@@ -12,9 +12,6 @@ export const interceptThreadResponse = async (
 
   if (shouldIntercept) {
     const res: any = await response.json();
-
-    console.log({ res });
-
     const { included = [] } = res;
 
     const entities = filterByType(
