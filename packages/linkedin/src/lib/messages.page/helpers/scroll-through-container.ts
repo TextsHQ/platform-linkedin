@@ -31,7 +31,6 @@ export const scrollThroughContainer = async (
     }
 
     await page.evaluate(
-      // @ts-ignore
       (e, reverse) => e.scrollTo(0, reverse ? 0 : e.scrollHeight),
       containerElement,
       reverse

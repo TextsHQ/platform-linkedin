@@ -1,5 +1,6 @@
 import * as puppeteer from "puppeteer";
 import { Page, Browser } from "puppeteer";
+import { LOGIN_URL, THREADS_URL } from "./lib/constants/linkedin";
 
 class LinkedIn {
   readonly options: any = {
@@ -48,11 +49,11 @@ class LinkedIn {
       await this.setup();
 
       const page: Page = await this.browser.newPage();
-      await page.goto("https://www.linkedin.com/login");
+      await page.goto(LOGIN_URL);
       // This needs to be refactored because waitFor function will be deprecated
       // in a future. I've tried with waitForFunction but has some problems with
       // async functions
-      // @ts-ignore
+      // @ts-expect-error
       await page.waitFor(() => !document.querySelector("#password"));
 
       const cookies = await page.cookies();
@@ -83,7 +84,7 @@ class LinkedIn {
         domain: ".www.linkedin.com",
       });
 
-      await page.goto("https://www.linkedin.com/messaging");
+      await page.goto(THREADS_URL);
 
       await page.setRequestInterception(true);
 
@@ -164,7 +165,6 @@ class LinkedIn {
         else keepSearching = false;
 
         await page.evaluate(
-          // @ts-ignore
           (e) => e.scrollTo(0, e.scrollHeight),
           containerElement
         );

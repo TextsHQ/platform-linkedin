@@ -1,4 +1,5 @@
 import { LinkedIn } from "..";
+import { THREADS_URL } from "../constants/linkedin";
 import { interceptThreadResponse, thread } from "./intercept-thread-response";
 import {
   interceptMessagesThreadsResponse,
@@ -26,10 +27,10 @@ const getThreadMessages = async (
   const { page } = crawler;
 
   page.on("response", interceptThreadResponse);
-  await page.goto(`https://www.linkedin.com/messaging/thread/${threadId}`);
+  await page.goto(`${THREADS_URL}/thread/${threadId}`);
 
   await scrollThroughMessages(page);
-  await page.goto("https://www.linkedin.com/messaging");
+  await page.goto(THREADS_URL);
 
   return thread;
 };
@@ -40,14 +41,14 @@ const sendMessageToThread = async (
   message: string
 ): Promise<void> => {
   const { page } = crawler;
-  await page.goto(`https://www.linkedin.com/messaging/thread/${threadId}`);
+  await page.goto(`${THREADS_URL}/thread/${threadId}`);
 
   const textareaClass = ".msg-form__contenteditable";
 
   await page.type(textareaClass, message);
   await page.type(textareaClass, String.fromCharCode(13));
 
-  await page.goto("https://www.linkedin.com/messaging");
+  await page.goto(THREADS_URL);
 };
 
 export const MessagesPage = {

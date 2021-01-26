@@ -1,3 +1,4 @@
+import { LOGIN_URL, THREADS_URL } from "./constants/linkedin";
 import { LinkedIn } from "./index";
 import { LoginPage } from "./login.page";
 import { MessagesPage } from "./messages.page";
@@ -6,8 +7,7 @@ import { Section } from "./pages";
 const goToLogin = async (
   crawler: LinkedIn
 ): Promise<LinkedIn<typeof LoginPage>> => {
-  const loginUrl = "https://www.linkedin.com/login";
-  await crawler.page.goto(loginUrl);
+  await crawler.page.goto(LOGIN_URL);
 
   return { ...crawler, currentPage: LoginPage };
 };
@@ -31,7 +31,7 @@ const goToMessages = async (
 ): Promise<LinkedIn<typeof MessagesPage>> => {
   const { page } = crawler;
 
-  await page.goto("https://www.linkedin.com/messaging");
+  await page.goto(THREADS_URL);
 
   const cookies = await page.cookies();
   const authCookie = cookies.find(({ name }) => name === "li_at");
