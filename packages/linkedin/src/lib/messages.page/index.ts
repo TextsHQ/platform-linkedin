@@ -1,5 +1,8 @@
-import { LinkedIn } from "..";
+import axios from "axios";
+
+import { LinkedIn, firstConversationsRequest } from "..";
 import { THREADS_URL } from "../constants/linkedin";
+import { parseConversationResponse } from "./helpers/parse-conversation-response";
 import { interceptThreadResponse, thread } from "./intercept-thread-response";
 import {
   interceptMessagesThreadsResponse,
@@ -8,13 +11,32 @@ import {
 import { scrollThroughMessages } from "./scroll-through-messages";
 import { scrollThroughThreads } from "./scroll-through-threads";
 
-const getAllConversationThreads = async (crawler: LinkedIn): Promise<any> => {
+const getAllConversationThreads = async (
+  crawler: LinkedIn,
+  maxThreads?: number
+): Promise<any> => {
   const { page } = crawler;
 
   page.on("response", interceptMessagesThreadsResponse);
-  await scrollThroughThreads(page);
+  await scrollThroughThreads(page, maxThreads);
+  // Intercepting the conversations API doesn't provide the first group of elements
+  // (they already comes rendered from server). So we need to request them replacing
+  // from the first API request the 'createdBefore' param to 'createAfter'.
+  const cookies = (await page.cookies())
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join(";");
 
-  return messagesThreads.sort(
+  const firstResponse = await axios({
+    method: "GET",
+    url: firstConversationsRequest
+      .url()
+      .replace("createdBefore", "createdAfter"),
+    headers: { ...firstConversationsRequest.headers(), cookie: cookies },
+  });
+
+  const firstResponseParsed = parseConversationResponse(firstResponse.data);
+
+  return [...firstResponseParsed, ...messagesThreads].sort(
     (a, b) => b?.conversation?.lastActivityAt - a?.conversation?.lastActivityAt
   );
 };
