@@ -4,19 +4,19 @@ export const scrollThroughContainer = async (
   page: Page,
   container: string,
   elements: string,
-  reverse = false
+  reverse = false,
+  maxElements: number = 500
 ): Promise<void> => {
   await page.waitForSelector(container);
   const containerElement = await page.$(container);
 
   let threads = [];
-  const maxThreads = 500;
 
   let previousHeight;
   let keepSearching = true;
 
   // This needs to be refactored
-  while (threads.length < maxThreads && keepSearching) {
+  while (threads.length < maxElements && keepSearching) {
     threads = [...(await page.$$(elements))];
 
     const newPreviousHeight = await page.evaluate(
