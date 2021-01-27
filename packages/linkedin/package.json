@@ -16,9 +16,11 @@
     "example-get-messages-threads": "ts-node ./examples/get-messages-threads.ts",
     "example-get-thread-messages": "ts-node ./examples/get-thread-messages.ts",
     "example-send-message-to-thread": "ts-node ./examples/send-message-to-thread.ts",
-    "example-get-session-cookie": "ts-node ./examples/get-session-cookie.ts"
+    "example-get-session-cookie": "ts-node ./examples/get-session-cookie.ts",
+    "example-login-and-send-message": "ts-node ./examples/login-and-send-message.ts"
   },
   "dependencies": {
+    "axios": "^0.21.1",
     "jest": "^26.6.0",
     "puppeteer": "^5.5.0",
     "typescript": "^4.0.3"
