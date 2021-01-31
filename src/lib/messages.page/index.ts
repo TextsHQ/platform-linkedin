@@ -1,8 +1,9 @@
-import axios from 'axios'
+import got from 'got'
+import { CookieJar } from 'tough-cookie'
 
 // eslint-disable-next-line import/no-cycle
 import { firstConversationsRequest } from '..'
-import { THREADS_URL } from '../constants/linkedin'
+import { LINKEDIN_BASE, THREADS_URL } from '../constants/linkedin'
 import { LinkedIn } from '../types/linkedin.types'
 import { parseConversationResponse } from './helpers/parse-conversation-response'
 import { interceptThreadResponse, thread } from './intercept-thread-response'
@@ -28,15 +29,16 @@ const getAllConversationThreads = async (
     .map(cookie => `${cookie.name}=${cookie.value}`)
     .join(';')
 
-  const firstResponse = await axios({
-    method: 'GET',
-    url: firstConversationsRequest
-      .url()
-      .replace('createdBefore', 'createdAfter'),
-    headers: { ...firstConversationsRequest.headers(), cookie: cookies },
+  const url = firstConversationsRequest.url().replace('createdBefore', 'createdAfter')
+  const cookieJar = new CookieJar()
+  await cookieJar.setCookie(cookies, LINKEDIN_BASE)
+
+  const firstResponse = await got(url, {
+    headers: { ...firstConversationsRequest.headers() },
+    cookieJar,
   })
 
-  const firstResponseParsed = parseConversationResponse(firstResponse.data)
+  const firstResponseParsed = parseConversationResponse(firstResponse.body)
 
   return [...firstResponseParsed, ...messagesThreads].sort(
     (a, b) => b?.conversation?.lastActivityAt - a?.conversation?.lastActivityAt,
