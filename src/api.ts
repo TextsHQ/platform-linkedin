@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, ServerEventType, MessageContent, PaginationArg, LoginCreds } from '@textshq/platform-sdk'
-import { mapThreads } from './mappers'
+import { mapMessage, mapThreads } from './mappers'
 import { getSessionCookie } from './public/get-session-cookie'
 import { getThreadMessages } from './public/get-thread-messages'
 import { getMessagesThreads } from './public/get-threads'
@@ -39,9 +39,11 @@ export default class RandomAPI implements PlatformAPI {
     if (this.eventTimeout) clearInterval(this.eventTimeout)
   }
 
-  serializeSession = () => { }
+  serializeSession = () => this.session
 
-  init = () => {}
+  init = (session: string) => {
+    this.session = session
+  }
 
   searchUsers = async (typed: string) => []
 
@@ -66,18 +68,35 @@ export default class RandomAPI implements PlatformAPI {
   }
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
-    const items = await getThreadMessages(this.session, threadID)
+    try {
+      const linkedInItems = await getThreadMessages(this.session, threadID)
+      const { entities, events } = linkedInItems
+      const currentUserId = entities[0].entityUrn.split(':').pop()
 
-    return {
-      items,
-      hasMore: false,
+      const items = events
+        .map((message: any) => mapMessage(message, currentUserId))
+        .filter((message: Message) => message.senderID === threadID)
+        .sort((a, b) => a.timestamp - b.timestamp)
+
+      return {
+        items,
+        hasMore: false,
+      }
+    } catch (error) {
+      return {
+        items: [],
+        hasMore: false,
+      }
     }
   }
 
-  sendMessage = async (threadID: string, content: MessageContent) => {
-    // FIXME: Allow to send more than texts
-    await sendMessageToThread(this.session, threadID, content.text)
-    return true
+  sendMessage = async (threadID: string, content: MessageContent): Promise<boolean | Message[]> => {
+    try {
+      await sendMessageToThread(this.session, threadID, content.text)
+      return true
+    } catch (error) {
+      throw new Error(error.message)
+    }
   }
 
   sendActivityIndicator = (threadID: string) => {}
