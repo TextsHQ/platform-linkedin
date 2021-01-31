@@ -1,4 +1,4 @@
-import * as puppeteer from 'puppeteer'
+import puppeteer from 'puppeteer'
 
 // eslint-disable-next-line import/no-cycle
 import { BlankPage } from './blank.page'

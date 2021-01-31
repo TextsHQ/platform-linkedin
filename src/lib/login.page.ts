@@ -30,8 +30,17 @@ const login = async (
  * @param crawler
  * @returns {string}
  */
-const getSessionCookie = async (crawler: LinkedIn): Promise<string> => {
+const getSessionCookie = async (
+  crawler: LinkedIn,
+  { username, password }: LoginInformation,
+): Promise<string> => {
   const { page } = crawler
+  await page.type('#username', username)
+  await page.type('#password', password)
+
+  const click = page.click("button[type='submit']")
+  const wait = page.waitForNavigation()
+  await Promise.all([click, wait])
   // This needs to be refactored because waitFor function will be deprecated
   // in a future. I've tried with waitForFunction but has some problems with
   // async functions
