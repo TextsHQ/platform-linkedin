@@ -1,5 +1,6 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, ServerEventType, MessageContent, PaginationArg } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, ServerEventType, MessageContent, PaginationArg, LoginCreds } from '@textshq/platform-sdk'
+import { mapThreads } from './mappers'
 import { getSessionCookie } from './public/get-session-cookie'
 import { getThreadMessages } from './public/get-thread-messages'
 import { getMessagesThreads } from './public/get-threads'
@@ -12,9 +13,12 @@ export default class RandomAPI implements PlatformAPI {
 
   private threads: Thread[]
 
-  login = async (): Promise<LoginResult> => {
+  login = async (credentials: LoginCreds): Promise<LoginResult> => {
     try {
-      await getSessionCookie()
+      const { username, password } = credentials
+      const session = await getSessionCookie({ username, password })
+      this.session = session
+
       return { type: 'success' }
     } catch (error) {
       return { type: 'error' }
@@ -44,12 +48,20 @@ export default class RandomAPI implements PlatformAPI {
   createThread = (userIDs: string[]) => null as any
 
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
-    const items = await getMessagesThreads(this.session)
+    try {
+      const items = await getMessagesThreads(this.session)
+      const parsedItems = mapThreads(items)
 
-    return {
-      items,
-      hasMore: items.length >= 25,
-      oldestCursor: 0,
+      return {
+        items: parsedItems,
+        hasMore: false,
+        oldestCursor: '0',
+      }
+    } catch (error) {
+      return {
+        items: [],
+        hasMore: false,
+      }
     }
   }
 
@@ -63,7 +75,9 @@ export default class RandomAPI implements PlatformAPI {
   }
 
   sendMessage = async (threadID: string, content: MessageContent) => {
-    await sendMessageToThread(this.session, threadID, content)
+    // FIXME: Allow to send more than texts
+    await sendMessageToThread(this.session, threadID, content.text)
+    return true
   }
 
   sendActivityIndicator = (threadID: string) => {}
