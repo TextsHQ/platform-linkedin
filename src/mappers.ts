@@ -1,4 +1,4 @@
-import { Thread } from '@textshq/platform-sdk'
+import { Thread, Message } from '@textshq/platform-sdk'
 
 /**
  * Map LinkedIn Threads and converts them into Texts.com threads.
@@ -46,4 +46,21 @@ export const mapThreads = (linkedInThreads: any[]): Thread[] => {
   }
 
   return threads
+}
+
+export const mapMessage = (linkedInMessage: any, currentUserId: string = ''): Message => {
+  const { attributedBody } = linkedInMessage.eventContent
+  const membersId = linkedInMessage['*from'].split(':').pop()
+  const senderID = membersId.split(',')[0].replaceAll('(', '')
+  const receiverID = membersId.split(',').pop().replaceAll(')', '')
+
+  return {
+    id: linkedInMessage.dashEntityUrn,
+    timestamp: new Date(linkedInMessage.createdAt),
+    text: attributedBody.text,
+    attachments: [],
+    reactions: [],
+    senderID,
+    isSender: currentUserId === receiverID,
+  }
 }
