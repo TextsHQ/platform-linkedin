@@ -1,4 +1,4 @@
-import * as puppeteer from 'puppeteer'
+import puppeteer from 'puppeteer'
 import { LINKEDIN_CONVERSATIONS_ENDPOINT } from '../constants/linkedin'
 import { filterByType } from './helpers/filter-by-type'
 

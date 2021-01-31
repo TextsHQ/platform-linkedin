@@ -33,16 +33,20 @@ const getAllConversationThreads = async (
   const cookieJar = new CookieJar()
   await cookieJar.setCookie(cookies, LINKEDIN_BASE)
 
-  const firstResponse = await got(url, {
-    headers: { ...firstConversationsRequest.headers() },
+  const { body } = await got(url, {
+    headers: { ...firstConversationsRequest.headers(), cookie: cookies },
     cookieJar,
   })
 
-  const firstResponseParsed = parseConversationResponse(firstResponse.body)
+  const firstResponseParsed = parseConversationResponse(JSON.parse(body))
 
-  return [...firstResponseParsed, ...messagesThreads].sort(
-    (a, b) => b?.conversation?.lastActivityAt - a?.conversation?.lastActivityAt,
-  )
+  return [...firstResponseParsed, ...messagesThreads]
+    .sort(
+      (a, b) => b?.conversation?.lastActivityAt - a?.conversation?.lastActivityAt,
+    ).filter((x: any) => {
+      const threadId = x?.conversation?.entityUrn?.split(':').pop()
+      return Boolean(threadId)
+    })
 }
 
 const getThreadMessages = async (
