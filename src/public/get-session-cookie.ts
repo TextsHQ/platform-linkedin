@@ -1,6 +1,8 @@
 import { openBrowser, closeBrowser } from '../lib'
 
-export const getSessionCookie = async (loginCredentials: { username: string; password: string }): Promise<string> => {
+export const getSessionCookie = async (
+  loginCredentials: { username: string; password: string },
+): Promise<{ session: string, currentUser: any }> => {
   const blank = await openBrowser()
   const login = await blank.currentPage.goTo.Login(blank)
 

@@ -1,5 +1,6 @@
 // eslint-disable-next-line import/no-cycle
 import { MessagesPage } from './messages.page'
+import { LINKEDIN_USER_ENDPOINT } from './constants/linkedin'
 import { LinkedIn } from './types/linkedin.types'
 import { Section } from './types/sections.types'
 
@@ -33,25 +34,41 @@ const login = async (
 const getSessionCookie = async (
   crawler: LinkedIn,
   { username, password }: LoginInformation,
-): Promise<string> => {
+): Promise<{ session: string, currentUser: any }> => {
   const { page } = crawler
+  let userMetadata: any
+
+  page.on('response', async response => {
+    const responseUrl = response.url()
+    const shouldIntercept = responseUrl.includes(LINKEDIN_USER_ENDPOINT)
+
+    if (shouldIntercept) {
+      const res = await response.json()
+      userMetadata = res
+    }
+  })
+
   await page.type('#username', username)
   await page.type('#password', password)
 
   const click = page.click("button[type='submit']")
   const wait = page.waitForNavigation()
   await Promise.all([click, wait])
-  // This needs to be refactored because waitFor function will be deprecated
-  // in a future. I've tried with waitForFunction but has some problems with
-  // async functions
-  // @ts-ignore
-  await page.waitFor(() => !document.querySelector('#password'))
+
+  const railSelector = '.profile-rail-card__actor-link'
+  await page.waitForSelector(railSelector)
+  // @ts-expect-error
+  const userName = await page.$eval(railSelector, el => el.innerText)
 
   const cookies = await page.cookies()
   const authCookie = cookies.find(({ name }) => name === 'li_at')
 
-  if (authCookie) return authCookie.value
-  throw new Error('Error Getting Cookie')
+  if (!authCookie) throw new Error('Error Getting Cookie')
+
+  return {
+    session: authCookie.value,
+    currentUser: { userName, ...userMetadata },
+  }
 }
 
 export const LoginPage = {
