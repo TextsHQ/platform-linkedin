@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, ServerEventType, MessageContent, PaginationArg, LoginCreds } from '@textshq/platform-sdk'
-import { mapMessage, mapThreads } from './mappers'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds } from '@textshq/platform-sdk'
+import { mapCurrentUser, mapMessage, mapThreads } from './mappers'
 import { getSessionCookie } from './public/get-session-cookie'
 import { getThreadMessages } from './public/get-thread-messages'
 import { getMessagesThreads } from './public/get-threads'
@@ -11,13 +11,17 @@ export default class RandomAPI implements PlatformAPI {
 
   private session: string | null = null
 
+  private currentUser: CurrentUser | null = null
+
   private threads: Thread[]
 
   login = async (credentials: LoginCreds): Promise<LoginResult> => {
     try {
       const { username, password } = credentials
-      const session = await getSessionCookie({ username, password })
+      const { session, currentUser } = await getSessionCookie({ username, password })
+
       this.session = session
+      this.currentUser = mapCurrentUser(currentUser)
 
       return { type: 'success' }
     } catch (error) {
@@ -27,11 +31,7 @@ export default class RandomAPI implements PlatformAPI {
 
   logout = () => { }
 
-  getCurrentUser = (): CurrentUser => ({
-    id: '1111',
-    fullName: 'Foo',
-    displayText: '@foo',
-  })
+  getCurrentUser = (): CurrentUser => this.currentUser
 
   subscribeToEvents = (onEvent: OnServerEventCallback) => {}
 
@@ -39,10 +39,11 @@ export default class RandomAPI implements PlatformAPI {
     if (this.eventTimeout) clearInterval(this.eventTimeout)
   }
 
-  serializeSession = () => this.session
+  serializeSession = () => ({ session: this.session, user: this.currentUser })
 
-  init = (session: string) => {
-    this.session = session
+  init = (serialized: { session: string; user: CurrentUser }) => {
+    if (serialized?.session) this.session = serialized.session
+    if (serialized?.user) this.currentUser = serialized.user
   }
 
   searchUsers = async (typed: string) => []
@@ -71,7 +72,12 @@ export default class RandomAPI implements PlatformAPI {
     try {
       const linkedInItems = await getThreadMessages(this.session, threadID)
       const { entities, events } = linkedInItems
-      const currentUserId = entities[0].entityUrn.split(':').pop()
+
+      const currentUserEntity = entities.find(({ firstName, lastName }) => {
+        const name = `${firstName} ${lastName}`
+        return this.currentUser.username === name
+      })
+      const currentUserId = currentUserEntity.entityUrn.split(':').pop()
 
       const items = events
         .map((message: any) => mapMessage(message, currentUserId))
