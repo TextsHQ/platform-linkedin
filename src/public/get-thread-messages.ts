@@ -1,18 +1,14 @@
-import { openBrowser, closeBrowser } from '../lib'
+import { MessagesPage } from '../lib/messages.page'
+import { LinkedIn } from '../lib/types/linkedin.types'
 
-export const getThreadMessages = async (session: string, threadId: string) => {
-  const blank = await openBrowser()
-  await blank.currentPage.setSessionCookie(blank, session)
-
-  const messagesCrawler = await blank.currentPage.goTo.Messages(blank)
-  const { currentPage } = await messagesCrawler
+export const getThreadMessages = async (browserLinkedIn: LinkedIn<any>, threadId: string) => {
+  const { currentPage, browser } = (browserLinkedIn as LinkedIn<typeof MessagesPage>)
+  const page = await browser.newPage()
 
   const threadMessages = await currentPage.getThreadMessages(
-    messagesCrawler,
+    page,
     threadId,
   )
-
-  await closeBrowser(messagesCrawler)
 
   return threadMessages
 }
