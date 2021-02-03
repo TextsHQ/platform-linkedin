@@ -38,6 +38,9 @@ const getSessionCookie = async (
   const { page } = crawler
   let userMetadata: any
 
+  await page.setRequestInterception(true)
+
+  page.on('request', request => request.continue())
   page.on('response', async response => {
     const responseUrl = response.url()
     const shouldIntercept = responseUrl.includes(LINKEDIN_USER_ENDPOINT)
