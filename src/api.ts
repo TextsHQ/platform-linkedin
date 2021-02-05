@@ -9,7 +9,7 @@ import { getThreadMessages } from './public/get-thread-messages'
 import { getMessagesThreads } from './public/get-threads'
 import { sendMessageToThread } from './public/send-message-to-thread'
 
-export default class RandomAPI implements PlatformAPI {
+export default class LinkedInAPI implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
 
   private session: string | null = null
