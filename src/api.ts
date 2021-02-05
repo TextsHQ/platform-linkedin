@@ -1,6 +1,7 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds } from '@textshq/platform-sdk'
 import { closeBrowser, openBrowser } from './lib'
+import { THREADS_URL } from './lib/constants/linkedin'
 import { LinkedIn } from './lib/types/linkedin.types'
 import { mapCurrentUser, mapMessage, mapThreads } from './mappers'
 import { getSessionCookie } from './public/get-session-cookie'
@@ -39,7 +40,20 @@ export default class RandomAPI implements PlatformAPI {
 
   getCurrentUser = (): CurrentUser => this.currentUser
 
-  subscribeToEvents = (onEvent: OnServerEventCallback) => {}
+  subscribeToEvents = async (onEvent: OnServerEventCallback) => {
+    const page = await this.browser.browser.pages()[0]
+    await page.goto(THREADS_URL)
+    page.on('request', request => request.continue())
+    page.on('response', async response => {
+      const responseUrl = response.url()
+      const itShouldIntercept = responseUrl.includes('realtime')
+
+      if (itShouldIntercept) {
+        const res: any = await response.json()
+        if (res) this.getThreads(InboxName.NORMAL)
+      }
+    })
+  }
 
   dispose = async () => {
     if (this.eventTimeout) clearInterval(this.eventTimeout)
@@ -119,7 +133,9 @@ export default class RandomAPI implements PlatformAPI {
     }
   }
 
-  sendActivityIndicator = (threadID: string) => {}
+  sendActivityIndicator = (threadID: string) => {
+    console.log(threadID, this.threads)
+  }
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {}
 
