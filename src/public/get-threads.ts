@@ -1,7 +1,7 @@
 import { MessagesPage } from '../lib/messages.page'
 import { LinkedIn } from '../lib/types/linkedin.types'
 
-export const getMessagesThreads = async (
+export const getThreads = async (
   browserLinkedIn: LinkedIn<any>,
   maxThreads?: number,
 ) => {
