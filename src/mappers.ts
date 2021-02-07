@@ -1,4 +1,29 @@
-import { Thread, Message, CurrentUser } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, Paginated } from '@textshq/platform-sdk'
+
+const mapParticipants = (linkedinParticipants: any[], entities: any[]): Paginated<Participant> => {
+  const items = linkedinParticipants.reduce((prev, current) => {
+    const participantId = current.split(',').pop().replace(')', '')
+    const entity = entities.find(({ entityUrn }) => {
+      const entityId = entityUrn.split(':').pop()
+      return entityId === participantId
+    })
+
+    return [
+      ...prev,
+      {
+        id: entity.publicIdentifier,
+        username: `${entity.firstName} ${entity.lastName}`,
+        fullName: `${entity.firstName} ${entity.lastName}`,
+        isSelf: false,
+      },
+    ]
+  }, [])
+
+  return {
+    items,
+    hasMore: false,
+  }
+}
 
 /**
  * Map LinkedIn Threads and converts them into Texts.com threads.
@@ -10,6 +35,7 @@ import { Thread, Message, CurrentUser } from '@textshq/platform-sdk'
  */
 export const mapThreads = (linkedInThreads: any[]): Thread[] => {
   const threads = []
+  const entities = linkedInThreads.map(({ entity: threadEntity }) => threadEntity)
 
   for (const thread of linkedInThreads) {
     const { entity, conversation } = thread
@@ -22,22 +48,13 @@ export const mapThreads = (linkedInThreads: any[]): Thread[] => {
 
     const messages = { items: [], hasMore: false }
 
-    const participants = {
-      items: [
-        {
-          id: entity.publicIdentifier,
-          username: `${entity.firstName} ${entity.lastName}`,
-          fullName: `${entity.firstName} ${entity.lastName}`,
-          isSelf: false,
-        },
-      ],
-      hasMore: false,
-    }
+    const conversationParticipants = conversation['*participants']
+    const participants = mapParticipants(conversationParticipants, entities)
 
     threads.push({
       _original: JSON.stringify(thread),
       id,
-      title,
+      title: participants.items.length < 2 ? title : participants.items.map(({ fullName }) => fullName).join(','),
       isUnread,
       type,
       timestamp,
