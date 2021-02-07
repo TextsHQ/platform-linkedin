@@ -86,7 +86,6 @@ const getThreadMessages = async (
   await page.goto(`${THREADS_URL}/thread/${threadId}`)
 
   await scrollThroughMessages(page)
-  await page.goto(THREADS_URL)
 
   await page.close()
   return thread
