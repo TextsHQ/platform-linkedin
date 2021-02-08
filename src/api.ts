@@ -8,7 +8,8 @@ import { getMessages } from './lib-v2/get-messages'
 import { sendMessage } from './lib-v2/send-message'
 import { createThread } from './lib-v2/create-thread'
 import { searchUsers } from './lib-v2/search-users'
-import { mapCurrentUser, mapMessage, mapMiniProfile, mapThreads } from './mappers'
+import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
+import { addReaction } from './lib-v2/add-reaction'
 
 export default class LinkedInAPI implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
@@ -107,9 +108,10 @@ export default class LinkedInAPI implements PlatformAPI {
     const { events } = linkedInItems
 
     const currentUserId = mapCurrentUser(this.currentUser).id
+    const { participants } = this.threads.find(({ id: threadId }) => threadID === threadId)
 
     const items = events
-      .map((message: any) => mapMessage(message, currentUserId))
+      .map((message: any) => mapMessage(message, currentUserId, participants.items))
       .sort((a: any, b: any) => a.timestamp - b.timestamp)
 
     return {
@@ -131,7 +133,10 @@ export default class LinkedInAPI implements PlatformAPI {
     console.log(threadID, this.threads)
   }
 
-  addReaction = async (threadID: string, messageID: string, reactionKey: string) => {}
+  addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
+    const { render: emojiRender } = mapReactionEmoji(reactionKey)
+    await addReaction(this.cookies, emojiRender, messageID, threadID)
+  }
 
   removeReaction = async (threadID: string, messageID: string, reactionKey: string) => {}
 

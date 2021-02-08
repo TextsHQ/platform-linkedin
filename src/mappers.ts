@@ -1,4 +1,5 @@
-import { Thread, Message, CurrentUser, Participant, User } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction } from '@textshq/platform-sdk'
+import { supportedReactions } from './constants'
 
 const getSenderID = (from: string) =>
   // "*from": "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)",
@@ -53,10 +54,22 @@ export const mapThreads = (liThreads: any[]): Thread[] => {
   return liThreads.map(thread => mapThread(thread, grouped))
 }
 
-export const mapMessage = (liMessage: any, currentUserID: string): Message => {
+export const mapReactionEmoji = (reactionKey: string) => supportedReactions[reactionKey]
+
+export const mapReactions = (liReactionSummaries: any, { currentUserID, participantId }): MessageReaction => ({
+  id: liReactionSummaries?.firstReactedAt,
+  reactionKey: liReactionSummaries?.emoji,
+  participantID: liReactionSummaries?.viewerReacted ? currentUserID : participantId,
+  emoji: true,
+})
+
+export const mapMessage = (liMessage: any, currentUserID: string, participants: Participant[] = []): Message => {
+  const { reactionSummaries } = liMessage
   const { attributedBody } = liMessage.eventContent
 
   const senderID = getSenderID(liMessage['*from'])
+  const participantId = participants.find(({ id }) => id !== currentUserID).id
+  const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId }))
 
   return {
     _original: JSON.stringify(liMessage),
@@ -64,7 +77,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody.text,
     attachments: [],
-    reactions: [],
+    reactions,
     senderID,
     isSender: currentUserID === senderID,
   }

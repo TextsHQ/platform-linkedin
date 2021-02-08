@@ -1,4 +1,5 @@
 import { PlatformInfo, MessageDeletionMode, Attribute } from '@textshq/platform-sdk'
+import { supportedReactions } from './constants'
 
 const icon = `<svg width="1em" height="1em" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 <rect width="16" height="16" rx="5" fill="#006699"/>
@@ -12,6 +13,9 @@ const info: PlatformInfo = {
   displayName: 'LinkedIn',
   icon,
   tags: ['Beta'],
+  reactions: {
+    supported: supportedReactions,
+  },
   loginMode: 'manual',
   deletionMode: MessageDeletionMode.UNSUPPORTED,
   attributes: new Set([
