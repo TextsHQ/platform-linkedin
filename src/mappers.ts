@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User } from '@textshq/platform-sdk'
 
 const getSenderID = (from: string) =>
   // "*from": "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)",
@@ -70,13 +70,26 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   }
 }
 
-export const mapCurrentUser = (liCurrentUser: any): CurrentUser => {
-  // id: { dmp: 'Ad-O9AwXmUgxi0kU4nViM4KcMRMA&v=2' },
-  const { dmp } = liCurrentUser.id
-  const id = dmp.split('&v')[0]
+export const mapMiniProfile = (liMiniProfile: any): User => {
+  // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
+  const id = liMiniProfile.entityUrn.split(':').pop()
 
   return {
     id,
-    displayText: liCurrentUser.userName,
+    username: liMiniProfile.publicIdentifier,
+    fullName: [liMiniProfile.firstName, liMiniProfile.lastName].filter(Boolean).join(' '),
+    imgURL: liMiniProfile.picture ? liMiniProfile.picture.rootUrl + liMiniProfile.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
+  }
+}
+
+export const mapCurrentUser = (liCurrentUser: any): CurrentUser => {
+  // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
+  const id = liCurrentUser.entityUrn.split(':').pop()
+
+  return {
+    id,
+    displayText: liCurrentUser.publicIdentifier,
+    username: liCurrentUser.publicIdentifier,
+    fullName: `${liCurrentUser.firstName} ${liCurrentUser.lastName}`,
   }
 }
