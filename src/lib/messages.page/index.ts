@@ -1,72 +1,20 @@
 import puppeteer from 'puppeteer'
 import got from 'got'
-import { CookieJar } from 'tough-cookie'
 
-import { LINKEDIN_BASE, LINKEDIN_CONVERSATIONS_ENDPOINT, THREADS_URL } from '../constants/linkedin'
+import { LINKEDIN_API_BASE, LINKEDIN_CONVERSATIONS_ENDPOINT, THREADS_URL } from '../constants/linkedin'
 import { parseConversationResponse } from './helpers/parse-conversation-response'
-import { interceptThreadResponse, thread } from './intercept-thread-response'
-import {
-  interceptMessagesThreadsResponse,
-  messagesThreads,
-} from './intercept-threads-response'
-import { scrollThroughMessages } from './scroll-through-messages'
-import { scrollThroughThreads } from './scroll-through-threads'
+import { filterByType } from './helpers/filter-by-type'
 
-const getAllConversationThreads = async (
-  page: puppeteer.Page,
-  maxThreads?: number,
-): Promise<any> => {
-  let firstConversationsRequest: puppeteer.Request
-  let firstDate = 0
-
-  await page.setRequestInterception(true)
-
-  page.on('request', request => {
-    // This is added because the first group of messages (first 20) comes
-    // directly from server (it doesn't make any request to get them), so
-    // this way we save the first request and then we can make a separated
-    // request to get the first 20 messages threads.
-    if (
-      request.method() === 'GET'
-      && request.url().includes(LINKEDIN_CONVERSATIONS_ENDPOINT)
-      && request.url().includes('createdBefore')
-    ) {
-      const date = request.url().split('createdBefore=').pop()
-
-      if (Number(date) > firstDate) {
-        firstDate = Number(date)
-        firstConversationsRequest = request
-      }
-    }
-
-    request.continue()
-  })
-
-  page.on('response', interceptMessagesThreadsResponse)
-
-  await page.goto(THREADS_URL)
-  await scrollThroughThreads(page, maxThreads)
-  // Intercepting the conversations API doesn't provide the first group of elements
-  // (they already comes rendered from server). So we need to request them replacing
-  // from the first API request the 'createdBefore' param to 'createAfter'.
-  const cookies = (await page.cookies())
-    .map(cookie => `${cookie.name}=${cookie.value}`)
-    .join(';')
-
-  const url = firstConversationsRequest.url().replace('createdBefore', 'createdAfter')
-  const cookieJar = new CookieJar()
-  await cookieJar.setCookie(cookies, LINKEDIN_BASE)
-
+const getAllConversationThreads = async (request: puppeteer.Request, cookies: string): Promise<any> => {
+  // After 01 Jan 2020
+  const url = 'https://www.linkedin.com/voyager/api/messaging/conversations?createdAfter=1577847600000'
   const { body } = await got(url, {
-    headers: { ...firstConversationsRequest.headers(), cookie: cookies },
-    cookieJar,
+    headers: { ...request.headers(), cookie: cookies },
   })
 
   const firstResponseParsed = parseConversationResponse(JSON.parse(body))
 
-  await page.close()
-
-  return [...firstResponseParsed, ...messagesThreads]
+  return [...firstResponseParsed]
     .sort(
       (a, b) => b?.conversation?.lastActivityAt - a?.conversation?.lastActivityAt,
     ).filter((x: any) => {
@@ -76,34 +24,48 @@ const getAllConversationThreads = async (
 }
 
 const getThreadMessages = async (
-  page: puppeteer.Page,
+  { request, cookies }: { request: puppeteer.Request; cookies: string; },
   threadId: string,
   maxMessages = 500,
 ): Promise<any> => {
-  await page.setRequestInterception(true)
-  page.on('request', request => request.continue())
-  page.on('response', interceptThreadResponse)
-  await page.goto(`${THREADS_URL}/thread/${threadId}`)
+  const url = `${LINKEDIN_API_BASE}/voyager/${LINKEDIN_CONVERSATIONS_ENDPOINT}/${threadId}/events?q=syncToken`
+  const { body } = await got(url, {
+    headers: { ...request.headers(), cookie: cookies },
+  })
 
-  await scrollThroughMessages(page)
+  const res = JSON.parse(body)
+  const { included = [] } = res
 
-  await page.close()
-  return thread
+  const entities = filterByType(
+    included,
+    'com.linkedin.voyager.identity.shared.MiniProfile',
+  )
+
+  const events = filterByType(included, 'com.linkedin.voyager.messaging.Event')
+
+  const members = filterByType(
+    included,
+    'com.linkedin.voyager.messaging.MessagingMember',
+  )
+
+  return {
+    members,
+    entities,
+    events,
+  }
 }
 
 const sendMessageToThread = async (
-  page: puppeteer.Page,
+  { request, cookies }: { request: puppeteer.Request; cookies: string; },
   threadId: string,
   message: string,
 ): Promise<void> => {
-  await page.goto(`${THREADS_URL}/thread/${threadId}`)
+  const url = `${LINKEDIN_API_BASE}/voyager/${LINKEDIN_CONVERSATIONS_ENDPOINT}/${threadId}/events?action=create`
 
-  const textareaClass = '.msg-form__contenteditable'
-
-  await page.type(textareaClass, message)
-  await page.type(textareaClass, String.fromCharCode(13))
-
-  await page.close()
+  await got.post(url, {
+    body: JSON.stringify({ eventCreate: { originToken: '007566e0-fea4-490f-abbd-b137669528d3', value: { 'com.linkedin.voyager.messaging.create.MessageCreate': { attributedBody: { text: message, attributes: [] }, attachments: [] } }, trackingId: '8\u001cw¤¢Óë\u001f3\u0000ð4\u0011ý' }, dedupeByClientGeneratedToken: false }),
+    headers: { ...request.headers(), cookie: cookies },
+  })
 }
 
 export const MessagesPage = {

@@ -11,8 +11,9 @@ export const openBrowser = async (
 ): Promise<LinkedIn<any>> => {
   const browser = await puppeteer.launch({
     args: [],
-    headless,
+    headless: false,
     ignoreHTTPSErrors: true,
+    executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   })
 
   const page = await browser.newPage()

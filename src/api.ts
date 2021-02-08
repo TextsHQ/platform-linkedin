@@ -20,6 +20,10 @@ export default class LinkedInAPI implements PlatformAPI {
 
   private browser: LinkedIn<any>
 
+  private realtimeRequest: any
+
+  private cookies: any
+
   init = async (serialized: { session: string; user: CurrentUser }) => {
     const { session, user } = serialized || {}
 
@@ -27,6 +31,10 @@ export default class LinkedInAPI implements PlatformAPI {
       this.session = session
       this.browser = await openBrowser()
       await this.browser.currentPage.setSessionCookie(this.browser, session)
+
+      const { realtimeRequest, cookies } = await this.browser.currentPage.getRealTimeRequestAndCookies(this.browser)
+      this.cookies = cookies
+      this.realtimeRequest = realtimeRequest
     }
 
     if (user) this.currentUser = user
@@ -39,8 +47,13 @@ export default class LinkedInAPI implements PlatformAPI {
 
       this.session = session
       this.currentUser = currentUser
+
       this.browser = await openBrowser()
       await this.browser.currentPage.setSessionCookie(this.browser, session)
+
+      const { realtimeRequest, cookies } = await this.browser.currentPage.getRealTimeRequestAndCookies(this.browser)
+      this.cookies = cookies
+      this.realtimeRequest = realtimeRequest
 
       return { type: 'success' }
     } catch (error) {
@@ -58,7 +71,8 @@ export default class LinkedInAPI implements PlatformAPI {
     const page = await this.browser.browser.newPage()
     await page.goto(FEED_URL)
     await page.setRequestInterception(true)
-    page.on('request', request => request.continue())
+
+    page.on('request', request => { request.continue() })
     page.on('response', response => {
       const responseUrl = response.url()
       const itShouldIntercept = responseUrl.includes(LINKEDIN_CONVERSATIONS_ENDPOINT) && responseUrl.includes('events')
@@ -66,7 +80,7 @@ export default class LinkedInAPI implements PlatformAPI {
       if (itShouldIntercept) {
         const params = responseUrl.split(`${LINKEDIN_CONVERSATIONS_ENDPOINT}/`).pop()
         const threadID = params.split('/')[0].replace(/%3D/g, '=')
-        console.log({ threadID })
+
         if (threadID) onEvent([{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }])
       }
     })
@@ -79,10 +93,10 @@ export default class LinkedInAPI implements PlatformAPI {
 
   searchUsers = async (typed: string) => []
 
-  createThread = (userIDs: string[]) => null as any
+  createThread = (userIDs: string[]) => console.log({ userIDs }) as any
 
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
-    const items = await getThreads(this.browser)
+    const items = await getThreads(this.realtimeRequest, this.cookies)
     const parsedItems = mapThreads(items)
 
     return {
@@ -93,10 +107,11 @@ export default class LinkedInAPI implements PlatformAPI {
   }
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
-    const linkedInItems = await getThreadMessages(this.browser, threadID)
+    const linkedInItems = await getThreadMessages({ request: this.realtimeRequest, cookies: this.cookies }, threadID)
     const { entities, events } = linkedInItems
 
     // const currentUserId = currentUserEntity.entityUrn.split(':').pop()
+    console.log(this.currentUser)
 
     const items = events
       .map((message: any) => mapMessage(message, ''))
@@ -110,7 +125,7 @@ export default class LinkedInAPI implements PlatformAPI {
 
   sendMessage = async (threadID: string, content: MessageContent): Promise<boolean | Message[]> => {
     try {
-      await sendMessageToThread(this.browser, threadID, content.text)
+      await sendMessageToThread({ request: this.realtimeRequest, cookies: this.cookies }, threadID, content.text)
       return true
     } catch (error) {
       throw new Error(error.message)

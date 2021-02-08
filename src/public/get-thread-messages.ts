@@ -1,12 +1,8 @@
 import { MessagesPage } from '../lib/messages.page'
-import { LinkedIn } from '../lib/types/linkedin.types'
 
-export const getThreadMessages = async (browserLinkedIn: LinkedIn<any>, threadId: string) => {
-  const { currentPage, browser } = (browserLinkedIn as LinkedIn<typeof MessagesPage>)
-  const page = await browser.newPage()
-
-  const threadMessages = await currentPage.getThreadMessages(
-    page,
+export const getThreadMessages = async ({ request, cookies }, threadId: string) => {
+  const threadMessages = await MessagesPage.getThreadMessages(
+    { request, cookies },
     threadId,
   )
 
