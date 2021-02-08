@@ -1,13 +1,14 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType } from '@textshq/platform-sdk'
-import { closeBrowser, openBrowser } from './lib'
-import { FEED_URL, LINKEDIN_CONVERSATIONS_ENDPOINT, THREADS_URL } from './lib/constants/linkedin'
-import { LinkedIn } from './lib/types/linkedin.types'
-import { mapCurrentUser, mapMessage, mapThreads } from './mappers'
-import { getSessionCookie } from './public/get-session-cookie'
-import { getThreadMessages } from './public/get-thread-messages'
-import { getThreads } from './public/get-threads'
-import { sendMessageToThread } from './public/send-message-to-thread'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User } from '@textshq/platform-sdk'
+
+import { getCurrentUser } from './lib-v2/get-current-user'
+import { login } from './lib-v2/login'
+import { getThreads } from './lib-v2/get-threads'
+import { getMessages } from './lib-v2/get-messages'
+import { sendMessage } from './lib-v2/send-message'
+import { createThread } from './lib-v2/create-thread'
+import { searchUsers } from './lib-v2/search-users'
+import { mapCurrentUser, mapMessage, mapMiniProfile, mapThreads } from './mappers'
 
 export default class LinkedInAPI implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
@@ -16,44 +17,28 @@ export default class LinkedInAPI implements PlatformAPI {
 
   private currentUser = null
 
-  private threads: Thread[]
-
-  private browser: LinkedIn<any>
-
-  private realtimeRequest: any
+  private threads: Thread[] = []
 
   private cookies: any
 
-  init = async (serialized: { session: string; user: CurrentUser }) => {
-    const { session, user } = serialized || {}
+  private searchedUsers: User[]
 
-    if (session) {
-      this.session = session
-      this.browser = await openBrowser()
-      await this.browser.currentPage.setSessionCookie(this.browser, session)
+  init = async (serialized: { session: string; user: CurrentUser, cookies: any }) => {
+    const { session, user, cookies } = serialized || {}
 
-      const { realtimeRequest, cookies } = await this.browser.currentPage.getRealTimeRequestAndCookies(this.browser)
-      this.cookies = cookies
-      this.realtimeRequest = realtimeRequest
-    }
-
+    if (session) this.session = session
     if (user) this.currentUser = user
+    if (cookies) this.cookies = cookies
   }
 
   login = async (credentials: LoginCreds): Promise<LoginResult> => {
     try {
       const { username, password } = credentials
-      const { session, currentUser } = await getSessionCookie({ username, password })
+      const cookies = await login({ username, password })
+      const currentUser = await getCurrentUser(cookies)
 
-      this.session = session
-      this.currentUser = currentUser
-
-      this.browser = await openBrowser()
-      await this.browser.currentPage.setSessionCookie(this.browser, session)
-
-      const { realtimeRequest, cookies } = await this.browser.currentPage.getRealTimeRequestAndCookies(this.browser)
       this.cookies = cookies
-      this.realtimeRequest = realtimeRequest
+      this.currentUser = currentUser
 
       return { type: 'success' }
     } catch (error) {
@@ -61,43 +46,54 @@ export default class LinkedInAPI implements PlatformAPI {
     }
   }
 
-  serializeSession = () => ({ session: this.session, user: this.currentUser })
+  serializeSession = () => ({
+    session: this.session,
+    user: this.currentUser,
+    cookies: this.cookies,
+  })
 
   logout = () => { }
 
   getCurrentUser = () => mapCurrentUser(this.currentUser)
 
-  subscribeToEvents = async (onEvent: OnServerEventCallback) => {
-    const page = await this.browser.browser.newPage()
-    await page.goto(FEED_URL)
-    await page.setRequestInterception(true)
-
-    page.on('request', request => { request.continue() })
-    page.on('response', response => {
-      const responseUrl = response.url()
-      const itShouldIntercept = responseUrl.includes(LINKEDIN_CONVERSATIONS_ENDPOINT) && responseUrl.includes('events')
-
-      if (itShouldIntercept) {
-        const params = responseUrl.split(`${LINKEDIN_CONVERSATIONS_ENDPOINT}/`).pop()
-        const threadID = params.split('/')[0].replace(/%3D/g, '=')
-
-        if (threadID) onEvent([{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }])
-      }
-    })
-  }
+  subscribeToEvents = async (onEvent: OnServerEventCallback) => {}
 
   dispose = async () => {
     if (this.eventTimeout) clearInterval(this.eventTimeout)
-    if (this.browser) await closeBrowser(this.browser)
   }
 
-  searchUsers = async (typed: string) => []
+  searchUsers = async (typed: string) => {
+    const res = await searchUsers(this.cookies, typed)
+    const users = res.map((miniProfile: any) => mapMiniProfile(miniProfile))
+    this.searchedUsers = [...users]
 
-  createThread = (userIDs: string[]) => console.log({ userIDs }) as any
+    return users
+  }
+
+  createThread = async (userIDs: string[]): Promise<Thread> => {
+    const res = await createThread(this.cookies, '', userIDs)
+    const { createdAt, conversationUrn } = res
+    // conversationUrn: "urn:li:fs_conversation:2-YmU3NDYwNzctNTU0ZS00NjdhLTg3ZDktMjkwOTE5NDAxNGQ4XzAxMw=="
+    const id = conversationUrn.split(':').pop()
+    const participants = userIDs.map(userId => this.searchedUsers.find(({ id: searchedUserId }) => searchedUserId === userId))
+    const title = participants.map(participant => participant.fullName).join(', ')
+
+    return {
+      id,
+      title,
+      type: userIDs.length > 1 ? 'group' : 'single',
+      participants: { items: participants, hasMore: false },
+      messages: { items: [], hasMore: false },
+      timestamp: new Date(createdAt),
+      isUnread: false,
+      isReadOnly: false,
+    }
+  }
 
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
-    const items = await getThreads(this.realtimeRequest, this.cookies)
+    const items = await getThreads(this.cookies)
     const parsedItems = mapThreads(items)
+    this.threads = [...this.threads, ...parsedItems]
 
     return {
       items: parsedItems,
@@ -107,15 +103,14 @@ export default class LinkedInAPI implements PlatformAPI {
   }
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
-    const linkedInItems = await getThreadMessages({ request: this.realtimeRequest, cookies: this.cookies }, threadID)
-    const { entities, events } = linkedInItems
+    const linkedInItems = await getMessages(this.cookies, threadID)
+    const { events } = linkedInItems
 
-    // const currentUserId = currentUserEntity.entityUrn.split(':').pop()
-    console.log(this.currentUser)
+    const currentUserId = mapCurrentUser(this.currentUser).id
 
     const items = events
-      .map((message: any) => mapMessage(message, ''))
-      .sort((a, b) => a.timestamp - b.timestamp)
+      .map((message: any) => mapMessage(message, currentUserId))
+      .sort((a: any, b: any) => a.timestamp - b.timestamp)
 
     return {
       items,
@@ -125,7 +120,7 @@ export default class LinkedInAPI implements PlatformAPI {
 
   sendMessage = async (threadID: string, content: MessageContent): Promise<boolean | Message[]> => {
     try {
-      await sendMessageToThread({ request: this.realtimeRequest, cookies: this.cookies }, threadID, content.text)
+      await sendMessage(this.cookies, content.text, threadID)
       return true
     } catch (error) {
       throw new Error(error.message)
