@@ -1,6 +1,7 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User } from '@textshq/platform-sdk'
 
+import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
 import { getCurrentUser } from './lib-v2/get-current-user'
 import { login } from './lib-v2/login'
 import { getThreads } from './lib-v2/get-threads'
@@ -8,8 +9,8 @@ import { getMessages } from './lib-v2/get-messages'
 import { sendMessage } from './lib-v2/send-message'
 import { createThread } from './lib-v2/create-thread'
 import { searchUsers } from './lib-v2/search-users'
-import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
-import { addReaction } from './lib-v2/add-reaction'
+import { toggleReaction } from './lib-v2/toggle-reaction'
+import { markMessageAsRead } from './lib-v2/mark-message-as-read'
 
 export default class LinkedInAPI implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
@@ -135,12 +136,14 @@ export default class LinkedInAPI implements PlatformAPI {
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
     const { render: emojiRender } = mapReactionEmoji(reactionKey)
-    await addReaction(this.cookies, emojiRender, messageID, threadID)
+    await toggleReaction(this.cookies, emojiRender, messageID, threadID)
   }
 
   removeReaction = async (threadID: string, messageID: string, reactionKey: string) => {}
 
   deleteMessage = async (threadID: string, messageID: string) => true
 
-  sendReadReceipt = async (threadID: string, messageID: string) => {}
+  sendReadReceipt = async (threadID: string, messageID: string) => {
+    await markMessageAsRead(this.cookies, threadID)
+  }
 }
