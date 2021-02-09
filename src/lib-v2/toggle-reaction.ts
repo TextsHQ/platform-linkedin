@@ -3,7 +3,7 @@ import axios from 'axios'
 import { createRequestHeaders } from './utils/headers'
 import { paramsSerializer } from './utils/paramsSerializer'
 
-export const addReaction = async (cookies, emoji: string, messageID: string, threadID: string) => {
+export const toggleReaction = async (cookies, emoji: string, messageID: string, threadID: string) => {
   try {
     const parsedMessageId = messageID.split(':').pop().replace(/=/g, '%3D')
     const parsedThreadID = threadID.replace(/=/g, '%3D')
