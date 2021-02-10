@@ -1,5 +1,6 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User } from '@textshq/platform-sdk'
+import EventSource from 'eventsource'
 
 import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
 import { getCurrentUser } from './lib-v2/get-current-user'
@@ -11,6 +12,7 @@ import { createThread } from './lib-v2/create-thread'
 import { searchUsers } from './lib-v2/search-users'
 import { toggleReaction } from './lib-v2/toggle-reaction'
 import { markMessageAsRead } from './lib-v2/mark-message-as-read'
+import { createRequestHeaders } from './lib-v2/utils/headers'
 
 export default class LinkedInAPI implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
@@ -58,7 +60,30 @@ export default class LinkedInAPI implements PlatformAPI {
 
   getCurrentUser = () => mapCurrentUser(this.currentUser)
 
-  subscribeToEvents = async (onEvent: OnServerEventCallback) => {}
+  subscribeToEvents = async (onEvent: OnServerEventCallback) => {
+    const headers = createRequestHeaders(this.cookies)
+    const url = 'https://realtime.www.linkedin.com/realtime/connect'
+
+    const eventSource = new EventSource(url, { headers })
+    eventSource.onmessage = event => {
+      if (!event.data.startsWith('{')) return
+
+      const json = JSON.parse(event.data)
+      const newMessageEventType = 'com.linkedin.realtimefrontend.DecoratedEvent'
+
+      if (json[newMessageEventType] && json[newMessageEventType]?.payload?.fromEntity) {
+        const { fromEntity = '', fromParticipant } = json[newMessageEventType]?.payload
+        if (!fromParticipant) return
+
+        const participantID = fromEntity.split(':').pop()
+        const threads = this.threads.filter(({ participants }) => (
+          participants.items.some(({ id }) => participantID === id)
+        ))
+
+        for (const { id: threadID } of threads) onEvent([{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }])
+      }
+    }
+  }
 
   dispose = async () => {
     if (this.eventTimeout) clearInterval(this.eventTimeout)
