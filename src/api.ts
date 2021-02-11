@@ -84,10 +84,27 @@ export default class LinkedInAPI implements PlatformAPI {
           const { entityUrn = '' } = payload.event
           const threadID = entityUrn.split(':(').pop().split(',')[0]
           threadsIDs.push({ id: threadID })
-        } else if (payload?.eventUrn && topic === 'urn:li-realtime:messageReactionSummariesTopic:urn:li-realtime:myself') {
+        } else if (topic === 'urn:li-realtime:messageReactionSummariesTopic:urn:li-realtime:myself') {
           const { eventUrn = '' } = payload
+
           const threadID = eventUrn.split(':(').pop().split(',')[0]
           threadsIDs.push({ id: threadID })
+        } else if (topic === 'urn:li-realtime:conversationsTopic:urn:li-realtime:myself') {
+          const { entityUrn = '', conversation } = payload
+          const threadID = entityUrn.split(':').pop()
+
+          onEvent([{
+            type: ServerEventType.STATE_SYNC,
+            mutationType: 'update',
+            objectName: 'thread',
+            objectIDs: { threadID },
+            entries: [
+              {
+                id: threadID,
+                isUnread: !conversation.read,
+              },
+            ],
+          }])
         }
 
         for (const { id: threadID } of threadsIDs) onEvent([{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }])
