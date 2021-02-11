@@ -72,22 +72,22 @@ export default class LinkedInAPI implements PlatformAPI {
       const newMessageEventType = 'com.linkedin.realtimefrontend.DecoratedEvent'
 
       if (json[newMessageEventType]?.payload) {
-        const { payload } = json[newMessageEventType]
-        let threadsIDs = []
+        const { payload, topic = '' } = json[newMessageEventType]
+        const threadsIDs = []
 
         if (payload?.previousEventInConversationUrn) {
           // "previousEventInConversationUrn": "urn:li:fs_event:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,2-MTYxMjk5MzkyMzQxMWI0ODMyNy0wMDMmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==)"
           const { previousEventInConversationUrn } = payload
           const threadID = previousEventInConversationUrn.split(':(').pop().split(',')[0]
           threadsIDs.push({ id: threadID })
-        } else if (payload?.fromEntity) {
-          const { fromEntity = '', fromParticipant } = payload
-          if (!fromParticipant) return
-
-          const participantID = fromEntity.split(':').pop()
-          threadsIDs = this.threads.filter(({ participants }) => (
-            participants.items.some(({ id }) => participantID === id)
-          ))
+        } else if (payload?.event) {
+          const { entityUrn = '' } = payload.event
+          const threadID = entityUrn.split(':(').pop().split(',')[0]
+          threadsIDs.push({ id: threadID })
+        } else if (payload?.eventUrn && topic === 'urn:li-realtime:messageReactionSummariesTopic:urn:li-realtime:myself') {
+          const { eventUrn = '' } = payload
+          const threadID = eventUrn.split(':(').pop().split(',')[0]
+          threadsIDs.push({ id: threadID })
         }
 
         for (const { id: threadID } of threadsIDs) onEvent([{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }])
