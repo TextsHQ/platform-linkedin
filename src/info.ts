@@ -1,5 +1,6 @@
 import { PlatformInfo, MessageDeletionMode, Attribute } from '@textshq/platform-sdk'
 import { supportedReactions } from './constants'
+import { LOGIN_URL } from './lib/constants/linkedin'
 
 const icon = `<svg width="1em" height="1em" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 <rect width="16" height="16" rx="5" fill="#006699"/>
@@ -16,7 +17,11 @@ const info: PlatformInfo = {
   reactions: {
     supported: supportedReactions,
   },
-  loginMode: 'manual',
+  loginMode: 'browser',
+  browserLogin: {
+    loginURL: LOGIN_URL,
+    authCookieName: 'li_at',
+  },
   deletionMode: MessageDeletionMode.UNSUPPORTED,
   attributes: new Set([
     Attribute.NO_CACHE,
