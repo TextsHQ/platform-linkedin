@@ -4,7 +4,6 @@ import EventSource from 'eventsource'
 
 import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
 import { getCurrentUser } from './lib-v2/get-current-user'
-import { login } from './lib-v2/login'
 import { getThreads } from './lib-v2/get-threads'
 import { getMessages } from './lib-v2/get-messages'
 import { sendMessage } from './lib-v2/send-message'
@@ -35,10 +34,13 @@ export default class LinkedInAPI implements PlatformAPI {
     if (cookies) this.cookies = cookies
   }
 
-  login = async (credentials: LoginCreds): Promise<LoginResult> => {
+  login = async ({ cookieJarJSON }): Promise<LoginResult> => {
     try {
-      const { username, password } = credentials
-      const cookies = await login({ username, password })
+      const cookies = cookieJarJSON.cookies.reduce((prev, current) => ({
+        ...prev,
+        [current.key]: current.value.replace(/"/g, ''),
+      }), {})
+
       const currentUser = await getCurrentUser(cookies)
 
       this.cookies = cookies
