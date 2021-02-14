@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType } from '@textshq/platform-sdk'
 import { supportedReactions } from './constants'
 
 const getSenderID = (from: string) =>
@@ -63,20 +63,66 @@ export const mapReactions = (liReactionSummaries: any, { currentUserID, particip
   emoji: true,
 })
 
+const mapCustomContent = (liCustomMessage: any): MessageAttachment => {
+  const { mediaType, id, media } = liCustomMessage
+
+  const type = (() => {
+    switch (mediaType) {
+      case 'TENOR_GIF':
+        return MessageAttachmentType.IMG
+
+      default:
+        return MessageAttachmentType.UNKNOWN
+    }
+  })()
+
+  return {
+    id,
+    type,
+    isGif: mediaType === 'TENOR_GIF',
+    srcURL: media?.previewgif?.url ?? '',
+  }
+}
+
+const mapAttachment = (liAttachment: any): MessageAttachment => {
+  const { name, reference, mediaType, id, byteSize } = liAttachment
+
+  const type = (() => {
+    switch (mediaType) {
+      default:
+        return MessageAttachmentType.UNKNOWN
+    }
+  })()
+
+  return {
+    id,
+    fileName: name,
+    type,
+    mimeType: mediaType,
+    size: byteSize,
+    srcURL: reference,
+  }
+}
+
 export const mapMessage = (liMessage: any, currentUserID: string, participants: Participant[] = []): Message => {
   const { reactionSummaries } = liMessage
-  const { attributedBody } = liMessage.eventContent
+  const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
 
   const senderID = getSenderID(liMessage['*from'])
   const participantId = participants.find(({ id }) => id !== currentUserID).id
   const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId }))
+
+  let attachments = []
+
+  if (liAttachments) attachments = liAttachments.map(liAttachment => mapAttachment(liAttachment))
+  if (customContent) attachments = [...attachments, mapCustomContent(customContent)]
 
   return {
     _original: JSON.stringify(liMessage),
     id: liMessage.dashEntityUrn,
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody.text,
-    attachments: [],
+    attachments,
     reactions,
     senderID,
     isSender: currentUserID === senderID,
