@@ -99,7 +99,7 @@ const mapAttachment = (liAttachment: any): MessageAttachment => {
     fileName: name,
     type,
     mimeType: mediaType,
-    size: byteSize,
+    fileSize: byteSize,
     srcURL: reference,
   }
 }
