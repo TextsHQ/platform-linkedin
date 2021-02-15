@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User, ActivityType } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
 import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
@@ -12,6 +12,7 @@ import { searchUsers } from './lib-v2/search-users'
 import { toggleReaction } from './lib-v2/toggle-reaction'
 import { markMessageAsRead } from './lib-v2/mark-message-as-read'
 import { createRequestHeaders } from './lib-v2/utils/headers'
+import { toggleTypingState } from './lib-v2/toggle-typing-state'
 
 export default class LinkedInAPI implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
@@ -184,8 +185,8 @@ export default class LinkedInAPI implements PlatformAPI {
     }
   }
 
-  sendActivityIndicator = (threadID: string) => {
-    console.log(threadID, this.threads)
+  sendActivityIndicator = async (type: ActivityType, threadID: string) => {
+    if (type === ActivityType.TYPING) await toggleTypingState(this.cookies, threadID)
   }
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
@@ -193,7 +194,10 @@ export default class LinkedInAPI implements PlatformAPI {
     await toggleReaction(this.cookies, emojiRender, messageID, threadID)
   }
 
-  removeReaction = async (threadID: string, messageID: string, reactionKey: string) => {}
+  removeReaction = async (threadID: string, messageID: string, reactionKey: string) => {
+    const { render: emojiRender } = mapReactionEmoji(reactionKey)
+    await toggleReaction(this.cookies, emojiRender, messageID, threadID)
+  }
 
   deleteMessage = async (threadID: string, messageID: string) => true
 
