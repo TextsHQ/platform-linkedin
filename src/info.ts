@@ -13,6 +13,7 @@ const info: PlatformInfo = {
   version: '0.0.1',
   displayName: 'LinkedIn',
   icon,
+  typingDurationMs: 3000,
   tags: ['Beta'],
   reactions: {
     supported: supportedReactions,
