@@ -1,6 +1,7 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User, ActivityType } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
+import { uniqBy } from 'lodash'
 
 import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
 import { getCurrentUser } from './lib-v2/get-current-user'
@@ -146,7 +147,7 @@ export default class LinkedInAPI implements PlatformAPI {
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
     const items = await getThreads(this.cookies)
     const parsedItems = mapThreads(items)
-    this.threads = [...this.threads, ...parsedItems]
+    this.threads = uniqBy([...this.threads, ...parsedItems], 'id')
 
     return {
       items: parsedItems,
