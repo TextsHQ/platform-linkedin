@@ -37,11 +37,7 @@ export default class LinkedInAPI implements PlatformAPI {
 
   login = async ({ cookieJarJSON }): Promise<LoginResult> => {
     try {
-      const cookies = cookieJarJSON.cookies.reduce((prev, current) => ({
-        ...prev,
-        [current.key]: current.value.replace(/"/g, ''),
-      }), {})
-
+      const { cookies } = cookieJarJSON
       const currentUser = await getCurrentUser(cookies)
 
       this.cookies = cookies
