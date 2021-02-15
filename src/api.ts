@@ -1,5 +1,6 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User, ActivityType } from '@textshq/platform-sdk'
+import { CookieJar } from 'tough-cookie'
 import EventSource from 'eventsource'
 import { uniqBy } from 'lodash'
 
@@ -14,8 +15,9 @@ import { toggleReaction } from './lib-v2/toggle-reaction'
 import { markMessageAsRead } from './lib-v2/mark-message-as-read'
 import { createRequestHeaders } from './lib-v2/utils/headers'
 import { toggleTypingState } from './lib-v2/toggle-typing-state'
+import LinkedInAPI from './lib-v2/linkedin'
 
-export default class LinkedInAPI implements PlatformAPI {
+export default class LinkedIn implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
 
   private session: string | null = null
@@ -28,6 +30,8 @@ export default class LinkedInAPI implements PlatformAPI {
 
   private searchedUsers: User[]
 
+  readonly api = new LinkedInAPI()
+
   init = async (serialized: { session: string; user: CurrentUser, cookies: any }) => {
     const { session, user, cookies } = serialized || {}
 
@@ -38,7 +42,9 @@ export default class LinkedInAPI implements PlatformAPI {
 
   login = async ({ cookieJarJSON }): Promise<LoginResult> => {
     try {
-      const { cookies } = cookieJarJSON
+      const cookies = CookieJar.fromJSON(cookieJarJSON)
+      await this.api.setLoginState(cookies)
+
       const currentUser = await getCurrentUser(cookies)
 
       this.cookies = cookies
