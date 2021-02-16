@@ -22,7 +22,7 @@ export const sendMessage = async (cookies, message: MessageContent, threadId: st
         'https://www.linkedin.com/voyager/api/voyagerMediaUploadMetadata',
         {
           fileSize: 2426,
-          filename: 'image.png',
+          filename: message.fileName,
           mediaUploadType: 'MESSAGING_PHOTO_ATTACHMENT',
         },
         {
@@ -53,7 +53,7 @@ export const sendMessage = async (cookies, message: MessageContent, threadId: st
 
       attachments.push({
         id: data.data.value.urn,
-        reference: { string: 'blob:https://www.linkedin.com/07bb3c11-4589-407a-bc1b-4c4c39ba9492' },
+        reference: { string: buffer.toString() },
         mediaType: message.mimeType,
         byteSize: 1667,
         name: message.fileName,
