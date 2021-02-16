@@ -175,7 +175,6 @@ export default class LinkedInAPI implements PlatformAPI {
 
   sendMessage = async (threadID: string, content: MessageContent): Promise<boolean | Message[]> => {
     try {
-      console.log({ content })
       await sendMessage(this.cookies, content, threadID)
       return true
     } catch (error) {
