@@ -229,4 +229,6 @@ export default class LinkedInAPI {
       headers: this.requestHeaders,
     })
   }
+
+  getRequestHeaders = () => this.requestHeaders
 }

@@ -1,12 +1,11 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User, ActivityType, ReAuthError } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
-import EventSource from 'eventsource'
 import { uniqBy } from 'lodash'
 
 import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
-import { createRequestHeaders } from './lib/utils/headers'
 import LinkedInAPI from './lib/linkedin'
+import LinkedInRealTime from './lib/real-time'
 
 export default class LinkedIn implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
@@ -18,6 +17,8 @@ export default class LinkedIn implements PlatformAPI {
   private cookies: any
 
   private searchedUsers: User[]
+
+  private realTimeApi: null | LinkedInRealTime = null
 
   readonly api = new LinkedInAPI()
 
@@ -51,55 +52,8 @@ export default class LinkedIn implements PlatformAPI {
   getCurrentUser = () => mapCurrentUser(this.currentUser)
 
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
-    const headers = createRequestHeaders(this.cookies)
-    const url = 'https://realtime.www.linkedin.com/realtime/connect'
-
-    const eventSource = new EventSource(url, { headers })
-    eventSource.onmessage = event => {
-      if (!event.data.startsWith('{')) return
-
-      const json = JSON.parse(event.data)
-      const newMessageEventType = 'com.linkedin.realtimefrontend.DecoratedEvent'
-
-      if (json[newMessageEventType]?.payload) {
-        const { payload, topic = '' } = json[newMessageEventType]
-        const threadsIDs = []
-
-        if (payload?.previousEventInConversationUrn) {
-          // "previousEventInConversationUrn": "urn:li:fs_event:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,2-MTYxMjk5MzkyMzQxMWI0ODMyNy0wMDMmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==)"
-          const { previousEventInConversationUrn } = payload
-          const threadID = previousEventInConversationUrn.split(':(').pop().split(',')[0]
-          threadsIDs.push({ id: threadID })
-        } else if (payload?.event) {
-          const { entityUrn = '' } = payload.event
-          const threadID = entityUrn.split(':(').pop().split(',')[0]
-          threadsIDs.push({ id: threadID })
-        } else if (topic === 'urn:li-realtime:messageReactionSummariesTopic:urn:li-realtime:myself') {
-          const { eventUrn = '' } = payload
-
-          const threadID = eventUrn.split(':(').pop().split(',')[0]
-          threadsIDs.push({ id: threadID })
-        } else if (topic === 'urn:li-realtime:conversationsTopic:urn:li-realtime:myself') {
-          const { entityUrn = '', conversation } = payload
-          const threadID = entityUrn.split(':').pop()
-
-          onEvent([{
-            type: ServerEventType.STATE_SYNC,
-            mutationType: 'update',
-            objectName: 'thread',
-            objectIDs: { threadID },
-            entries: [
-              {
-                id: threadID,
-                isUnread: !conversation.read,
-              },
-            ],
-          }])
-        }
-
-        for (const { id: threadID } of threadsIDs) onEvent([{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }])
-      }
-    }
+    this.realTimeApi = new LinkedInRealTime(this.api, onEvent)
+    this.realTimeApi.subscribeToEvents()
   }
 
   dispose = async () => {
