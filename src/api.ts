@@ -27,8 +27,9 @@ export default class LinkedIn implements PlatformAPI {
     if (!cookies) return
 
     await this.api.setLoginState(CookieJar.fromJSON(cookies))
-    this.currentUser = await this.api.getCurrentUser()
+    const currentUser = await this.api.getCurrentUser()
 
+    this.currentUser = currentUser
     if (!this.currentUser) throw new ReAuthError()
   }
 
@@ -89,31 +90,55 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
-    const items = await this.api.getThreads()
+    const { cursor } = pagination ?? {}
+    const createdBefore = cursor ? new Date(cursor).getTime() : new Date().getTime()
+
+    const items = await this.api.getThreads(createdBefore)
     const parsedItems = mapThreads(items)
+
+    const previousLastThreadId = [...this.threads].pop()?.id
     this.threads = uniqBy([...this.threads, ...parsedItems], 'id')
+
+    const latestThread = [...this.threads].pop()
+    const hasMore = !pagination || previousLastThreadId !== [...parsedItems]?.pop()?.id
+    const oldestCursor = latestThread?.timestamp.toString()
 
     return {
       items: parsedItems,
-      hasMore: false,
-      oldestCursor: '0',
+      hasMore,
+      oldestCursor,
     }
   }
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
-    const linkedInItems = await this.api.getMessages(threadID)
+    const { cursor } = pagination ?? {}
+
+    const thread = this.threads.find(({ id }) => id === threadID)
+    const cursorTimestamp = cursor && [...thread.messages?.items].find(({ id }) => id === cursor).timestamp
+    const createdBefore = cursorTimestamp ? new Date(cursorTimestamp).getTime() : new Date().getTime()
+
+    const linkedInItems = await this.api.getMessages(threadID, createdBefore)
     const { events } = linkedInItems
 
     const currentUserId = mapCurrentUser(this.currentUser).id
     const { participants } = this.threads.find(({ id: threadId }) => threadID === threadId)
 
-    const items = events
+    const items: Message[] = events
       .map((message: any) => mapMessage(message, currentUserId, participants.items))
       .sort((a: any, b: any) => a.timestamp - b.timestamp)
 
+    const latestThreadMessage = [...thread.messages?.items]?.pop()
+    thread.messages.items = uniqBy([...thread.messages.items, ...items], 'id')
+
+    const hasMore = !pagination || latestThreadMessage?.id !== [...items].pop()?.id
+    const oldestCursor = [...items].pop().id
+    const newestCursor = [...items][0].id
+
     return {
       items,
-      hasMore: false,
+      hasMore,
+      oldestCursor,
+      newestCursor,
     }
   }
 
