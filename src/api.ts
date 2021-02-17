@@ -1,7 +1,6 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
-import { uniqBy } from 'lodash'
 
 import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
 import LinkedInAPI from './lib/linkedin'
@@ -11,8 +10,6 @@ export default class LinkedIn implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
 
   private currentUser = null
-
-  private threads: Thread[] = []
 
   private cookies: any
 
@@ -92,59 +89,37 @@ export default class LinkedIn implements PlatformAPI {
 
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
     const { cursor } = pagination ?? {}
-    const createdBefore = cursor ? new Date(cursor).getTime() : new Date().getTime()
+    const createdBefore = cursor ? new Date(+cursor).getTime() : new Date().getTime()
 
     const items = await this.api.getThreads(createdBefore)
-    const parsedItems = mapThreads(items)
-
-    const latestThread = this.threads[this.threads.length - 1]
-    const previousLastThreadId = latestThread?.id
-    this.threads = uniqBy([...this.threads, ...parsedItems], 'id')
-
-    const hasMore = !pagination || previousLastThreadId !== parsedItems[parsedItems.length - 1]?.id
-    const oldestCursor = latestThread?.timestamp.toString()
+    const mapped = mapThreads(items)
 
     return {
-      items: parsedItems,
-      hasMore,
-      oldestCursor,
+      items: mapped,
+      hasMore: mapped.length > 0,
+      oldestCursor: mapped[mapped.length - 1]?.timestamp.toString(),
     }
   }
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
     const { cursor } = pagination ?? {}
+    const createdBefore = cursor ? new Date(+cursor).getTime() : new Date().getTime()
 
-    const thread = this.threads.find(({ id }) => id === threadID)
-    const cursorTimestamp = cursor && thread.messages?.items.find(({ id }) => id === cursor).timestamp
-    const createdBefore = cursorTimestamp ? new Date(cursorTimestamp).getTime() : new Date().getTime()
-
-    const linkedInItems = await this.api.getMessages(threadID, createdBefore)
-    const { events } = linkedInItems
-
+    const messages = await this.api.getMessages(threadID, createdBefore)
     const currentUserId = mapCurrentUser(this.currentUser).id
-    const { participants } = thread
-
-    const items: Message[] = events
-      .map((message: any) => mapMessage(message, currentUserId, participants.items))
-      .sort((a: any, b: any) => a.timestamp - b.timestamp)
-
-    const latestThreadMessage = thread.messages?.items[thread.messages?.items.length - 1]
-    thread.messages.items = uniqBy([...thread.messages.items, ...items], 'id')
-
-    const oldestCursor = items[items.length - 1]?.id
-    const hasMore = !pagination || latestThreadMessage?.id !== oldestCursor
+    const items = (messages.events as any[])
+      .map<Message>(message => mapMessage(message, currentUserId))
+      .sort((a, b) => a.timestamp.valueOf() - b.timestamp.valueOf())
 
     return {
       items,
-      hasMore,
-      oldestCursor,
+      hasMore: items.length > 0,
+      oldestCursor: items[items.length - 1]?.id,
     }
   }
 
-  sendMessage = async (threadID: string, content: MessageContent): Promise<boolean | Message[]> => {
-    await this.api.sendMessage(content, threadID)
-    return true
-  }
+  sendMessage = (threadID: string, content: MessageContent) =>
+    this.api.sendMessage(content, threadID)
 
   sendActivityIndicator = async (type: ActivityType, threadID: string) => {
     if (type === ActivityType.TYPING) await this.api.toggleTypingState(threadID)

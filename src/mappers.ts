@@ -118,24 +118,24 @@ const mapFeedUpdate = (liFeedUpdate: string): MessageLink => {
   }
 }
 
-export const mapMessage = (liMessage: any, currentUserID: string, participants: Participant[] = []): Message => {
+export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   const { reactionSummaries } = liMessage
   const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
 
   const senderID = getSenderID(liMessage['*from'])
-  const participantId = participants.find(({ id }) => id !== currentUserID).id
-  const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId }))
 
-  let attachments = []
-  let links = []
+  // linkedin seems to have broken reactions?
+  const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId: senderID }))
 
-  if (liAttachments) attachments = liAttachments.map(liAttachment => mapAttachment(liAttachment))
-  if (customContent) attachments = [...attachments, mapCustomContent(customContent)]
-  if (liMessage.eventContent['*feedUpdate']) links = [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])]
+  const attachments = liAttachments?.map(liAttachment => mapAttachment(liAttachment)) || []
+  if (customContent) attachments.push(mapCustomContent(customContent))
+
+  const links = liMessage.eventContent['*feedUpdate'] ? [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])] : []
 
   return {
     _original: JSON.stringify(liMessage),
     id: liMessage.dashEntityUrn,
+    cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody.text,
     attachments,

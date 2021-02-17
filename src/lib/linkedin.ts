@@ -32,10 +32,7 @@ export default class LinkedInAPI {
     return miniProfile
   }
 
-  getMessages = async (
-    threadID: string,
-    createdBefore: number = new Date().getTime(),
-  ) => {
+  getMessages = async (threadID: string, createdBefore: number) => {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
     const queryParams = { keyVersion: 'LEGACY_INBOX', createdBefore }
 
@@ -169,10 +166,11 @@ export default class LinkedInAPI {
       dedupeByClientGeneratedToken: false,
     }
 
-    await this.linkedInRequest.post(url, payload, {
+    const res = await this.linkedInRequest.post(url, payload, {
       params: queryParams,
       headers: this.requestHeaders,
     })
+    return res.status === 201
   }
 
   createThread = async (profileIds: string[]) => {
