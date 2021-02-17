@@ -165,8 +165,6 @@ export default class LinkedIn implements PlatformAPI {
     await this.api.toggleReaction(emojiRender, messageID, threadID)
   }
 
-  deleteMessage = async (threadID: string, messageID: string) => true
-
   sendReadReceipt = async (threadID: string, messageID: string) => {
     await this.api.markThreadAsRead(threadID)
   }

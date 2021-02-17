@@ -27,7 +27,7 @@ const info: PlatformInfo = {
     loginURL,
     authCookieName: 'li_at',
   },
-  deletionMode: MessageDeletionMode.UNSUPPORTED,
+  deletionMode: MessageDeletionMode.NONE,
   attributes: new Set([
     Attribute.NO_CACHE,
   ]),
