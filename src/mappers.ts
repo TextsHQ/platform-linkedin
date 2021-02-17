@@ -1,7 +1,7 @@
 import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
-import { supportedReactions } from './constants/texts'
+import { supportedReactions } from './constants'
 
 const getSenderID = (from: string) =>
   // "*from": "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)",

@@ -4,10 +4,8 @@ import got from 'got'
 import fs from 'fs'
 import { CookieJar } from 'tough-cookie'
 
-import { LINKEDIN_API_CONVERSATIONS_ENDPOINT, LINKEDIN_API_ME_ENDPOINT, LINKEDIN_API_URL } from '../constants/linkedin'
-import { filterByType, parseConversationResponse } from './helpers'
-import { createRequestHeaders } from './utils/headers'
-import { paramsSerializer } from './utils/params-serializer'
+import { LinkedInURLs } from '../constants'
+import { filterByType, parseConversationResponse, createRequestHeaders, paramsSerializer } from './helpers'
 
 export default class LinkedInAPI {
   private requestHeaders: any = null
@@ -23,7 +21,7 @@ export default class LinkedInAPI {
   }
 
   getCurrentUser = async (): Promise<unknown> => {
-    const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_ME_ENDPOINT}`
+    const url = LinkedInURLs.API_ME
 
     const { body } = await got(url, { headers: this.requestHeaders })
     const response = JSON.parse(body)
@@ -38,7 +36,7 @@ export default class LinkedInAPI {
     threadID: string,
     createdBefore: number = new Date().getTime(),
   ): Promise<any> => {
-    const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_CONVERSATIONS_ENDPOINT}/${threadID}/events`
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
     const queryParams = { keyVersion: 'LEGACY_INBOX', createdBefore }
 
     const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
@@ -66,7 +64,7 @@ export default class LinkedInAPI {
   }
 
   getThreads = async (createdBefore: number = new Date().getTime()): Promise<any> => {
-    const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_CONVERSATIONS_ENDPOINT}`
+    const url = `${LinkedInURLs.API_CONVERSATIONS}`
     const queryParams = { createdBefore }
     const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
     const firstResponseParsed = parseConversationResponse(JSON.parse(body))
@@ -82,14 +80,14 @@ export default class LinkedInAPI {
 
   markThreadAsRead = async (threadID: string): Promise<void> => {
     const encodedEndpoint = encodeURIComponent(`${threadID}`)
-    const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_CONVERSATIONS_ENDPOINT}/${encodedEndpoint}`
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
     const payload = { patch: { $set: { read: true } } }
 
     await this.linkedInRequest.post(url, payload, { headers: this.requestHeaders })
   }
 
   searchUsers = async (keyword: string): Promise<unknown[]> => {
-    const url = `${LINKEDIN_API_URL}/voyagerMessagingTypeaheadHits`
+    const url = `${LinkedInURLs.API_BASE}/voyagerMessagingTypeaheadHits`
     const queryParams = {
       keyword,
       q: 'typeaheadKeyword',
@@ -108,7 +106,7 @@ export default class LinkedInAPI {
   }
 
   sendMessage = async (message: MessageContent, threadID: string): Promise<void> => {
-    const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_CONVERSATIONS_ENDPOINT}/${threadID}/events`
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
     const queryParams = { action: 'create' }
     const attachments = []
 
@@ -178,7 +176,7 @@ export default class LinkedInAPI {
   }
 
   createThread = async (profileIds: string[]): Promise<any> => {
-    const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_CONVERSATIONS_ENDPOINT}`
+    const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = { action: 'create' }
 
     const payload = {
@@ -210,7 +208,7 @@ export default class LinkedInAPI {
   toggleReaction = async (emoji: string, messageID: string, threadID: string): Promise<void> => {
     const parsedMessageId = messageID.split(':').pop()
     const encodedEndpoint = encodeURIComponent(`${parsedMessageId}`)
-    const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_CONVERSATIONS_ENDPOINT}/${threadID}/events/${encodedEndpoint}`
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events/${encodedEndpoint}`
     const queryParams = { action: 'reactWithEmoji' }
     const payload = { emoji }
 
@@ -221,7 +219,7 @@ export default class LinkedInAPI {
   }
 
   toggleTypingState = async (threadID:string): Promise<void> => {
-    const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_CONVERSATIONS_ENDPOINT}`
+    const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = { action: 'typing' }
     const payload = { conversationId: threadID }
 

@@ -1,7 +1,8 @@
 import { PlatformInfo, MessageDeletionMode, Attribute } from '@textshq/platform-sdk'
 
-import { supportedReactions } from './constants/texts'
-import { LINKEDIN_LOGIN_URL as loginURL } from './constants/linkedin'
+import { supportedReactions, LinkedInURLs } from './constants'
+
+const { LOGIN: loginURL } = LinkedInURLs
 
 const icon = (
   `<svg width="1em" height="1em" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
