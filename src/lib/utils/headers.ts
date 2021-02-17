@@ -1,7 +1,12 @@
 import { reduce } from 'lodash'
-import { requestHeaders } from '../constants/headers'
 
-export const createRequestHeaders = cookies => {
+import { requestHeaders } from '../../constants/headers'
+
+/**
+ * @param cookies
+ * @returns {Record<string, string>}
+ */
+export const createRequestHeaders = (cookies): Record<string, string> => {
   const parsedCookies = cookies.reduce((prev, current) => ({
     ...prev,
     // This is done to be sure that the cookies doesn't have the quotes (""). For some reason

@@ -1,6 +1,5 @@
 import { filterByType } from './filter-by-type'
 
-// FIXME: Add type
 export const parseConversationResponse = (response): any[] => {
   const { included = [] } = response
 

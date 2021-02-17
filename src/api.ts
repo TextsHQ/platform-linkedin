@@ -1,26 +1,15 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User, ActivityType } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, CurrentUser, InboxName, MessageContent, PaginationArg, LoginCreds, ServerEventType, User, ActivityType, ReAuthError } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 import EventSource from 'eventsource'
 import { uniqBy } from 'lodash'
 
 import { mapCurrentUser, mapMessage, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
-import { getCurrentUser } from './lib-v2/get-current-user'
-import { getThreads } from './lib-v2/get-threads'
-import { getMessages } from './lib-v2/get-messages'
-import { sendMessage } from './lib-v2/send-message'
-import { createThread } from './lib-v2/create-thread'
-import { searchUsers } from './lib-v2/search-users'
-import { toggleReaction } from './lib-v2/toggle-reaction'
-import { markMessageAsRead } from './lib-v2/mark-message-as-read'
-import { createRequestHeaders } from './lib-v2/utils/headers'
-import { toggleTypingState } from './lib-v2/toggle-typing-state'
-import LinkedInAPI from './lib-v2/linkedin'
+import { createRequestHeaders } from './lib/utils/headers'
+import LinkedInAPI from './lib/linkedin'
 
 export default class LinkedIn implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
-
-  private session: string | null = null
 
   private currentUser = null
 
@@ -32,23 +21,22 @@ export default class LinkedIn implements PlatformAPI {
 
   readonly api = new LinkedInAPI()
 
-  init = async (serialized: { session: string; user: CurrentUser, cookies: any }) => {
-    const { session, user, cookies } = serialized || {}
+  init = async (serialized: { cookies: any }) => {
+    const { cookies } = serialized || {}
+    if (!cookies) return
 
-    if (session) this.session = session
-    if (user) this.currentUser = user
-    if (cookies) this.cookies = cookies
+    await this.api.setLoginState(CookieJar.fromJSON(cookies))
+    this.currentUser = await this.api.getCurrentUser()
+
+    if (!this.currentUser) throw new ReAuthError()
   }
 
   login = async ({ cookieJarJSON }): Promise<LoginResult> => {
     try {
-      const cookies = CookieJar.fromJSON(cookieJarJSON)
-      await this.api.setLoginState(cookies)
+      await this.api.setLoginState(CookieJar.fromJSON(cookieJarJSON))
 
-      const currentUser = await getCurrentUser(cookies)
-
-      this.cookies = cookies
-      this.currentUser = currentUser
+      this.currentUser = await this.api.getCurrentUser()
+      this.cookies = cookieJarJSON
 
       return { type: 'success' }
     } catch (error) {
@@ -56,11 +44,7 @@ export default class LinkedIn implements PlatformAPI {
     }
   }
 
-  serializeSession = () => ({
-    session: this.session,
-    user: this.currentUser,
-    cookies: this.cookies,
-  })
+  serializeSession = () => ({ cookies: this.cookies })
 
   logout = () => { }
 
@@ -123,7 +107,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   searchUsers = async (typed: string) => {
-    const res = await searchUsers(this.cookies, typed)
+    const res = await this.api.searchUsers(typed)
     const users = res.map((miniProfile: any) => mapMiniProfile(miniProfile))
     this.searchedUsers = [...users]
 
@@ -131,7 +115,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   createThread = async (userIDs: string[]): Promise<Thread> => {
-    const res = await createThread(this.cookies, '', userIDs)
+    const res = await this.api.createThread(userIDs)
     const { createdAt, conversationUrn } = res
     // conversationUrn: "urn:li:fs_conversation:2-YmU3NDYwNzctNTU0ZS00NjdhLTg3ZDktMjkwOTE5NDAxNGQ4XzAxMw=="
     const id = conversationUrn.split(':').pop()
@@ -151,7 +135,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
-    const items = await getThreads(this.cookies)
+    const items = await this.api.getThreads()
     const parsedItems = mapThreads(items)
     this.threads = uniqBy([...this.threads, ...parsedItems], 'id')
 
@@ -163,7 +147,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
-    const linkedInItems = await getMessages(this.cookies, threadID)
+    const linkedInItems = await this.api.getMessages(threadID)
     const { events } = linkedInItems
 
     const currentUserId = mapCurrentUser(this.currentUser).id
@@ -181,7 +165,7 @@ export default class LinkedIn implements PlatformAPI {
 
   sendMessage = async (threadID: string, content: MessageContent): Promise<boolean | Message[]> => {
     try {
-      await sendMessage(this.cookies, content, threadID)
+      await this.api.sendMessage(content, threadID)
       return true
     } catch (error) {
       throw new Error(error.message)
@@ -189,22 +173,22 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   sendActivityIndicator = async (type: ActivityType, threadID: string) => {
-    if (type === ActivityType.TYPING) await toggleTypingState(this.cookies, threadID)
+    if (type === ActivityType.TYPING) await this.api.toggleTypingState(threadID)
   }
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
     const { render: emojiRender } = mapReactionEmoji(reactionKey)
-    await toggleReaction(this.cookies, emojiRender, messageID, threadID)
+    await this.api.toggleReaction(emojiRender, messageID, threadID)
   }
 
   removeReaction = async (threadID: string, messageID: string, reactionKey: string) => {
     const { render: emojiRender } = mapReactionEmoji(reactionKey)
-    await toggleReaction(this.cookies, emojiRender, messageID, threadID)
+    await this.api.toggleReaction(emojiRender, messageID, threadID)
   }
 
   deleteMessage = async (threadID: string, messageID: string) => true
 
   sendReadReceipt = async (threadID: string, messageID: string) => {
-    await markMessageAsRead(this.cookies, threadID)
+    await this.api.markThreadAsRead(threadID)
   }
 }

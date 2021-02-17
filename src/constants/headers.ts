@@ -1,4 +1,4 @@
-export const authHeaders = {
+export const authHeaders: Record<string, string> = {
   'user-agent': 'LinkedIn/8.8.1 CFNetwork/711.3.18 Darwin/14.0.0',
   'accept-encoding': 'gzip, deflate',
   Accept: '*/*',
@@ -11,7 +11,7 @@ export const authHeaders = {
   'Content-Type': 'application/x-www-form-urlencoded',
 }
 
-export const requestHeaders = {
+export const requestHeaders: Record<string, string> = {
   authority: 'www.linkedin.com',
   'x-restli-protocol-version': '2.0.0',
   'x-li-lang': 'en_US',
