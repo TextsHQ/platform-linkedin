@@ -35,9 +35,12 @@ export default class LinkedInAPI {
     return miniProfile
   }
 
-  getMessages = async (threadID: string): Promise<any> => {
+  getMessages = async (
+    threadID: string,
+    createdBefore: number = new Date().getTime(),
+  ): Promise<any> => {
     const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_CONVERSATIONS_ENDPOINT}/${threadID}/events`
-    const queryParams = { keyVersion: 'LEGACY_INBOX' }
+    const queryParams = { keyVersion: 'LEGACY_INBOX', createdBefore }
 
     const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
 
@@ -63,11 +66,9 @@ export default class LinkedInAPI {
     }
   }
 
-  getThreads = async (): Promise<any> => {
+  getThreads = async (createdBefore: number = new Date().getTime()): Promise<any> => {
     const url = `${LINKEDIN_API_URL}/${LINKEDIN_API_CONVERSATIONS_ENDPOINT}`
-    // FIXME: Add pagination
-    // After 01 Jan 2020
-    const queryParams = { createdAfter: '1577847600000' }
+    const queryParams = { createdBefore }
     const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
     const firstResponseParsed = parseConversationResponse(JSON.parse(body))
 
