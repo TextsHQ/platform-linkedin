@@ -1,7 +1,7 @@
 import { OnServerEventCallback, ServerEventType } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
-import { LINKEDIN_REALTIME_URL } from '../constants/linkedin'
+import { LinkedInURLs } from '../constants'
 import LinkedInAPI from './linkedin'
 
 export default class LinkedInRealTime {
@@ -16,7 +16,7 @@ export default class LinkedInRealTime {
 
   subscribeToEvents = async (): Promise<void> => {
     const headers = this.api.getRequestHeaders()
-    const eventSource = new EventSource(LINKEDIN_REALTIME_URL, { headers })
+    const eventSource = new EventSource(LinkedInURLs.REALTIME, { headers })
 
     eventSource.onmessage = event => {
       if (!event.data.startsWith('{')) return
