@@ -98,4 +98,3 @@ export const paramsSerializer = (params: Record<string, string | Record<string, 
     encodeURIComponent: uri => uri,
   })
 }
-
