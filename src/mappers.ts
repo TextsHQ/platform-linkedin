@@ -1,4 +1,6 @@
 import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType } from '@textshq/platform-sdk'
+import { orderBy } from 'lodash'
+
 import { supportedReactions } from './constants/texts'
 
 const getSenderID = (from: string) =>
@@ -31,7 +33,7 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>): Thread => {
     timestamp: new Date(conversation?.lastActivityAt),
     isReadOnly: false,
     mutedUntil: conversation.muted ? 'forever' : undefined,
-    messages: { items: [], hasMore: false },
+    messages: { items: [], hasMore: true },
     participants: {
       items: mapParticipants(conversation['*participants'], entitiesMap),
       hasMore: false,
@@ -51,7 +53,7 @@ const groupEntities = (liThreads: any[]) => {
 
 export const mapThreads = (liThreads: any[]): Thread[] => {
   const grouped = groupEntities(liThreads)
-  return liThreads.map(thread => mapThread(thread, grouped))
+  return orderBy(liThreads.map(thread => mapThread(thread, grouped)), 'lastActivityAt', 'desc')
 }
 
 export const mapReactionEmoji = (reactionKey: string) => supportedReactions[reactionKey]
@@ -143,12 +145,12 @@ export const mapMiniProfile = (liMiniProfile: any): User => {
 
 export const mapCurrentUser = (liCurrentUser: any): CurrentUser => {
   // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
-  const id = liCurrentUser.entityUrn.split(':').pop()
+  const id = liCurrentUser?.entityUrn?.split(':').pop()
 
   return {
     id,
-    displayText: liCurrentUser.publicIdentifier,
-    username: liCurrentUser.publicIdentifier,
-    fullName: `${liCurrentUser.firstName} ${liCurrentUser.lastName}`,
+    displayText: liCurrentUser?.publicIdentifier,
+    username: liCurrentUser?.publicIdentifier,
+    fullName: `${liCurrentUser?.firstName} ${liCurrentUser?.lastName}`,
   }
 }
