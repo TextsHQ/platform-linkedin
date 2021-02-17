@@ -1,4 +1,4 @@
-import { SupportedReaction } from "@textshq/platform-sdk";
+import { SupportedReaction } from '@textshq/platform-sdk'
 
 export const supportedReactions: Record<string, SupportedReaction> = {
   clap: { title: 'Clap', render: '👏' },
