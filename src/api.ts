@@ -25,6 +25,7 @@ export default class LinkedIn implements PlatformAPI {
   init = async (serialized: { cookies: any }) => {
     const { cookies } = serialized || {}
     if (!cookies) return
+    this.cookies = cookies
 
     await this.api.setLoginState(CookieJar.fromJSON(cookies))
     const currentUser = await this.api.getCurrentUser()
