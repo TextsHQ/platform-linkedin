@@ -12,7 +12,7 @@ export default class LinkedInAPI {
 
   private linkedInRequest: AxiosInstance | null = null
 
-  setLoginState = async (cookieJar: CookieJar): Promise<void> => {
+  setLoginState = async (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError()
     const { cookies = [] } = { ...cookieJar.toJSON() }
 
@@ -20,7 +20,7 @@ export default class LinkedInAPI {
     this.linkedInRequest = axios.create({ paramsSerializer, withCredentials: true })
   }
 
-  getCurrentUser = async (): Promise<unknown> => {
+  getCurrentUser = async () => {
     const url = LinkedInURLs.API_ME
 
     const { body } = await got(url, { headers: this.requestHeaders })
@@ -35,7 +35,7 @@ export default class LinkedInAPI {
   getMessages = async (
     threadID: string,
     createdBefore: number = new Date().getTime(),
-  ): Promise<any> => {
+  ) => {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
     const queryParams = { keyVersion: 'LEGACY_INBOX', createdBefore }
 
@@ -63,7 +63,7 @@ export default class LinkedInAPI {
     }
   }
 
-  getThreads = async (createdBefore: number = new Date().getTime()): Promise<any> => {
+  getThreads = async (createdBefore: number = new Date().getTime()) => {
     const url = `${LinkedInURLs.API_CONVERSATIONS}`
     const queryParams = { createdBefore }
     const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
@@ -78,7 +78,7 @@ export default class LinkedInAPI {
       })
   }
 
-  markThreadAsRead = async (threadID: string): Promise<void> => {
+  markThreadAsRead = async (threadID: string) => {
     const encodedEndpoint = encodeURIComponent(`${threadID}`)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
     const payload = { patch: { $set: { read: true } } }
@@ -86,7 +86,7 @@ export default class LinkedInAPI {
     await this.linkedInRequest.post(url, payload, { headers: this.requestHeaders })
   }
 
-  searchUsers = async (keyword: string): Promise<unknown[]> => {
+  searchUsers = async (keyword: string) => {
     const url = `${LinkedInURLs.API_BASE}/voyagerMessagingTypeaheadHits`
     const queryParams = {
       keyword,
@@ -105,7 +105,7 @@ export default class LinkedInAPI {
     return data?.included ?? []
   }
 
-  sendMessage = async (message: MessageContent, threadID: string): Promise<void> => {
+  sendMessage = async (message: MessageContent, threadID: string) => {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
     const queryParams = { action: 'create' }
     const attachments = []
@@ -175,7 +175,7 @@ export default class LinkedInAPI {
     })
   }
 
-  createThread = async (profileIds: string[]): Promise<any> => {
+  createThread = async (profileIds: string[]) => {
     const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = { action: 'create' }
 
@@ -205,7 +205,7 @@ export default class LinkedInAPI {
     return data?.data?.value
   }
 
-  toggleReaction = async (emoji: string, messageID: string, threadID: string): Promise<void> => {
+  toggleReaction = async (emoji: string, messageID: string, threadID: string) => {
     const parsedMessageId = messageID.split(':').pop()
     const encodedEndpoint = encodeURIComponent(`${parsedMessageId}`)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events/${encodedEndpoint}`
@@ -218,7 +218,7 @@ export default class LinkedInAPI {
     })
   }
 
-  toggleTypingState = async (threadID:string): Promise<void> => {
+  toggleTypingState = async (threadID: string) => {
     const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = { action: 'typing' }
     const payload = { conversationId: threadID }
