@@ -1,4 +1,9 @@
-import { filterByType } from './filter-by-type'
+/**
+ * @param data
+ * @param type
+ * @returns {any[]}
+ */
+export const filterByType = (data: any[], type: string): any[] => data.filter(({ $type }) => $type === type)
 
 export const parseConversationResponse = (response): any[] => {
   const { included = [] } = response
