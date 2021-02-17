@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { supportedReactions } from './constants/texts'
@@ -106,6 +106,18 @@ const mapAttachment = (liAttachment: any): MessageAttachment => {
   }
 }
 
+const mapFeedUpdate = (liFeedUpdate: string): MessageLink => {
+  // *feedUpdate : "urn:li:fs_updateV2:(urn:li:activity:6767570017279066112,MESSAGING_RESHARE,EMPTY,DEFAULT,false)"
+  const urn = liFeedUpdate.split(':(').pop().split(',')[0]
+  const baseUrl = 'https://www.linkedin.com/feed/update'
+  const url = `${baseUrl}/${urn}`
+
+  return {
+    url,
+    title: 'Feed Update',
+  }
+}
+
 export const mapMessage = (liMessage: any, currentUserID: string, participants: Participant[] = []): Message => {
   const { reactionSummaries } = liMessage
   const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
@@ -115,9 +127,11 @@ export const mapMessage = (liMessage: any, currentUserID: string, participants: 
   const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId }))
 
   let attachments = []
+  let links = []
 
   if (liAttachments) attachments = liAttachments.map(liAttachment => mapAttachment(liAttachment))
   if (customContent) attachments = [...attachments, mapCustomContent(customContent)]
+  if (liMessage.eventContent['*feedUpdate']) links = [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])]
 
   return {
     _original: JSON.stringify(liMessage),
@@ -125,6 +139,7 @@ export const mapMessage = (liMessage: any, currentUserID: string, participants: 
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody.text,
     attachments,
+    links,
     reactions,
     senderID,
     isSender: currentUserID === senderID,
