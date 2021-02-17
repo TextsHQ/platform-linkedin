@@ -5,8 +5,7 @@ import fs from 'fs'
 import { CookieJar } from 'tough-cookie'
 
 import { LINKEDIN_API_CONVERSATIONS_ENDPOINT, LINKEDIN_API_ME_ENDPOINT, LINKEDIN_API_URL } from '../constants/linkedin'
-import { filterByType } from './helpers/filter-by-type'
-import { parseConversationResponse } from './helpers/parse-conversation-response'
+import { filterByType, parseConversationResponse } from './helpers'
 import { createRequestHeaders } from './utils/headers'
 import { paramsSerializer } from './utils/params-serializer'
 
@@ -114,10 +113,12 @@ export default class LinkedInAPI {
     const attachments = []
 
     if (message.mimeType) {
+      const buffer = message.fileBuffer ?? fs.readFileSync(message.filePath)
+
       const { data } = await this.linkedInRequest.post(
         'https://www.linkedin.com/voyager/api/voyagerMediaUploadMetadata',
         {
-          fileSize: 2426,
+          fileSize: buffer.byteLength,
           filename: message.fileName,
           mediaUploadType: 'MESSAGING_PHOTO_ATTACHMENT',
         },
@@ -127,7 +128,6 @@ export default class LinkedInAPI {
         },
       )
 
-      const buffer = message.fileBuffer ?? fs.readFileSync(message.filePath)
       await this.linkedInRequest.put(
         data.data.value.singleUploadUrl,
         buffer,
@@ -151,7 +151,7 @@ export default class LinkedInAPI {
         id: data.data.value.urn,
         reference: { string: buffer.toString() },
         mediaType: message.mimeType,
-        byteSize: 1667,
+        byteSize: buffer.byteLength,
         name: message.fileName,
       })
     }
