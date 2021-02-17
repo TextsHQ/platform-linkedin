@@ -131,24 +131,18 @@ export default class LinkedIn implements PlatformAPI {
     thread.messages.items = uniqBy([...thread.messages.items, ...items], 'id')
 
     const hasMore = !pagination || latestThreadMessage?.id !== [...items].pop()?.id
-    const oldestCursor = [...items].pop().id
-    const newestCursor = [...items][0].id
+    const oldestCursor = [...items].pop()?.id
 
     return {
       items,
       hasMore,
       oldestCursor,
-      newestCursor,
     }
   }
 
   sendMessage = async (threadID: string, content: MessageContent): Promise<boolean | Message[]> => {
-    try {
-      await this.api.sendMessage(content, threadID)
-      return true
-    } catch (error) {
-      throw new Error(error.message)
-    }
+    await this.api.sendMessage(content, threadID)
+    return true
   }
 
   sendActivityIndicator = async (type: ActivityType, threadID: string) => {
