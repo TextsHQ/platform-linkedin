@@ -18,7 +18,6 @@ export default class LinkedInAPI {
   setLoginState = async (cookieJar: CookieJar): Promise<void> => {
     if (!cookieJar) throw TypeError()
     const { cookies = [] } = { ...cookieJar.toJSON() }
-    console.log('aaaaa', cookies)
 
     this.requestHeaders = createRequestHeaders(cookies)
     this.linkedInRequest = axios.create({ paramsSerializer, withCredentials: true })
