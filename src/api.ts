@@ -96,11 +96,11 @@ export default class LinkedIn implements PlatformAPI {
     const items = await this.api.getThreads(createdBefore)
     const parsedItems = mapThreads(items)
 
-    const previousLastThreadId = [...this.threads].pop()?.id
+    const latestThread = this.threads[this.threads.length - 1]
+    const previousLastThreadId = latestThread?.id
     this.threads = uniqBy([...this.threads, ...parsedItems], 'id')
 
-    const latestThread = [...this.threads].pop()
-    const hasMore = !pagination || previousLastThreadId !== [...parsedItems]?.pop()?.id
+    const hasMore = !pagination || previousLastThreadId !== parsedItems[parsedItems.length - 1]?.id
     const oldestCursor = latestThread?.timestamp.toString()
 
     return {
@@ -114,24 +114,24 @@ export default class LinkedIn implements PlatformAPI {
     const { cursor } = pagination ?? {}
 
     const thread = this.threads.find(({ id }) => id === threadID)
-    const cursorTimestamp = cursor && [...thread.messages?.items].find(({ id }) => id === cursor).timestamp
+    const cursorTimestamp = cursor && thread.messages?.items.find(({ id }) => id === cursor).timestamp
     const createdBefore = cursorTimestamp ? new Date(cursorTimestamp).getTime() : new Date().getTime()
 
     const linkedInItems = await this.api.getMessages(threadID, createdBefore)
     const { events } = linkedInItems
 
     const currentUserId = mapCurrentUser(this.currentUser).id
-    const { participants } = this.threads.find(({ id: threadId }) => threadID === threadId)
+    const { participants } = thread
 
     const items: Message[] = events
       .map((message: any) => mapMessage(message, currentUserId, participants.items))
       .sort((a: any, b: any) => a.timestamp - b.timestamp)
 
-    const latestThreadMessage = [...thread.messages?.items]?.pop()
+    const latestThreadMessage = thread.messages?.items[thread.messages?.items.length - 1]
     thread.messages.items = uniqBy([...thread.messages.items, ...items], 'id')
 
-    const hasMore = !pagination || latestThreadMessage?.id !== [...items].pop()?.id
-    const oldestCursor = [...items].pop()?.id
+    const oldestCursor = items[items.length - 1]?.id
+    const hasMore = !pagination || latestThreadMessage?.id !== oldestCursor
 
     return {
       items,
