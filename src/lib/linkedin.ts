@@ -60,8 +60,8 @@ export default class LinkedInAPI {
     }
   }
 
-  getThreads = async (createdBefore: number = new Date().getTime()) => {
-    const url = `${LinkedInURLs.API_CONVERSATIONS}`
+  getThreads = async (createdBefore = Date.now()) => {
+    const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = { createdBefore }
     const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
     const firstResponseParsed = parseConversationResponse(JSON.parse(body))

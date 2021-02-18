@@ -89,7 +89,7 @@ export default class LinkedIn implements PlatformAPI {
 
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
     const { cursor } = pagination ?? {}
-    const createdBefore = cursor ? new Date(+cursor).getTime() : new Date().getTime()
+    const createdBefore = +cursor || Date.now()
 
     const items = await this.api.getThreads(createdBefore)
     const mapped = mapThreads(items)
@@ -97,13 +97,13 @@ export default class LinkedIn implements PlatformAPI {
     return {
       items: mapped,
       hasMore: mapped.length > 0,
-      oldestCursor: mapped[mapped.length - 1]?.timestamp.toString(),
+      oldestCursor: mapped[mapped.length - 1]?.timestamp.getTime().toString(),
     }
   }
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
     const { cursor } = pagination ?? {}
-    const createdBefore = cursor ? new Date(+cursor).getTime() : new Date().getTime()
+    const createdBefore = +cursor || Date.now()
 
     const messages = await this.api.getMessages(threadID, createdBefore)
     const currentUserId = mapCurrentUser(this.currentUser).id
@@ -114,7 +114,6 @@ export default class LinkedIn implements PlatformAPI {
     return {
       items,
       hasMore: items.length > 0,
-      oldestCursor: items[items.length - 1]?.id,
     }
   }
 
