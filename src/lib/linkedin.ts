@@ -62,14 +62,9 @@ export default class LinkedInAPI {
 
   getThreads = async (createdBefore = Date.now(), inboxType: InboxName = InboxName.NORMAL) => {
     const url = LinkedInURLs.API_CONVERSATIONS
-    let queryParams: any = { createdBefore }
-
-    if (inboxType === InboxName.REQUESTS) {
-      queryParams = {
-        ...queryParams,
-        q: 'systemLabel',
-        type: 'MESSAGE_REQUEST_PENDING',
-      }
+    const queryParams = {
+      createdBefore,
+      ...(inboxType === InboxName.REQUESTS ? { q: 'systemLabel', type: 'MESSAGE_REQUEST_PENDING' } : {}),
     }
 
     const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
