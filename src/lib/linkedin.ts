@@ -75,10 +75,10 @@ export default class LinkedInAPI {
       })
   }
 
-  markThreadAsRead = async (threadID: string) => {
+  markThreadRead = async (threadID: string, read: boolean = true) => {
     const encodedEndpoint = encodeURIComponent(`${threadID}`)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
-    const payload = { patch: { $set: { read: true } } }
+    const payload = { patch: { $set: { read } } }
 
     await this.linkedInRequest.post(url, payload, { headers: this.requestHeaders })
   }

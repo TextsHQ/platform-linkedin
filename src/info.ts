@@ -30,6 +30,7 @@ const info: PlatformInfo = {
   deletionMode: MessageDeletionMode.NONE,
   attributes: new Set([
     Attribute.NO_CACHE,
+    Attribute.SUPPORTS_MARK_AS_UNREAD,
   ]),
 }
 
