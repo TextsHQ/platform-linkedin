@@ -88,7 +88,8 @@ export default class LinkedIn implements PlatformAPI {
     const createdBefore = +cursor || Date.now()
 
     const items = await this.api.getThreads(createdBefore)
-    const mapped = mapThreads(items)
+    const currentUserId = mapCurrentUser(this.currentUser).id
+    const mapped = mapThreads(items, currentUserId)
 
     return {
       items: mapped,
@@ -103,6 +104,7 @@ export default class LinkedIn implements PlatformAPI {
 
     const messages = await this.api.getMessages(threadID, createdBefore)
     const currentUserId = mapCurrentUser(this.currentUser).id
+
     const items = (messages.events as any[])
       .map<Message>(message => mapMessage(message, currentUserId))
       .sort((a, b) => a.timestamp.valueOf() - b.timestamp.valueOf())

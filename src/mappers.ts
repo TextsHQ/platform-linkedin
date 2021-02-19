@@ -21,8 +21,37 @@ const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>
     }
   })
 
-const mapThread = (thread: any, entitiesMap: Record<string, any>): Thread => {
-  const { conversation } = thread
+const mapMessageReceipt = (message: Message, liReceipts: any[]): Message => {
+  if (!liReceipts || !liReceipts?.length) return message
+
+  const messageReceipt = liReceipts.find(receipt => {
+    const { eventUrn } = receipt.seenReceipt
+    return eventUrn.includes(message.id.split(':').pop())
+  })
+
+  const previousSeenState = typeof message.seen === 'object' ? message.seen : {}
+  const newSeenState = messageReceipt
+    ? { [messageReceipt.fromEntity.split(':').pop()]: new Date(messageReceipt.seenReceipt.seenAt) }
+    : {}
+
+  return {
+    ...message,
+    seen: {
+      ...previousSeenState,
+      ...newSeenState,
+    },
+  }
+}
+
+const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID: string): Thread => {
+  const { conversation, messages: liMessages } = thread
+
+  const messages: Message[] = liMessages
+    .map(liMessage => mapMessage(liMessage, currentUserID))
+    .map(message => mapMessageReceipt(message, conversation?.receipts))
+
+  const lastMessageSnippet = messages.length > 0 ? messages[messages.length - 1].text : undefined
+
   return {
     _original: JSON.stringify(thread),
     // "entityUrn": "urn:li:fs_conversation:2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg=="
@@ -33,11 +62,12 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>): Thread => {
     timestamp: new Date(conversation?.lastActivityAt),
     isReadOnly: false,
     mutedUntil: conversation.muted ? 'forever' : undefined,
-    messages: { items: [], hasMore: true },
+    messages: { items: messages, hasMore: true },
     participants: {
       items: mapParticipants(conversation['*participants'], entitiesMap),
       hasMore: false,
     },
+    lastMessageSnippet,
   }
 }
 
@@ -51,9 +81,9 @@ const groupEntities = (liThreads: any[]) => {
   return map
 }
 
-export const mapThreads = (liThreads: any[]): Thread[] => {
+export const mapThreads = (liThreads: any[], currentUserID: string): Thread[] => {
   const grouped = groupEntities(liThreads)
-  return orderBy(liThreads.map(thread => mapThread(thread, grouped)), 'lastActivityAt', 'desc')
+  return orderBy(liThreads.map(thread => mapThread(thread, grouped, currentUserID)), 'lastActivityAt', 'desc')
 }
 
 export const mapReactionEmoji = (reactionKey: string) => supportedReactions[reactionKey]
@@ -161,6 +191,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     senderID,
     isSender: currentUserID === senderID,
     linkedMessage,
+    seen: {},
   }
 }
 

@@ -28,6 +28,11 @@ export const parseConversationResponse = (response): any[] => {
     'com.linkedin.voyager.messaging.MessagingMember',
   )
 
+  const allMessages = filterByType(
+    included,
+    'com.linkedin.voyager.messaging.Event',
+  )
+
   const parsedData = entities.reduce((prev, current) => {
     const entityId = current?.entityUrn.split(':').pop()
 
@@ -35,11 +40,13 @@ export const parseConversationResponse = (response): any[] => {
       participant.includes(entityId)))
 
     const messagingMember = messagingMembers.find(member => member.entityUrn.includes(entityId))
+    const messages = allMessages.filter(message => message['*from'].includes(entityId))
 
     const currentData = {
       entity: current,
       messagingMember,
       conversation,
+      messages,
     }
 
     return [...prev, currentData]

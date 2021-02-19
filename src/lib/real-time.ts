@@ -1,4 +1,4 @@
-import { OnServerEventCallback, ServerEventType } from '@textshq/platform-sdk'
+import { OnServerEventCallback, ServerEvent, ServerEventType, UNKNOWN_DATE } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
 import { LinkedInURLs } from '../constants'
@@ -19,7 +19,7 @@ export default class LinkedInRealTime {
     const eventSource = new EventSource(LinkedInURLs.REALTIME, { headers })
 
     eventSource.onmessage = event => {
-      if (!event.data.startsWith('{')) return
+      if (!event.data?.startsWith('{')) return
 
       const json = JSON.parse(event.data)
       const newMessageEventType = 'com.linkedin.realtimefrontend.DecoratedEvent'
@@ -58,9 +58,31 @@ export default class LinkedInRealTime {
               },
             ],
           }])
+        } else if (topic === 'urn:li-realtime:messageSeenReceiptsTopic:urn:li-realtime:myself') {
+          const { fromEntity, seenReceipt } = payload
+          const { eventUrn, seenAt } = seenReceipt
+
+          const participantID = fromEntity.split(':').pop()
+          // urn:li:fs_event:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,2-MTYxMzcwNjcxOTUzMWI2NTIzNi0wMDQmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==)
+          const threadID = eventUrn.split(':(').pop().split(',')[0]
+          const messageID = `urn:li:fsd_message:${eventUrn.split(',').pop().replace(')', '')}`
+
+          this.onEvent([{
+            type: ServerEventType.STATE_SYNC,
+            mutationType: 'update',
+            objectName: 'message',
+            objectIDs: { messageID, threadID },
+            entries: [
+              {
+                id: messageID,
+                seen: { [participantID]: UNKNOWN_DATE },
+              },
+            ],
+          }])
         }
 
-        for (const { id: threadID } of threadsIDs) this.onEvent([{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }])
+        const events = threadsIDs.map(({ id: threadID }) => ({ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }))
+        this.onEvent(events as ServerEvent[])
       }
     }
   }
