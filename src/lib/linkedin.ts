@@ -228,4 +228,9 @@ export default class LinkedInAPI {
   }
 
   getRequestHeaders = () => this.requestHeaders
+
+  logout = async (): Promise<void> => {
+    const url = LinkedInURLs.LOGOUT
+    await this.linkedInRequest.get(url, { headers: this.requestHeaders })
+  }
 }

@@ -32,21 +32,17 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   login = async ({ cookieJarJSON }): Promise<LoginResult> => {
-    try {
-      await this.api.setLoginState(CookieJar.fromJSON(cookieJarJSON))
+    await this.api.setLoginState(CookieJar.fromJSON(cookieJarJSON))
 
-      this.currentUser = await this.api.getCurrentUser()
-      this.cookies = cookieJarJSON
+    this.currentUser = await this.api.getCurrentUser()
+    this.cookies = cookieJarJSON
 
-      return { type: 'success' }
-    } catch (error) {
-      return { type: 'error' }
-    }
+    return { type: 'success' }
   }
 
   serializeSession = () => ({ cookies: this.cookies })
 
-  logout = () => { }
+  logout = () => this.api.logout()
 
   getCurrentUser = () => mapCurrentUser(this.currentUser)
 
