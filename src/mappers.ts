@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, UNKNOWN_DATE, InboxName } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { supportedReactions } from './constants'
@@ -21,7 +21,7 @@ const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>
     }
   })
 
-const mapMessageReceipt = (message: Message, liReceipts: any[]): Message => {
+const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = false): Message => {
   if (!liReceipts || !liReceipts?.length) return message
 
   const messageReceipt = liReceipts.find(receipt => {
@@ -31,24 +31,28 @@ const mapMessageReceipt = (message: Message, liReceipts: any[]): Message => {
 
   const previousSeenState = typeof message.seen === 'object' ? message.seen : {}
   const newSeenState = messageReceipt
-    ? { [messageReceipt.fromEntity.split(':').pop()]: new Date(messageReceipt.seenReceipt.seenAt) }
+    ? { [messageReceipt.fromEntity.split(':').pop()]: UNKNOWN_DATE }
     : {}
 
   return {
     ...message,
-    seen: {
-      ...previousSeenState,
-      ...newSeenState,
-    },
+    seen: groupChat
+      ? {
+        ...previousSeenState,
+        ...newSeenState,
+      }
+      : Object.keys(newSeenState).length > 0,
   }
 }
 
 const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID: string): Thread => {
   const { conversation, messages: liMessages } = thread
 
+  const participantsItems = mapParticipants(conversation['*participants'], entitiesMap)
+
   const messages: Message[] = liMessages
     .map(liMessage => mapMessage(liMessage, currentUserID))
-    .map(message => mapMessageReceipt(message, conversation?.receipts))
+    .map(message => mapMessageReceipt(message, conversation?.receipts, participantsItems.length > 1))
 
   const lastMessageSnippet = messages.length > 0 ? messages[messages.length - 1].text : undefined
 
@@ -64,7 +68,7 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
     mutedUntil: conversation.muted ? 'forever' : undefined,
     messages: { items: messages, hasMore: true },
     participants: {
-      items: mapParticipants(conversation['*participants'], entitiesMap),
+      items: participantsItems,
       hasMore: false,
     },
     lastMessageSnippet,
@@ -81,9 +85,12 @@ const groupEntities = (liThreads: any[]) => {
   return map
 }
 
-export const mapThreads = (liThreads: any[], currentUserID: string): Thread[] => {
-  const grouped = groupEntities(liThreads)
-  return orderBy(liThreads.map(thread => mapThread(thread, grouped, currentUserID)), 'lastActivityAt', 'desc')
+export const mapThreads = (liThreads: any[], currentUserID: string, inboxType: InboxName): Thread[] => {
+  const filtered = liThreads.filter(thread => thread.inboxType === inboxType)
+  const grouped = groupEntities(filtered)
+  const threads = liThreads.map(thread => mapThread(thread, grouped, currentUserID))
+
+  return orderBy(threads, 'lastActivityAt', 'desc')
 }
 
 export const mapReactionEmoji = (reactionKey: string) => supportedReactions[reactionKey]
@@ -163,6 +170,11 @@ const mapFeedUpdate = (liFeedUpdate: string): MessageLink => {
   }
 }
 
+export const mapMessageSeenState = (message: Message, seenReceipt: any): Message => ({
+  ...message,
+  seen: seenReceipt[message.id] || message.seen,
+})
+
 export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   const { reactionSummaries } = liMessage
   const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
@@ -174,7 +186,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId: senderID }))
 
   const attachments = liAttachments?.map(liAttachment => mapAttachment(liAttachment)) || []
-  if (customContent && !customContent?.forwardedContentType) attachments.push(mapCustomContent(customContent))
+  if (customContent && !customContent?.forwardedContentType && customContent.$type !== 'com.linkedin.voyager.messaging.event.message.InmailContent') attachments.push(mapCustomContent(customContent))
   if (customContent && customContent?.forwardedContentType) linkedMessage = mapForwardedMessage(customContent)
 
   const links = liMessage.eventContent['*feedUpdate'] ? [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])] : []

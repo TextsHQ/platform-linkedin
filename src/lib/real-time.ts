@@ -9,9 +9,12 @@ export default class LinkedInRealTime {
 
   onEvent: OnServerEventCallback
 
-  constructor(api: LinkedInAPI, onEvent: OnServerEventCallback) {
+  updateSeenReceipt: (key: string, value: any) => void
+
+  constructor(api: LinkedInAPI, onEvent: OnServerEventCallback, updateSeenReceipt) {
     this.api = api
     this.onEvent = onEvent
+    this.updateSeenReceipt = updateSeenReceipt
   }
 
   subscribeToEvents = async (): Promise<void> => {
@@ -66,6 +69,8 @@ export default class LinkedInRealTime {
           // urn:li:fs_event:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,2-MTYxMzcwNjcxOTUzMWI2NTIzNi0wMDQmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==)
           const threadID = eventUrn.split(':(').pop().split(',')[0]
           const messageID = `urn:li:fsd_message:${eventUrn.split(',').pop().replace(')', '')}`
+
+          this.updateSeenReceipt(messageID, { [participantID]: new Date(seenAt) })
 
           this.onEvent([{
             type: ServerEventType.STATE_SYNC,
