@@ -32,6 +32,7 @@ const info: PlatformInfo = {
     Attribute.NO_CACHE,
     Attribute.SUPPORTS_MARK_AS_UNREAD,
     Attribute.SUPPORTS_DELETE_THREAD,
+    Attribute.SUPPORTS_REQUESTS_INBOX,
   ]),
 }
 
