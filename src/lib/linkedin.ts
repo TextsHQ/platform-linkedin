@@ -1,4 +1,4 @@
-import { MessageContent } from '@textshq/platform-sdk'
+import { InboxName, MessageContent } from '@textshq/platform-sdk'
 import axios, { AxiosInstance } from 'axios'
 import got from 'got'
 import fs from 'fs'
@@ -60,13 +60,25 @@ export default class LinkedInAPI {
     }
   }
 
-  getThreads = async (createdBefore = Date.now()) => {
+  getThreads = async (createdBefore = Date.now(), inboxType: InboxName = InboxName.NORMAL) => {
     const url = LinkedInURLs.API_CONVERSATIONS
-    const queryParams = { createdBefore }
+    let queryParams: any = { createdBefore }
+
+    if (inboxType === InboxName.REQUESTS) {
+      queryParams = {
+        ...queryParams,
+        q: 'systemLabel',
+        type: 'MESSAGE_REQUEST_PENDING',
+      }
+    }
+
     const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
     const firstResponseParsed = parseConversationResponse(JSON.parse(body))
 
+    console.log(firstResponseParsed.length)
+
     return firstResponseParsed
+      .map(thread => ({ ...thread, inboxType }))
       .sort(
         (a, b) => b?.conversation?.lastActivityAt - a?.conversation?.lastActivityAt,
       ).filter((x: any) => {
