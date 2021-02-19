@@ -75,8 +75,6 @@ export default class LinkedInAPI {
     const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
     const firstResponseParsed = parseConversationResponse(JSON.parse(body))
 
-    console.log(firstResponseParsed.length)
-
     return firstResponseParsed
       .map(thread => ({ ...thread, inboxType }))
       .sort(
