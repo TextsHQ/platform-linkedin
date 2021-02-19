@@ -203,6 +203,13 @@ export default class LinkedInAPI {
     return data?.data?.value
   }
 
+  deleteThread = async (threadID: string): Promise<void> => {
+    const encodedEndpoint = encodeURIComponent(`${threadID}`)
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
+
+    await this.linkedInRequest.delete(url, { headers: this.requestHeaders })
+  }
+
   toggleReaction = async (emoji: string, messageID: string, threadID: string) => {
     const parsedMessageId = messageID.split(':').pop()
     const encodedEndpoint = encodeURIComponent(`${parsedMessageId}`)

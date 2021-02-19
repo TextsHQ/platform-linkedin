@@ -31,6 +31,7 @@ const info: PlatformInfo = {
   attributes: new Set([
     Attribute.NO_CACHE,
     Attribute.SUPPORTS_MARK_AS_UNREAD,
+    Attribute.SUPPORTS_DELETE_THREAD,
   ]),
 }
 
