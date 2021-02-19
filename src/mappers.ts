@@ -167,5 +167,6 @@ export const mapCurrentUser = (liCurrentUser: any): CurrentUser => {
     displayText: liCurrentUser?.publicIdentifier,
     username: liCurrentUser?.publicIdentifier,
     fullName: `${liCurrentUser?.firstName} ${liCurrentUser?.lastName}`,
+    imgURL: liCurrentUser?.picture ? liCurrentUser?.picture.rootUrl + liCurrentUser?.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
   }
 }
