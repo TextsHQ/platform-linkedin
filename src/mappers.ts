@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, UNKNOWN_DATE, InboxName } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, UNKNOWN_DATE } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { supportedReactions } from './constants'
@@ -85,9 +85,8 @@ const groupEntities = (liThreads: any[]) => {
   return map
 }
 
-export const mapThreads = (liThreads: any[], currentUserID: string, inboxType: InboxName): Thread[] => {
-  const filtered = liThreads.filter(thread => thread.inboxType === inboxType)
-  const grouped = groupEntities(filtered)
+export const mapThreads = (liThreads: any[], currentUserID: string): Thread[] => {
+  const grouped = groupEntities(liThreads)
   const threads = liThreads.map(thread => mapThread(thread, grouped, currentUserID))
 
   return orderBy(threads, 'lastActivityAt', 'desc')

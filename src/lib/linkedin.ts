@@ -76,7 +76,6 @@ export default class LinkedInAPI {
     const firstResponseParsed = parseConversationResponse(JSON.parse(body))
 
     return firstResponseParsed
-      .map(thread => ({ ...thread, inboxType }))
       .sort(
         (a, b) => b?.conversation?.lastActivityAt - a?.conversation?.lastActivityAt,
       ).filter((x: any) => {

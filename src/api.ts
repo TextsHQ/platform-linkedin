@@ -97,7 +97,7 @@ export default class LinkedIn implements PlatformAPI {
     const items = await this.api.getThreads(createdBefore, inboxName)
 
     const currentUserId = mapCurrentUser(this.currentUser).id
-    const mapped = mapThreads(items, currentUserId, inboxName)
+    const mapped = mapThreads(items, currentUserId)
 
     for (const thread of mapped) {
       for (const message of thread.messages.items) {
