@@ -26,6 +26,7 @@ export const requestHeaders: Record<string, string> = {
 
 export const LinkedInURLs = {
   LOGIN: 'https://www.linkedin.com/login',
+  LOGOUT: 'https://www.linkedin.com/logout',
   REALTIME: 'https://realtime.www.linkedin.com/realtime/connect',
   API_BASE: 'https://www.linkedin.com/voyager/api',
   API_CONVERSATIONS: 'https://www.linkedin.com/voyager/api/messaging/conversations',
