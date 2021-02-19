@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { supportedReactions } from './constants'
@@ -65,6 +65,21 @@ export const mapReactions = (liReactionSummaries: any, { currentUserID, particip
   emoji: true,
 })
 
+const mapForwardedMessage = (liForwardedMessage: any): MessagePreview => {
+  const { originalCreatedAt, forwardedBody } = liForwardedMessage
+  const { text } = forwardedBody
+  // urn:li:fs_messagingMember:(2-ZDVjZjEzYjYtNTc4YS01Nzc4LTk2NTctNzRjN2M1ZWYzN2M1XzAxMg==,ACoAAA7bNVUBXo4wls3McYpXWVndS6LXypCdluU)
+  const messagingMember = liForwardedMessage['*originalFrom']
+  const senderID = messagingMember.split(',').pop().replace(')', '')
+
+  return {
+    id: `${originalCreatedAt}`,
+    senderID,
+    text,
+    attachments: [],
+  }
+}
+
 const mapCustomContent = (liCustomMessage: any): MessageAttachment => {
   const { mediaType, id, media } = liCustomMessage
 
@@ -123,12 +138,14 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
 
   const senderID = getSenderID(liMessage['*from'])
+  let linkedMessage
 
   // linkedin seems to have broken reactions?
   const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId: senderID }))
 
   const attachments = liAttachments?.map(liAttachment => mapAttachment(liAttachment)) || []
-  if (customContent) attachments.push(mapCustomContent(customContent))
+  if (customContent && !customContent?.forwardedContentType) attachments.push(mapCustomContent(customContent))
+  if (customContent && customContent?.forwardedContentType) linkedMessage = mapForwardedMessage(customContent)
 
   const links = liMessage.eventContent['*feedUpdate'] ? [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])] : []
 
@@ -143,6 +160,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     reactions,
     senderID,
     isSender: currentUserID === senderID,
+    linkedMessage,
   }
 }
 
