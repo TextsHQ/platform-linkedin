@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, UNKNOWN_DATE } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { supportedReactions } from './constants'
@@ -31,7 +31,7 @@ const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = fals
 
   const previousSeenState = typeof message.seen === 'object' ? message.seen : {}
   const newSeenState = messageReceipt
-    ? { [messageReceipt.fromEntity.split(':').pop()]: UNKNOWN_DATE }
+    ? { [messageReceipt.fromEntity.split(':').pop()]: new Date(messageReceipt.seenReceipt.seenAt) }
     : {}
 
   return {
