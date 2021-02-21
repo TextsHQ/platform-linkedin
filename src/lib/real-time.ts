@@ -5,17 +5,11 @@ import { LinkedInURLs } from '../constants'
 import LinkedInAPI from './linkedin'
 
 export default class LinkedInRealTime {
-  api: LinkedInAPI
-
-  onEvent: OnServerEventCallback
-
-  updateSeenReceipt: (key: string, value: any) => void
-
-  constructor(api: LinkedInAPI, onEvent: OnServerEventCallback, updateSeenReceipt) {
-    this.api = api
-    this.onEvent = onEvent
-    this.updateSeenReceipt = updateSeenReceipt
-  }
+  constructor(
+    private api: LinkedInAPI,
+    private onEvent: OnServerEventCallback,
+    private updateSeenReceipt: (key: string, value: any) => void,
+  ) {}
 
   subscribeToEvents = async (): Promise<void> => {
     const headers = this.api.getRequestHeaders()
