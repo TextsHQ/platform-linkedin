@@ -195,7 +195,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     id: liMessage.dashEntityUrn,
     cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
-    text: attributedBody.text,
+    text: attributedBody?.text,
     attachments,
     links,
     reactions,
