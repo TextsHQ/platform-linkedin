@@ -90,5 +90,8 @@ export default class LinkedInRealTime {
         this.onEvent(events as ServerEvent[])
       }
     }
+    eventSource.onerror = err => {
+      console.error(err)
+    }
   }
 }
