@@ -1,30 +1,43 @@
 import { InboxName, MessageContent } from '@textshq/platform-sdk'
-import axios, { AxiosInstance } from 'axios'
 import got from 'got'
 import fs from 'fs'
 import { CookieJar } from 'tough-cookie'
 
 import { LinkedInURLs } from '../constants'
-import { filterByType, parseConversationResponse, createRequestHeaders, paramsSerializer } from './helpers'
+import { filterByType, parseConversationResponse, createRequestHeaders } from './helpers'
 
 export default class LinkedInAPI {
   private requestHeaders: any = null
 
-  private linkedInRequest: AxiosInstance | null = null
+  private cookieJar: CookieJar
 
   setLoginState = async (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError()
-    const { cookies = [] } = { ...cookieJar.toJSON() }
+    this.cookieJar = cookieJar
+  }
 
-    this.requestHeaders = createRequestHeaders(cookies)
-    this.linkedInRequest = axios.create({ paramsSerializer, withCredentials: true })
+  fetch = async ({ headers = {}, ...rest }) => {
+    if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
+
+    const requestHeaders = createRequestHeaders(this.cookieJar)
+    const res = await got({
+      throwHttpErrors: false,
+      cookieJar: this.cookieJar,
+      headers: {
+        ...requestHeaders,
+        ...headers,
+      },
+      ...rest,
+    })
+
+    if (!res.body) return
+    return JSON.parse(res.body)
   }
 
   getCurrentUser = async () => {
     const url = LinkedInURLs.API_ME
 
-    const { body } = await got(url, { headers: this.requestHeaders })
-    const response = JSON.parse(body)
+    const response = await this.fetch({ method: 'GET', url })
 
     const miniProfileType = 'com.linkedin.voyager.identity.shared.MiniProfile'
     const miniProfile = response?.included?.find(r => r.$type === miniProfileType)
@@ -36,10 +49,8 @@ export default class LinkedInAPI {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
     const queryParams = { keyVersion: 'LEGACY_INBOX', createdBefore }
 
-    const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
-
-    const res = JSON.parse(body)
-    const { included = [] } = res
+    const response = await this.fetch({ url, method: 'GET', searchParams: queryParams })
+    const { included = [] } = response
 
     const entities = filterByType(
       included,
@@ -67,8 +78,8 @@ export default class LinkedInAPI {
       ...(inboxType === InboxName.REQUESTS ? { q: 'systemLabel', type: 'MESSAGE_REQUEST_PENDING' } : {}),
     }
 
-    const { body } = await got(url, { headers: this.requestHeaders, searchParams: queryParams })
-    const firstResponseParsed = parseConversationResponse(JSON.parse(body))
+    const response = await this.fetch({ method: 'GET', url, searchParams: queryParams })
+    const firstResponseParsed = parseConversationResponse(response)
 
     return firstResponseParsed
       .sort(
@@ -84,7 +95,7 @@ export default class LinkedInAPI {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
     const payload = { patch: { $set: { read } } }
 
-    await this.linkedInRequest.post(url, payload, { headers: this.requestHeaders })
+    await this.fetch({ method: 'POST', url, json: payload })
   }
 
   searchUsers = async (keyword: string) => {
@@ -95,12 +106,13 @@ export default class LinkedInAPI {
       types: 'List(CONNECTIONS,GROUP_THREADS,PEOPLE,COWORKERS)',
     }
 
-    const { data } = await this.linkedInRequest.get(url, {
+    const { data } = await this.fetch({
+      method: 'GET',
+      url,
       headers: {
-        ...this.requestHeaders,
         referer: 'https://www.linkedin.com/messaging/thread/new/',
       },
-      params: queryParams,
+      searchParams: queryParams,
     })
 
     return data?.included ?? []
@@ -114,37 +126,34 @@ export default class LinkedInAPI {
     if (message.mimeType) {
       const buffer = message.fileBuffer ?? fs.readFileSync(message.filePath)
 
-      const { data } = await this.linkedInRequest.post(
-        'https://www.linkedin.com/voyager/api/voyagerMediaUploadMetadata',
-        {
+      const data = await this.fetch({
+        url: 'https://www.linkedin.com/voyager/api/voyagerMediaUploadMetadata',
+        method: 'POST',
+        json: {
           fileSize: buffer.byteLength,
           filename: message.fileName,
           mediaUploadType: 'MESSAGING_PHOTO_ATTACHMENT',
         },
-        {
-          params: { action: 'upload' },
-          headers: this.requestHeaders,
-        },
-      )
+        searchParams: { action: 'upload' },
+      })
 
-      await this.linkedInRequest.put(
-        data.data.value.singleUploadUrl,
-        buffer,
-        {
-          headers: {
-            ...this.requestHeaders,
-            Connection: 'keep-alive',
-            'sec-ch-ua': '"Chromium";v="88", "Google Chrome";v="88", ";Not A Brand";v="99"',
-            'Content-Type': 'image/png',
-            accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-            'sec-fetch-site': 'cross-site',
-            'sec-fetch-mode': 'no-cors',
-            'sec-fetch-dest': 'image',
-            'accept-encoding': 'gzip, deflate, br',
-            'accept-language': 'en-US',
-          },
+      await this.fetch({
+        url: data.data.value.singleUploadUrl,
+        method: 'PUT',
+        body: buffer,
+        headers: {
+          ...this.requestHeaders,
+          Connection: 'keep-alive',
+          'sec-ch-ua': '"Chromium";v="88", "Google Chrome";v="88", ";Not A Brand";v="99"',
+          'Content-Type': 'image/png',
+          accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+          'sec-fetch-site': 'cross-site',
+          'sec-fetch-mode': 'no-cors',
+          'sec-fetch-dest': 'image',
+          'accept-encoding': 'gzip, deflate, br',
+          'accept-language': 'en-US',
         },
-      )
+      })
 
       attachments.push({
         id: data.data.value.urn,
@@ -170,11 +179,14 @@ export default class LinkedInAPI {
       dedupeByClientGeneratedToken: false,
     }
 
-    const res = await this.linkedInRequest.post(url, payload, {
-      params: queryParams,
-      headers: this.requestHeaders,
+    const response = await this.fetch({
+      url,
+      method: 'POST',
+      json: payload,
+      searchParams: queryParams,
     })
-    return res.status === 201
+
+    return Boolean(response?.data)
   }
 
   createThread = async (profileIds: string[]) => {
@@ -199,19 +211,24 @@ export default class LinkedInAPI {
       },
     }
 
-    const { data } = await this.linkedInRequest.post(url, payload, {
-      params: queryParams,
-      headers: this.requestHeaders,
+    const response = await this.fetch({
+      url,
+      method: 'POST',
+      json: payload,
+      searchParams: queryParams,
     })
 
-    return data?.data?.value
+    return response?.data?.value
   }
 
   deleteThread = async (threadID: string): Promise<void> => {
     const encodedEndpoint = encodeURIComponent(`${threadID}`)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
 
-    await this.linkedInRequest.delete(url, { headers: this.requestHeaders })
+    await this.fetch({
+      url,
+      method: 'DELETE',
+    })
   }
 
   toggleReaction = async (emoji: string, messageID: string, threadID: string) => {
@@ -221,9 +238,11 @@ export default class LinkedInAPI {
     const queryParams = { action: 'reactWithEmoji' }
     const payload = { emoji }
 
-    await this.linkedInRequest.post(url, payload, {
-      params: queryParams,
-      headers: this.requestHeaders,
+    await this.fetch({
+      url,
+      method: 'POST',
+      json: payload,
+      searchParams: queryParams,
     })
   }
 
@@ -232,9 +251,11 @@ export default class LinkedInAPI {
     const queryParams = { action: 'typing' }
     const payload = { conversationId: threadID }
 
-    await this.linkedInRequest.post(url, payload, {
-      params: queryParams,
-      headers: this.requestHeaders,
+    await this.fetch({
+      url,
+      method: 'POST',
+      json: payload,
+      searchParams: queryParams,
     })
   }
 
@@ -242,6 +263,6 @@ export default class LinkedInAPI {
 
   logout = async (): Promise<void> => {
     const url = LinkedInURLs.LOGOUT
-    await this.linkedInRequest.get(url, { headers: this.requestHeaders })
+    await this.fetch({ url, method: 'GET' })
   }
 }

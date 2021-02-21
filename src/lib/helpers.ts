@@ -1,5 +1,5 @@
-import { castArray, isArray, isPlainObject, mapValues, reduce } from 'lodash'
-import { stringify } from 'querystring'
+import { reduce } from 'lodash'
+import { CookieJar } from 'tough-cookie'
 
 import { requestHeaders } from '../constants'
 
@@ -59,8 +59,10 @@ export const parseConversationResponse = (response): any[] => {
  * @param cookies
  * @returns {Record<string, string>}
  */
-export const createRequestHeaders = (cookies): Record<string, string> => {
-  const parsedCookies = cookies.reduce((prev, current) => ({
+export const createRequestHeaders = (cookieJar: CookieJar): Record<string, string> => {
+  const { cookies = [] } = { ...cookieJar.toJSON() }
+
+  const parsedCookies: any = cookies.reduce((prev, current) => ({
     ...prev,
     // This is done to be sure that the cookies doesn't have the quotes (""). For some reason
     // some of the LinkedIn cookies comes with the quotes and other without them
@@ -73,35 +75,4 @@ export const createRequestHeaders = (cookies): Record<string, string> => {
     'csrf-token': parsedCookies.JSESSIONID!,
     cookie: cookieString,
   }
-}
-
-/**
- * This is from the LinkedIn Private module created by Eilon Mor <eilonmore>
- *
- * @see https://github.com/eilonmore/linkedin-private-api
- */
-const encodeFilter = (value: string | string[], key: string) => encodeURIComponent(`${key}->${castArray(value).join('|')}`)
-
-export const paramsSerializer = (params: Record<string, string | Record<string, string>>): string => {
-  const encodedParams = mapValues(params, value => {
-    if (!isArray(value) && !isPlainObject(value)) {
-      return value.toString()
-    }
-
-    if (isArray(value)) {
-      return `List(${value.join(',')})`
-    }
-
-    const encodedList = reduce(
-      value as Record<string, string>,
-      (res, filterVal, filterKey) => `${res}${res ? ',' : ''}${encodeFilter(filterVal, filterKey)}`,
-      '',
-    )
-
-    return `List(${encodedList})`
-  })
-
-  return stringify(encodedParams, undefined, undefined, {
-    encodeURIComponent: uri => uri,
-  })
 }
