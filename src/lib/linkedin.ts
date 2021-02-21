@@ -7,8 +7,6 @@ import { LinkedInURLs } from '../constants'
 import { filterByType, parseConversationResponse, createRequestHeaders } from './helpers'
 
 export default class LinkedInAPI {
-  private requestHeaders: any = null
-
   private cookieJar: CookieJar
 
   setLoginState = async (cookieJar: CookieJar) => {
@@ -142,7 +140,6 @@ export default class LinkedInAPI {
         method: 'PUT',
         body: buffer,
         headers: {
-          ...this.requestHeaders,
           Connection: 'keep-alive',
           'sec-ch-ua': '"Chromium";v="88", "Google Chrome";v="88", ";Not A Brand";v="99"',
           'Content-Type': 'image/png',
@@ -259,7 +256,10 @@ export default class LinkedInAPI {
     })
   }
 
-  getRequestHeaders = () => this.requestHeaders
+  getRequestHeaders = () => {
+    if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
+    return createRequestHeaders(this.cookieJar)
+  }
 
   logout = async (): Promise<void> => {
     const url = LinkedInURLs.LOGOUT
