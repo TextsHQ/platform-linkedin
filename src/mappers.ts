@@ -179,14 +179,19 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
 
   const senderID = getSenderID(liMessage['*from'])
-  let linkedMessage
+  let linkedMessage: MessagePreview
 
   // linkedin seems to have broken reactions?
   const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId: senderID }))
 
   const attachments = liAttachments?.map(liAttachment => mapAttachment(liAttachment)) || []
-  if (customContent && !customContent?.forwardedContentType && customContent.$type !== 'com.linkedin.voyager.messaging.event.message.InmailContent') attachments.push(mapCustomContent(customContent))
-  if (customContent && customContent?.forwardedContentType) linkedMessage = mapForwardedMessage(customContent)
+  if (customContent) {
+    if (!customContent.forwardedContentType && customContent.$type !== 'com.linkedin.voyager.messaging.event.message.InmailContent') {
+      attachments.push(mapCustomContent(customContent))
+    } else if (customContent.forwardedContentType) {
+      linkedMessage = mapForwardedMessage(customContent)
+    }
+  }
 
   const links = liMessage.eventContent['*feedUpdate'] ? [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])] : []
 
