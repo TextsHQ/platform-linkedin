@@ -34,6 +34,8 @@ const info: PlatformInfo = {
     Attribute.SUPPORTS_DELETE_THREAD,
     Attribute.SUPPORTS_REQUESTS_INBOX,
   ]),
+  getUserProfileLink: ({ username }) =>
+    username && `https://www.linkedin.com/in/${username}`,
 }
 
 export default info

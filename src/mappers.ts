@@ -10,12 +10,26 @@ const getSenderID = (from: string) =>
     .pop() // ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)
     .replace(')', '')
 
+export const mapMiniProfile = (liMiniProfile: any): User => ({
+  // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
+  id: liMiniProfile.entityUrn.split(':').pop(),
+  username: liMiniProfile.publicIdentifier,
+  fullName: [liMiniProfile.firstName, liMiniProfile.lastName].filter(Boolean).join(' '),
+  imgURL: liMiniProfile.picture ? liMiniProfile.picture.rootUrl + liMiniProfile.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
+})
+
+export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
+  ...mapMiniProfile(liCurrentUser),
+  displayText: liCurrentUser?.publicIdentifier,
+})
+
 const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>) =>
   liParticipants.map<Participant>(p => {
     const id = getSenderID(p)
     const entity = entitiesMap[id]
     return {
       id,
+      username: entity.publicIdentifier,
       fullName: [entity.firstName, entity.lastName].filter(Boolean).join(' '),
       imgURL: entity.picture ? entity.picture.rootUrl + entity.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
     }
@@ -52,9 +66,7 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
 
   const messages: Message[] = liMessages
     .map(liMessage => mapMessage(liMessage, currentUserID))
-    .map(message => mapMessageReceipt(message, conversation?.receipts, participantsItems.length > 1))
-
-  const lastMessageSnippet = messages.length > 0 ? messages[messages.length - 1].text : undefined
+    .map(message => mapMessageReceipt(message, conversation?.receipts, conversation.groupChat))
 
   return {
     _original: JSON.stringify(thread),
@@ -71,7 +83,6 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
       items: participantsItems,
       hasMore: false,
     },
-    lastMessageSnippet,
   }
 }
 
@@ -88,8 +99,7 @@ const groupEntities = (liThreads: any[]) => {
 export const mapThreads = (liThreads: any[], currentUserID: string): Thread[] => {
   const grouped = groupEntities(liThreads)
   const threads = liThreads.map(thread => mapThread(thread, grouped, currentUserID))
-
-  return orderBy(threads, 'lastActivityAt', 'desc')
+  return orderBy(threads, 'timestamp', 'desc')
 }
 
 export const mapReactionEmoji = (reactionKey: string) => supportedReactions[reactionKey]
@@ -208,30 +218,5 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     isSender: currentUserID === senderID,
     linkedMessage,
     seen: {},
-  }
-}
-
-export const mapMiniProfile = (liMiniProfile: any): User => {
-  // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
-  const id = liMiniProfile.entityUrn.split(':').pop()
-
-  return {
-    id,
-    username: liMiniProfile.publicIdentifier,
-    fullName: [liMiniProfile.firstName, liMiniProfile.lastName].filter(Boolean).join(' '),
-    imgURL: liMiniProfile.picture ? liMiniProfile.picture.rootUrl + liMiniProfile.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
-  }
-}
-
-export const mapCurrentUser = (liCurrentUser: any): CurrentUser => {
-  // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
-  const id = liCurrentUser?.entityUrn?.split(':').pop()
-
-  return {
-    id,
-    displayText: liCurrentUser?.publicIdentifier,
-    username: liCurrentUser?.publicIdentifier,
-    fullName: `${liCurrentUser?.firstName} ${liCurrentUser?.lastName}`,
-    imgURL: liCurrentUser?.picture ? liCurrentUser?.picture.rootUrl + liCurrentUser?.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
   }
 }

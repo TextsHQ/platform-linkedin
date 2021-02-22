@@ -85,15 +85,11 @@ export default class LinkedInAPI {
     }
 
     const response = await this.fetch({ method: 'GET', url, searchParams: queryParams })
-    const firstResponseParsed = parseConversationResponse(response)
-
-    return firstResponseParsed
-      .sort(
-        (a, b) => b?.conversation?.lastActivityAt - a?.conversation?.lastActivityAt,
-      ).filter((x: any) => {
-        const threadId = x?.conversation?.entityUrn?.split(':').pop()
-        return Boolean(threadId)
-      })
+    const parsed = parseConversationResponse(response)
+    return parsed.filter((x: any) => {
+      const threadId = x?.conversation?.entityUrn?.split(':').pop()
+      return Boolean(threadId)
+    })
   }
 
   markThreadRead = async (threadID: string, read: boolean = true) => {
