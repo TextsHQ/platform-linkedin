@@ -1,8 +1,3 @@
-import { reduce } from 'lodash'
-import { CookieJar } from 'tough-cookie'
-
-import { requestHeaders } from '../constants'
-
 /**
  * @param data
  * @param type
@@ -53,26 +48,4 @@ export const parseConversationResponse = (response): any[] => {
   }, [])
 
   return parsedData
-}
-
-/**
- * @param cookies
- * @returns {Record<string, string>}
- */
-export const createRequestHeaders = (cookieJar: CookieJar): Record<string, string> => {
-  const { cookies = [] } = { ...cookieJar.toJSON() }
-
-  const parsedCookies: any = cookies.reduce((prev, current) => ({
-    ...prev,
-    // This is done to be sure that the cookies doesn't have the quotes (""). For some reason
-    // some of the LinkedIn cookies comes with the quotes and other without them
-    [current.key]: current.value.replace(/"/g, ''),
-  }), {})
-  const cookieString = reduce(parsedCookies, (res, v, k) => `${res}${k}="${v}"; `, '')
-
-  return {
-    ...requestHeaders,
-    'csrf-token': parsedCookies.JSESSIONID!,
-    cookie: cookieString,
-  }
 }

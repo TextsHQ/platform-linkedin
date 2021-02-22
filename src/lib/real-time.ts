@@ -1,7 +1,7 @@
 import { OnServerEventCallback, ServerEvent, ServerEventType, UNKNOWN_DATE } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
-import { LinkedInURLs } from '../constants'
+import { REQUEST_HEADERS, LinkedInURLs } from '../constants'
 import LinkedInAPI from './linkedin'
 
 export default class LinkedInRealTime {
@@ -12,7 +12,10 @@ export default class LinkedInRealTime {
   ) {}
 
   subscribeToEvents = async (): Promise<void> => {
-    const headers = this.api.getRequestHeaders()
+    const headers = {
+      ...REQUEST_HEADERS,
+      Cookie: this.api.cookieJar.getCookieStringSync(LinkedInURLs.HOME),
+    }
     const eventSource = new EventSource(LinkedInURLs.REALTIME, { headers })
 
     eventSource.onmessage = event => {
