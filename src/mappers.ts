@@ -36,7 +36,7 @@ export const mapConversationsResponse = (liResponse: any): Record<string, any>[]
 
     const entity = profiles.find(p => p?.entityUrn.includes(entityId)) || {}
     const messagingMember = members.find(m => m.entityUrn.includes(entityId)) || {}
-    const messages = allMessages.find(e => e['*from'].includes(entityId)) || []
+    const messages = allMessages.filter(e => e['*from'].includes(entityId)) || []
 
     conversations.push({
       entity,
@@ -99,7 +99,7 @@ const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = fals
 }
 
 const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID: string): Thread => {
-  const { conversation, messages: liMessages } = thread
+  const { conversation, messages: liMessages = [] } = thread
 
   const participantsItems = mapParticipants(conversation['*participants'], entitiesMap)
 
