@@ -46,8 +46,7 @@ export default class LinkedInAPI {
 
     const response = await this.fetch({ method: 'GET', url })
 
-    const miniProfileType = LinkedInAPITypes.miniProfile
-    const miniProfile = response?.included?.find(r => r.$type === miniProfileType)
+    const miniProfile = response?.included?.find(r => r.$type === LinkedInAPITypes.miniProfile)
 
     return miniProfile
   }
