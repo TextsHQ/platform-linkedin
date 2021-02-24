@@ -1,10 +1,11 @@
 import { InboxName, MessageContent } from '@textshq/platform-sdk'
 import got from 'got'
 import fs from 'fs'
+import { groupBy } from 'lodash'
 import { CookieJar } from 'tough-cookie'
 
-import { REQUEST_HEADERS, LinkedInURLs } from '../constants'
-import { filterByType, parseConversationResponse } from './helpers'
+import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
+import { parseConversationResponse } from './helpers'
 
 export default class LinkedInAPI {
   cookieJar: CookieJar
@@ -45,7 +46,7 @@ export default class LinkedInAPI {
 
     const response = await this.fetch({ method: 'GET', url })
 
-    const miniProfileType = 'com.linkedin.voyager.identity.shared.MiniProfile'
+    const miniProfileType = LinkedInAPITypes.miniProfile
     const miniProfile = response?.included?.find(r => r.$type === miniProfileType)
 
     return miniProfile
@@ -57,23 +58,14 @@ export default class LinkedInAPI {
 
     const response = await this.fetch({ url, method: 'GET', searchParams: queryParams })
     const { included = [] } = response
+    const grouped = groupBy(included, '$type')
 
-    const entities = filterByType(
-      included,
-      'com.linkedin.voyager.identity.shared.MiniProfile',
-    )
-
-    const events = filterByType(included, 'com.linkedin.voyager.messaging.Event')
-
-    const members = filterByType(
-      included,
-      'com.linkedin.voyager.messaging.MessagingMember',
-    )
+    const { miniProfile: miniProfileType, member: memberType, event: eventType } = LinkedInAPITypes
 
     return {
-      members,
-      entities,
-      events,
+      members: grouped[memberType] || [],
+      entities: grouped[miniProfileType] || [],
+      events: grouped[eventType] || [],
     }
   }
 
@@ -86,9 +78,12 @@ export default class LinkedInAPI {
 
     const response = await this.fetch({ method: 'GET', url, searchParams: queryParams })
     const parsed = parseConversationResponse(response)
+
     return parsed.filter((x: any) => {
       const threadId = x?.conversation?.entityUrn?.split(':').pop()
-      return Boolean(threadId)
+      const entity = x?.entity?.entityUrn
+
+      return Boolean(threadId && entity)
     })
   }
 
