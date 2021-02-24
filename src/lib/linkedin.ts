@@ -5,7 +5,7 @@ import { groupBy } from 'lodash'
 import { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
-import { parseConversationResponse } from './helpers'
+import { mapConversationsResponse } from '../mappers'
 
 export default class LinkedInAPI {
   cookieJar: CookieJar
@@ -76,10 +76,10 @@ export default class LinkedInAPI {
     }
 
     const response = await this.fetch({ method: 'GET', url, searchParams: queryParams })
-    const parsed = parseConversationResponse(response)
+    const parsed = mapConversationsResponse(response)
 
     return parsed.filter((x: any) => {
-      const threadId = x?.conversation?.entityUrn?.split(':').pop()
+      const threadId = x?.conversation?.entityUrn
       const entity = x?.entity?.entityUrn
 
       return Boolean(threadId && entity)
