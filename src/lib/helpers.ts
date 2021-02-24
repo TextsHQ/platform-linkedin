@@ -1,51 +1,39 @@
-/**
- * @param data
- * @param type
- * @returns {any[]}
- */
-export const filterByType = (data: any[], type: string): any[] => data.filter(({ $type }) => $type === type)
+import { filter, find, groupBy } from 'lodash'
+import { LinkedInAPITypes } from '../constants'
 
 export const parseConversationResponse = (response): any[] => {
   const { included = [] } = response
+  const grouped = groupBy(included, '$type')
 
-  const entities = filterByType(
-    included,
-    'com.linkedin.voyager.identity.shared.MiniProfile',
-  )
+  const {
+    miniProfile: miniProfileType,
+    conversation: conversationType,
+    member: memberType,
+    event: eventType,
+  } = LinkedInAPITypes
 
-  const conversations = filterByType(
-    included,
-    'com.linkedin.voyager.messaging.Conversation',
-  )
+  const {
+    [miniProfileType]: profiles = [],
+    [conversationType]: allConversations = [],
+    [memberType]: members = [],
+    [eventType]: allMessages = [],
+  } = grouped
 
-  const messagingMembers = filterByType(
-    included,
-    'com.linkedin.voyager.messaging.MessagingMember',
-  )
+  return allConversations?.map(conversation => {
+    const firstParticipant = conversation['*participants'][0] || ''
 
-  const allMessages = filterByType(
-    included,
-    'com.linkedin.voyager.messaging.Event',
-  )
+    const entityId = firstParticipant?.split(',').pop().replace(')', '')
+    const entity = find(profiles, p => p?.entityUrn.includes(entityId)) || {}
 
-  const parsedData = entities.reduce((prev, current) => {
-    const entityId = current?.entityUrn.split(':').pop()
+    // const conversation = find(allConversations, c => c['*participants'].some(participant => participant.includes(entityId))) || {}
+    const messagingMember = find(members, m => m.entityUrn.includes(entityId)) || {}
+    const messages = filter(allMessages, e => e['*from'].includes(entityId)) || []
 
-    const conversation = conversations.find(receivedConversation => receivedConversation['*participants'].some(participant =>
-      participant.includes(entityId)))
-
-    const messagingMember = messagingMembers.find(member => member.entityUrn.includes(entityId))
-    const messages = allMessages.filter(message => message['*from'].includes(entityId))
-
-    const currentData = {
-      entity: current,
-      messagingMember,
+    return {
+      entity,
       conversation,
+      messagingMember,
       messages,
     }
-
-    return [...prev, currentData]
-  }, [])
-
-  return parsedData
+  })
 }
