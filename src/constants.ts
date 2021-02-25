@@ -33,3 +33,10 @@ export const LinkedInURLs = {
   API_CONVERSATIONS: 'https://www.linkedin.com/voyager/api/messaging/conversations',
   API_ME: 'https://www.linkedin.com/voyager/api/me',
 }
+
+export const LinkedInAPITypes = {
+  miniProfile: 'com.linkedin.voyager.identity.shared.MiniProfile',
+  conversation: 'com.linkedin.voyager.messaging.Conversation',
+  member: 'com.linkedin.voyager.messaging.MessagingMember',
+  event: 'com.linkedin.voyager.messaging.Event',
+}

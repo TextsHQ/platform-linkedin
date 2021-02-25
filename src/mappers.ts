@@ -1,21 +1,60 @@
 import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview } from '@textshq/platform-sdk'
-import { orderBy } from 'lodash'
+import { orderBy, groupBy } from 'lodash'
 
-import { supportedReactions } from './constants'
+import { LinkedInAPITypes, supportedReactions } from './constants'
 
-const getSenderID = (from: string) =>
+export const getSenderID = (from: string) =>
   // "*from": "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)",
   from
     .split(',')
     .pop() // ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)
     .replace(')', '')
 
+export const mapConversationsResponse = (liResponse: any): Record<string, any>[] => {
+  const { included = [] } = liResponse
+  const grouped = groupBy(included, '$type')
+
+  const {
+    miniProfile: miniProfileType,
+    conversation: conversationType,
+    member: memberType,
+    event: eventType,
+  } = LinkedInAPITypes
+
+  const {
+    [miniProfileType]: profiles = [],
+    [conversationType]: allConversations = [],
+    [memberType]: members = [],
+    [eventType]: allMessages = [],
+  } = grouped
+
+  const conversations = []
+
+  for (const conversation of allConversations) {
+    const firstParticipant = conversation['*participants'][0] || ''
+    const entityId = getSenderID(firstParticipant)
+
+    const entity = profiles.find(p => p?.entityUrn.includes(entityId)) || {}
+    const messagingMember = members.find(m => m.entityUrn.includes(entityId)) || {}
+    const messages = allMessages.filter(e => e['*from'].includes(entityId)) || []
+
+    conversations.push({
+      entity,
+      conversation,
+      messagingMember,
+      messages,
+    })
+  }
+
+  return conversations
+}
+
 export const mapMiniProfile = (liMiniProfile: any): User => ({
   // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
-  id: liMiniProfile.entityUrn.split(':').pop(),
-  username: liMiniProfile.publicIdentifier,
-  fullName: [liMiniProfile.firstName, liMiniProfile.lastName].filter(Boolean).join(' '),
-  imgURL: liMiniProfile.picture ? liMiniProfile.picture.rootUrl + liMiniProfile.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
+  id: liMiniProfile?.entityUrn.split(':').pop(),
+  username: liMiniProfile?.publicIdentifier,
+  fullName: [liMiniProfile?.firstName, liMiniProfile?.lastName].filter(Boolean).join(' '),
+  imgURL: liMiniProfile?.picture ? liMiniProfile?.picture.rootUrl + liMiniProfile?.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
 })
 
 export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
@@ -29,9 +68,9 @@ const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>
     const entity = entitiesMap[id]
     return {
       id,
-      username: entity.publicIdentifier,
-      fullName: [entity.firstName, entity.lastName].filter(Boolean).join(' '),
-      imgURL: entity.picture ? entity.picture.rootUrl + entity.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
+      username: entity?.publicIdentifier,
+      fullName: [entity?.firstName, entity?.lastName].filter(Boolean).join(' '),
+      imgURL: entity?.picture ? entity?.picture.rootUrl + entity?.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
     }
   })
 
@@ -60,7 +99,7 @@ const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = fals
 }
 
 const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID: string): Thread => {
-  const { conversation, messages: liMessages } = thread
+  const { conversation, messages: liMessages = [] } = thread
 
   const participantsItems = mapParticipants(conversation['*participants'], entitiesMap)
 
@@ -90,7 +129,7 @@ const groupEntities = (liThreads: any[]) => {
   const map = {}
   for (const liThread of liThreads) {
     // "entityUrn": "urn:li:fs_miniProfile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
-    const id = liThread.entity.entityUrn.split(':').pop()
+    const id = liThread.entity?.entityUrn?.split(':').pop()
     map[id] = liThread.entity
   }
   return map
