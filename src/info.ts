@@ -22,6 +22,7 @@ const info: PlatformInfo = {
   reactions: {
     supported: supportedReactions,
     canReactWithAllEmojis: true,
+    allowsMultipleReactionsToSingleMessage: true,
   },
   loginMode: 'browser',
   browserLogin: {
