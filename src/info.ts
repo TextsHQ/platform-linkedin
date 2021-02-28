@@ -21,6 +21,7 @@ const info: PlatformInfo = {
   tags: ['Beta'],
   reactions: {
     supported: supportedReactions,
+    canReactWithAllEmojis: true,
   },
   loginMode: 'browser',
   browserLogin: {
