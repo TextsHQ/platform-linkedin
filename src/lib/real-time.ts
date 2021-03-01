@@ -12,6 +12,7 @@ export default class LinkedInRealTime {
   ) {}
 
   private* parseJSON(json: any) {
+    if (!json) return
     const newMessageEventType = 'com.linkedin.realtimefrontend.DecoratedEvent'
 
     if (!json[newMessageEventType]?.payload) return
@@ -85,9 +86,13 @@ export default class LinkedInRealTime {
     const eventSource = new EventSource(LinkedInURLs.REALTIME, { headers })
 
     eventSource.onmessage = event => {
-      if (!event.data?.startsWith('{')) return texts.log('unknown linkedin realtime response', event.data)
-
-      const jsons = event.data.split('\n').map(line => JSON.parse(line))
+      const jsons = event.data.split('\n').map(line => {
+        if (!line.startsWith('{')) {
+          texts.log('unknown linkedin realtime response', event.data)
+          return
+        }
+        return JSON.parse(line)
+      })
       const events = jsons.flatMap(json => [...this.parseJSON(json)])
       if (events.length > 0) this.onEvent(events)
     }
