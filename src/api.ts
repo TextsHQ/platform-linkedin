@@ -138,11 +138,11 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
-    await this.api.toggleReaction(reactionKey, messageID, threadID)
+    await this.api.toggleReaction(reactionKey, messageID, threadID, true)
   }
 
   removeReaction = async (threadID: string, messageID: string, reactionKey: string) => {
-    await this.api.toggleReaction(reactionKey, messageID, threadID)
+    await this.api.toggleReaction(reactionKey, messageID, threadID, false)
   }
 
   sendReadReceipt = async (threadID: string, messageID: string) => {

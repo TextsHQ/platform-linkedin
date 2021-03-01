@@ -226,11 +226,11 @@ export default class LinkedInAPI {
     })
   }
 
-  toggleReaction = async (emoji: string, messageID: string, threadID: string) => {
+  toggleReaction = async (emoji: string, messageID: string, threadID: string, react: boolean) => {
     const parsedMessageId = messageID.split(':').pop()
     const encodedEndpoint = encodeURIComponent(`${parsedMessageId}`)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events/${encodedEndpoint}`
-    const queryParams = { action: 'reactWithEmoji' }
+    const queryParams = { action: react ? 'reactWithEmoji' : 'unreactWithEmoji' }
     const payload = { emoji }
 
     await this.fetch({
