@@ -2,7 +2,7 @@
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
-import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapReactionEmoji, mapThreads } from './mappers'
+import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapThreads } from './mappers'
 import LinkedInAPI from './lib/linkedin'
 import LinkedInRealTime from './lib/real-time'
 
@@ -138,13 +138,11 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
-    const { render: emojiRender } = mapReactionEmoji(reactionKey)
-    await this.api.toggleReaction(emojiRender, messageID, threadID)
+    await this.api.toggleReaction(reactionKey, messageID, threadID)
   }
 
   removeReaction = async (threadID: string, messageID: string, reactionKey: string) => {
-    const { render: emojiRender } = mapReactionEmoji(reactionKey)
-    await this.api.toggleReaction(emojiRender, messageID, threadID)
+    await this.api.toggleReaction(reactionKey, messageID, threadID)
   }
 
   sendReadReceipt = async (threadID: string, messageID: string) => {

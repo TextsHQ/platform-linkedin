@@ -1,6 +1,6 @@
 import { InboxName, MessageContent } from '@textshq/platform-sdk'
 import got from 'got'
-import fs from 'fs'
+import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
 import { CookieJar } from 'tough-cookie'
 
@@ -120,7 +120,7 @@ export default class LinkedInAPI {
     const attachments = []
 
     if (message.mimeType) {
-      const buffer = message.fileBuffer ?? fs.readFileSync(message.filePath)
+      const buffer = message.fileBuffer ?? await fs.readFile(message.filePath)
 
       const data = await this.fetch({
         url: 'https://www.linkedin.com/voyager/api/voyagerMediaUploadMetadata',

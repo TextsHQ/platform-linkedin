@@ -141,8 +141,6 @@ export const mapThreads = (liThreads: any[], currentUserID: string): Thread[] =>
   return orderBy(threads, 'timestamp', 'desc')
 }
 
-export const mapReactionEmoji = (reactionKey: string) => supportedReactions[reactionKey]
-
 export const mapReactions = (liReactionSummaries: any, { currentUserID, participantId }): MessageReaction => ({
   id: liReactionSummaries?.firstReactedAt,
   reactionKey: liReactionSummaries?.emoji,

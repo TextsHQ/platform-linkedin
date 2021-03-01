@@ -3,11 +3,11 @@ import { SupportedReaction, texts } from '@textshq/platform-sdk'
 const { USER_AGENT } = texts.constants
 
 export const supportedReactions: Record<string, SupportedReaction> = {
-  clap: { title: 'Clap', render: '👏' },
-  like: { title: 'Like', render: '👍' },
-  dislike: { title: 'Dislike', render: '👎' },
-  smiling: { title: 'Smiling', render: '😊' },
-  disappointed: { title: 'Disappointed', render: '😞' },
+  '👏': { title: 'Clap', render: '👏' },
+  '👍': { title: 'Like', render: '👍' },
+  '👎': { title: 'Dislike', render: '👎' },
+  '😊': { title: 'Smiling', render: '😊' },
+  '😞': { title: 'Disappointed', render: '😞' },
 }
 
 export const REQUEST_HEADERS: Record<string, string> = {
