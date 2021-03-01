@@ -156,4 +156,10 @@ export default class LinkedIn implements PlatformAPI {
   deleteThread = async (threadID: string) => {
     await this.api.deleteThread(threadID)
   }
+
+  getAsset = async (type: string, uri: string) => {
+    if (type !== 'proxy') return
+    const url = Buffer.from(uri, 'hex').toString()
+    return this.api.fetchStream({ url })
+  }
 }

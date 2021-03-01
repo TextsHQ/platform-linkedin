@@ -24,6 +24,11 @@
   "devDependencies": {
     "@textshq/eslint-config": "https://github.com/TextsHQ/eslint-config",
     "@textshq/platform-sdk": "link:../platform-sdk",
+    "@types/cookie": "^0.4.0",
+    "@types/eslint": "^7.2.6",
+    "@types/eventsource": "^1.1.5",
+    "@types/lodash": "^4.14.168",
+    "@types/tough-cookie": "^4.0.0",
     "eslint": "^7.18.0",
     "ts-node": "^9.1.1"
   }

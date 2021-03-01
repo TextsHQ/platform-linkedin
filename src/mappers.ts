@@ -188,10 +188,10 @@ const mapAttachment = (liAttachment: any): MessageAttachment => {
   const { name, reference, mediaType, id, byteSize } = liAttachment
 
   const type = (() => {
-    switch (mediaType) {
-      default:
-        return MessageAttachmentType.UNKNOWN
-    }
+    if (mediaType.startsWith('image')) return MessageAttachmentType.IMG
+    if (mediaType.startsWith('video')) return MessageAttachmentType.VIDEO
+    if (mediaType.startsWith('audio')) return MessageAttachmentType.AUDIO
+    return MessageAttachmentType.UNKNOWN
   })()
 
   return {
@@ -200,7 +200,7 @@ const mapAttachment = (liAttachment: any): MessageAttachment => {
     type,
     mimeType: mediaType,
     fileSize: byteSize,
-    srcURL: reference,
+    srcURL: 'asset://$accountID/proxy/' + Buffer.from(reference).toString('hex'),
   }
 }
 
@@ -248,6 +248,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody?.text,
+    isDeleted: !!liMessage.eventContent.recalledAt,
     attachments,
     links,
     reactions,

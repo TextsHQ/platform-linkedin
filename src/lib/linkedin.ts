@@ -15,9 +15,7 @@ export default class LinkedInAPI {
     this.cookieJar = cookieJar
   }
 
-  fetch = async ({ headers = {}, ...rest }) => {
-    if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
-
+  getCSRFToken = () => {
     const csrfToken = this.cookieJar
       .getCookiesSync(LinkedInURLs.HOME)
       .find(c => c.key === 'JSESSIONID')
@@ -26,12 +24,17 @@ export default class LinkedInAPI {
       .replaceAll('"', '')
 
     if (!csrfToken) throw Error('could not find csrf token')
+    return csrfToken
+  }
+
+  fetch = async ({ headers = {}, ...rest }) => {
+    if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
 
     const res = await got({
       throwHttpErrors: false,
       cookieJar: this.cookieJar,
       headers: {
-        'csrf-token': csrfToken,
+        'csrf-token': this.getCSRFToken(),
         ...REQUEST_HEADERS,
         ...headers,
       },
@@ -39,6 +42,21 @@ export default class LinkedInAPI {
     })
 
     if (res.body) return JSON.parse(res.body)
+  }
+
+  fetchStream = ({ headers = {}, ...rest }) => {
+    if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
+
+    return got.stream({
+      throwHttpErrors: false,
+      cookieJar: this.cookieJar,
+      headers: {
+        'csrf-token': this.getCSRFToken(),
+        ...REQUEST_HEADERS,
+        ...headers,
+      },
+      ...rest,
+    })
   }
 
   getCurrentUser = async () => {
