@@ -37,17 +37,19 @@ export default class LinkedInRealTime {
       const { entityUrn = '', conversation } = payload
       const threadID = entityUrn.split(':').pop()
 
-      yield {
-        type: ServerEventType.STATE_SYNC,
-        mutationType: 'update',
-        objectName: 'thread',
-        objectIDs: { threadID },
-        entries: [
-          {
-            id: threadID,
-            isUnread: !conversation.read,
-          },
-        ],
+      if (conversation) {
+        yield {
+          type: ServerEventType.STATE_SYNC,
+          mutationType: 'update',
+          objectName: 'thread',
+          objectIDs: { threadID },
+          entries: [
+            {
+              id: threadID,
+              isUnread: !conversation.read,
+            },
+          ],
+        }
       }
     } else if (topic === 'urn:li-realtime:messageSeenReceiptsTopic:urn:li-realtime:myself') {
       const { fromEntity, seenReceipt } = payload

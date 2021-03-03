@@ -72,6 +72,8 @@ export default class LinkedIn implements PlatformAPI {
 
   createThread = async (userIDs: string[]): Promise<Thread> => {
     const res = await this.api.createThread(userIDs)
+    if (!res) return
+
     const { createdAt, conversationUrn } = res
     // conversationUrn: "urn:li:fs_conversation:2-YmU3NDYwNzctNTU0ZS00NjdhLTg3ZDktMjkwOTE5NDAxNGQ4XzAxMw=="
     const id = conversationUrn.split(':').pop()
