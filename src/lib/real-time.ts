@@ -2,7 +2,7 @@ import { OnServerEventCallback, ServerEvent, ServerEventType, texts, UNKNOWN_DAT
 import EventSource from 'eventsource'
 
 import { REQUEST_HEADERS, LinkedInURLs } from '../constants'
-import LinkedInAPI from './linkedin'
+import type LinkedInAPI from './linkedin'
 
 export default class LinkedInRealTime {
   constructor(

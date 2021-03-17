@@ -2,7 +2,7 @@ import { InboxName, MessageContent } from '@textshq/platform-sdk'
 import got from 'got'
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
-import { CookieJar } from 'tough-cookie'
+import type { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
 import { mapConversationsResponse } from '../mappers'
