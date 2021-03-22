@@ -36,7 +36,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   login = async ({ cookieJarJSON }): Promise<LoginResult> => {
-    if (!cookieJarJSON?.cookies?.some(({ key }) => key === LinkedInAuthCookie)) return { type: 'error', errorMessage: 'There was an error' }
+    if (!cookieJarJSON?.cookies?.some(({ key }) => key === LinkedInAuthCookie)) return { type: 'error', errorMessage: 'No authentication cookie was found' }
 
     await this.api.setLoginState(CookieJar.fromJSON(cookieJarJSON))
 
