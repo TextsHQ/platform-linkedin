@@ -5,7 +5,7 @@ import { CookieJar } from 'tough-cookie'
 import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapThreads } from './mappers'
 import LinkedInAPI from './lib/linkedin'
 import LinkedInRealTime from './lib/real-time'
-import { LinkedInAuthCookie } from './constants'
+import { LinkedInAuthCookieName } from './constants'
 
 export default class LinkedIn implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
@@ -36,7 +36,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   login = async ({ cookieJarJSON }): Promise<LoginResult> => {
-    if (!cookieJarJSON?.cookies?.some(({ key }) => key === LinkedInAuthCookie)) return { type: 'error', errorMessage: 'No authentication cookie was found' }
+    if (!cookieJarJSON?.cookies?.some(({ key }) => key === LinkedInAuthCookieName)) return { type: 'error', errorMessage: 'No authentication cookie was found' }
 
     await this.api.setLoginState(CookieJar.fromJSON(cookieJarJSON))
 
