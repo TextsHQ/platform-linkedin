@@ -24,6 +24,8 @@ export const REQUEST_HEADERS: Record<string, string> = {
   'accept-language': 'en-US,en;q=0.9',
 }
 
+export const LinkedInAuthCookie = 'li_at'
+
 export const LinkedInURLs = {
   HOME: 'https://www.linkedin.com/',
   LOGIN: 'https://www.linkedin.com/login',
