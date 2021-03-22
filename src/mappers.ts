@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity } from '@textshq/platform-sdk'
 import { orderBy, groupBy } from 'lodash'
 
 import { LinkedInAPITypes, supportedReactions } from './constants'
@@ -221,9 +221,32 @@ export const mapMessageSeenState = (message: Message, seenReceipt: any): Message
   seen: seenReceipt[message.id] || message.seen,
 })
 
+const mapTextAttributes = (liTextAttributes: any[], text: string): TextAttributes => {
+  const entitiesAttributes = liTextAttributes.filter(({ type }) => type.$type === 'com.linkedin.pemberly.text.Entity')
+  if (!entitiesAttributes.length) return
+
+  const entities: TextEntity[] = entitiesAttributes.map((liEntity: any) => ({
+    from: liEntity.start,
+    to: liEntity.start + liEntity.length,
+    bold: true,
+    mentionedUser: {
+      username: text?.slice(liEntity.start, liEntity.start + liEntity.length),
+      // urn : "urn:li:fs_miniProfile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
+      id: liEntity.type.urn.split(':').pop(),
+    },
+  }))
+
+  return { entities }
+}
+
 export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   const { reactionSummaries } = liMessage
   const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
+
+  let textAttributes
+  if (attributedBody?.attributes?.length > 0) {
+    textAttributes = mapTextAttributes(attributedBody?.attributes, attributedBody?.text)
+  }
 
   const senderID = getSenderID(liMessage['*from'])
   let linkedMessage: MessagePreview
@@ -232,13 +255,11 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId: senderID }))
 
   const attachments = liAttachments?.map(liAttachment => mapAttachment(liAttachment)) || []
-  if (customContent) {
-    if (!customContent.forwardedContentType && customContent.$type !== 'com.linkedin.voyager.messaging.event.message.InmailContent') {
-      attachments.push(mapCustomContent(customContent))
-    } else if (customContent.forwardedContentType) {
-      linkedMessage = mapForwardedMessage(customContent)
-    }
-  }
+
+  if (customContent?.forwardedContentType) linkedMessage = mapForwardedMessage(customContent)
+
+  let isAction = false
+  if (customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent') isAction = true
 
   const links = liMessage.eventContent['*feedUpdate'] ? [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])] : []
 
@@ -256,5 +277,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     isSender: currentUserID === senderID,
     linkedMessage,
     seen: {},
+    textAttributes,
+    isAction,
   }
 }
