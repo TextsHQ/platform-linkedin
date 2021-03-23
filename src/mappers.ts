@@ -230,7 +230,6 @@ const mapTextAttributes = (liTextAttributes: any[], text: string): TextAttribute
     to: liEntity.start + liEntity.length,
     bold: true,
     mentionedUser: {
-      username: text?.slice(liEntity.start, liEntity.start + liEntity.length),
       // urn : "urn:li:fs_miniProfile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
       id: liEntity.type.urn.split(':').pop(),
     },
