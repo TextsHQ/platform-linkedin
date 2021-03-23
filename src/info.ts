@@ -1,6 +1,6 @@
 import { PlatformInfo, MessageDeletionMode, Attribute } from '@textshq/platform-sdk'
 
-import { supportedReactions, LinkedInURLs } from './constants'
+import { supportedReactions, LinkedInURLs, LinkedInAuthCookieName } from './constants'
 
 const { LOGIN: loginURL } = LinkedInURLs
 
@@ -27,7 +27,7 @@ const info: PlatformInfo = {
   loginMode: 'browser',
   browserLogin: {
     loginURL,
-    authCookieName: 'li_at',
+    authCookieName: LinkedInAuthCookieName,
   },
   deletionMode: MessageDeletionMode.NONE,
   attributes: new Set([
