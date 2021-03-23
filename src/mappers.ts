@@ -225,7 +225,7 @@ const mapTextAttributes = (liTextAttributes: any[], text: string): TextAttribute
   const entitiesAttributes = liTextAttributes.filter(({ type }) => type.$type === 'com.linkedin.pemberly.text.Entity')
   if (!entitiesAttributes.length) return
 
-  const entities: TextEntity[] = entitiesAttributes.map((liEntity: any) => ({
+  const entities = entitiesAttributes.map<TextEntity>((liEntity: any) => ({
     from: liEntity.start,
     to: liEntity.start + liEntity.length,
     bold: true,
