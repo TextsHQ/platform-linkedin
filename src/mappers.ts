@@ -243,7 +243,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   const { reactionSummaries } = liMessage
   const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
 
-  let textAttributes
+  let textAttributes: TextAttributes
   if (attributedBody?.attributes?.length > 0) {
     textAttributes = mapTextAttributes(attributedBody?.attributes, attributedBody?.text)
   }
