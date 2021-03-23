@@ -258,8 +258,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
 
   if (customContent?.forwardedContentType) linkedMessage = mapForwardedMessage(customContent)
 
-  let isAction = false
-  if (customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent') isAction = true
+  const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent'
 
   const links = liMessage.eventContent['*feedUpdate'] ? [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])] : []
 
