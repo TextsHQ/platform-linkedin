@@ -51,6 +51,21 @@ export default class LinkedInRealTime {
           ],
         }
       }
+
+      if (payload?.action === 'UPDATE') {
+        yield {
+          type: ServerEventType.STATE_SYNC,
+          mutationType: 'update',
+          objectName: 'thread',
+          objectIDs: { threadID },
+          entries: [
+            {
+              id: threadID,
+              title: conversation.name,
+            },
+          ],
+        }
+      }
     } else if (topic === 'urn:li-realtime:messageSeenReceiptsTopic:urn:li-realtime:myself') {
       const { fromEntity, seenReceipt } = payload
       const { eventUrn, seenAt } = seenReceipt
