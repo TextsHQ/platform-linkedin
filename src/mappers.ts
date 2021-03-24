@@ -54,7 +54,7 @@ export const mapMiniProfile = (liMiniProfile: any): User => ({
   id: liMiniProfile?.entityUrn.split(':').pop(),
   username: liMiniProfile?.publicIdentifier,
   fullName: [liMiniProfile?.firstName, liMiniProfile?.lastName].filter(Boolean).join(' '),
-  imgURL: liMiniProfile?.picture ? liMiniProfile?.picture.rootUrl + liMiniProfile?.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
+  imgURL: liMiniProfile?.picture ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment : undefined,
 })
 
 export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
