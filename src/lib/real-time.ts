@@ -54,7 +54,18 @@ export default class LinkedInRealTime {
       }
 
       if (payload?.action === 'UPDATE') {
-        const participants = conversation?.participants.map(participant => participant['com.linkedin.voyager.messaging.MessagingMember'].miniProfile)
+        const participants = conversation?.participants
+          .map(participant => {
+            const { miniProfile: eventMiniProfile } = participant['com.linkedin.voyager.messaging.MessagingMember']
+            const miniProfile = {
+              ...eventMiniProfile,
+              picture: {
+                ...(eventMiniProfile.picture ? eventMiniProfile.picture['com.linkedin.common.VectorImage'] : {}),
+              },
+            }
+
+            return mapMiniProfile(miniProfile)
+          })
 
         yield {
           type: ServerEventType.STATE_SYNC,
