@@ -1,7 +1,7 @@
 import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity } from '@textshq/platform-sdk'
 import { orderBy, groupBy } from 'lodash'
 
-import { LinkedInAPITypes, supportedReactions } from './constants'
+import { LinkedInAPITypes } from './constants'
 
 export const getSenderID = (from: string) =>
   // "*from": "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)",
@@ -38,12 +38,14 @@ export const mapConversationsResponse = (liResponse: any): Record<string, any>[]
     const messagingMember = members.find(m => m.entityUrn.includes(entityId)) || {}
     const messages = allMessages.filter(e => e['*from'].includes(entityId)) || []
 
-    conversations.push({
-      entity,
-      conversation,
-      messagingMember,
-      messages,
-    })
+    if (entityId !== 'UNKNOWN') {
+      conversations.push({
+        entity,
+        conversation,
+        messagingMember,
+        messages,
+      })
+    }
   }
 
   return conversations
@@ -268,7 +270,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     id: liMessage.dashEntityUrn,
     cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
-    text: attributedBody?.text,
+    text: attributedBody?.text || customContent?.body,
     isDeleted: !!liMessage.eventContent.recalledAt,
     attachments,
     links,

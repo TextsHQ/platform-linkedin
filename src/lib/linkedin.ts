@@ -104,10 +104,10 @@ export default class LinkedInAPI {
     const parsed = [...mapConversationsResponse(inbox), ...mapConversationsResponse(archive)]
 
     return parsed.filter((x: any) => {
-      const threadId = x?.conversation?.entityUrn
-      const entity = x?.entity?.entityUrn
+      const { entityUrn: threadId } = x?.conversation || {}
+      const { entityUrn: entityId, $type } = x?.entity || {}
 
-      return Boolean(threadId && entity)
+      return Boolean(threadId && entityId && $type === 'com.linkedin.voyager.identity.shared.MiniProfile')
     })
   }
 
