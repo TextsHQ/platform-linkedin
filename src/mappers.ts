@@ -49,12 +49,16 @@ export const mapConversationsResponse = (liResponse: any): Record<string, any>[]
   return conversations
 }
 
+const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.picture?.rootUrl
+  ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment
+  : undefined)
+
 export const mapMiniProfile = (liMiniProfile: any): User => ({
   // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
   id: liMiniProfile?.entityUrn.split(':').pop(),
   username: liMiniProfile?.publicIdentifier,
   fullName: [liMiniProfile?.firstName, liMiniProfile?.lastName].filter(Boolean).join(' '),
-  imgURL: liMiniProfile?.picture ? liMiniProfile?.picture.rootUrl + liMiniProfile?.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
+  imgURL: mapPicture(liMiniProfile),
 })
 
 export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
@@ -70,7 +74,7 @@ const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>
       id,
       username: entity?.publicIdentifier,
       fullName: [entity?.firstName, entity?.lastName].filter(Boolean).join(' '),
-      imgURL: entity?.picture ? entity?.picture.rootUrl + entity?.picture.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
+      imgURL: mapPicture(entity),
     }
   })
 
@@ -118,10 +122,8 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
     isReadOnly: false,
     mutedUntil: conversation.muted ? 'forever' : undefined,
     messages: { items: messages, hasMore: true },
-    participants: {
-      items: participantsItems,
-      hasMore: false,
-    },
+    participants: { items: participantsItems, hasMore: false },
+    isArchived: conversation.archived || undefined,
   }
 }
 

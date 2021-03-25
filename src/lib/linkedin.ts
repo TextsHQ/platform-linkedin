@@ -93,8 +93,15 @@ export default class LinkedInAPI {
       ...(inboxType === InboxName.REQUESTS ? { q: 'systemLabel', type: 'MESSAGE_REQUEST_PENDING' } : {}),
     }
 
-    const response = await this.fetch({ method: 'GET', url, searchParams: queryParams })
-    const parsed = mapConversationsResponse(response)
+    const inbox = await this.fetch({ method: 'GET', url, searchParams: queryParams })
+    const archive = await this.fetch({
+      method: 'GET',
+      // This is done this way and not using 'searchParams' because using the searchParams it'll serialize
+      // them and LinkedIn receives it with the ().
+      url: `${url}?folders=List(ARCHIVED)&createdBefore=${createdBefore}&q=search`,
+    })
+
+    const parsed = [...mapConversationsResponse(inbox), ...mapConversationsResponse(archive)]
 
     return parsed.filter((x: any) => {
       const threadId = x?.conversation?.entityUrn
@@ -108,6 +115,14 @@ export default class LinkedInAPI {
     const encodedEndpoint = encodeURIComponent(`${threadID}`)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
     const payload = { patch: { $set: { read } } }
+
+    await this.fetch({ method: 'POST', url, json: payload })
+  }
+
+  toggleArchiveThread = async (threadID: string, archived: boolean = true) => {
+    const encodedEndpoint = encodeURIComponent(`${threadID}`)
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
+    const payload = { patch: { $set: { archived } } }
 
     await this.fetch({ method: 'POST', url, json: payload })
   }

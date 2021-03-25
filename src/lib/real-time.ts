@@ -2,6 +2,7 @@ import { OnServerEventCallback, ServerEvent, ServerEventType, texts, UNKNOWN_DAT
 import EventSource from 'eventsource'
 
 import { REQUEST_HEADERS, LinkedInURLs } from '../constants'
+import { mapMiniProfile } from '../mappers'
 import type LinkedInAPI from './linkedin'
 
 export default class LinkedInRealTime {
@@ -53,6 +54,19 @@ export default class LinkedInRealTime {
       }
 
       if (payload?.action === 'UPDATE') {
+        const participants = conversation?.participants
+          .map(participant => {
+            const { miniProfile: eventMiniProfile } = participant['com.linkedin.voyager.messaging.MessagingMember'] || {}
+            const miniProfile = {
+              ...eventMiniProfile,
+              picture: {
+                ...(eventMiniProfile.picture ? eventMiniProfile.picture['com.linkedin.common.VectorImage'] : {}),
+              },
+            }
+
+            return mapMiniProfile(miniProfile)
+          })
+
         yield {
           type: ServerEventType.STATE_SYNC,
           mutationType: 'update',
@@ -62,6 +76,9 @@ export default class LinkedInRealTime {
             {
               id: threadID,
               title: conversation.name,
+              isArchived: conversation?.archived,
+              mutedUntil: conversation?.muted ? 'forever' : undefined,
+              participants,
             },
           ],
         }
