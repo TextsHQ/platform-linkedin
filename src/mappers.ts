@@ -49,12 +49,14 @@ export const mapConversationsResponse = (liResponse: any): Record<string, any>[]
   return conversations
 }
 
+const mapPicture = (liPicture): string => liPicture?.rootUrl + liPicture?.artifacts[0]?.fileIdentifyingUrlPathSegment
+
 export const mapMiniProfile = (liMiniProfile: any): User => ({
   // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
   id: liMiniProfile?.entityUrn.split(':').pop(),
   username: liMiniProfile?.publicIdentifier,
   fullName: [liMiniProfile?.firstName, liMiniProfile?.lastName].filter(Boolean).join(' '),
-  imgURL: liMiniProfile?.picture?.rootUrl ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment : undefined,
+  imgURL: liMiniProfile?.picture?.rooUrl ? mapPicture(liMiniProfile?.picture) : undefined,
 })
 
 export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
@@ -70,7 +72,7 @@ const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>
       id,
       username: entity?.publicIdentifier,
       fullName: [entity?.firstName, entity?.lastName].filter(Boolean).join(' '),
-      imgURL: entity?.picture ? entity?.picture.rootUrl + entity?.picture?.artifacts[0].fileIdentifyingUrlPathSegment : undefined,
+      imgURL: entity?.picture?.rootUrl ? mapPicture(entity?.picture) : undefined,
     }
   })
 
