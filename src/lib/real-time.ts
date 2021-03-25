@@ -75,7 +75,7 @@ export default class LinkedInRealTime {
           entries: [
             {
               id: threadID,
-              title: conversation.name,
+              title: conversation?.name,
               isArchived: conversation?.archived,
               mutedUntil: conversation?.muted ? 'forever' : undefined,
               participants,
