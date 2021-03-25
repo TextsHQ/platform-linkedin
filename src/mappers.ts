@@ -38,12 +38,14 @@ export const mapConversationsResponse = (liResponse: any): Record<string, any>[]
     const messagingMember = members.find(m => m.entityUrn.includes(entityId)) || {}
     const messages = allMessages.filter(e => e['*from'].includes(entityId)) || []
 
-    conversations.push({
-      entity,
-      conversation,
-      messagingMember,
-      messages,
-    })
+    if (entityId !== 'UNKNOWN') {
+      conversations.push({
+        entity,
+        conversation,
+        messagingMember,
+        messages,
+      })
+    }
   }
 
   return conversations
