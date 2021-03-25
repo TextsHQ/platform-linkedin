@@ -56,7 +56,7 @@ export default class LinkedInRealTime {
       if (payload?.action === 'UPDATE') {
         const participants = conversation?.participants
           .map(participant => {
-            const { miniProfile: eventMiniProfile } = participant['com.linkedin.voyager.messaging.MessagingMember']
+            const { miniProfile: eventMiniProfile } = participant['com.linkedin.voyager.messaging.MessagingMember'] || {}
             const miniProfile = {
               ...eventMiniProfile,
               picture: {
@@ -75,7 +75,7 @@ export default class LinkedInRealTime {
           entries: [
             {
               id: threadID,
-              title: conversation.name,
+              title: conversation?.name,
               isArchived: conversation?.archived,
               mutedUntil: conversation?.muted ? 'forever' : undefined,
               participants,

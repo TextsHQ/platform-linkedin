@@ -49,7 +49,7 @@ export const mapConversationsResponse = (liResponse: any): Record<string, any>[]
   return conversations
 }
 
-const mapPicture = (liMiniProfile): string | undefined => (liMiniProfile?.picture?.rootUrl
+const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.picture?.rootUrl
   ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment
   : undefined)
 
