@@ -1,7 +1,7 @@
 import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity } from '@textshq/platform-sdk'
 import { orderBy, groupBy } from 'lodash'
 
-import { LinkedInAPITypes, supportedReactions } from './constants'
+import { LinkedInAPITypes } from './constants'
 
 export const getSenderID = (from: string) =>
   // "*from": "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)",
@@ -268,7 +268,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     id: liMessage.dashEntityUrn,
     cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
-    text: attributedBody?.text,
+    text: attributedBody?.text || customContent?.body,
     isDeleted: !!liMessage.eventContent.recalledAt,
     attachments,
     links,
