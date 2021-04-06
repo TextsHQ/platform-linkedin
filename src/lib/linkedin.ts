@@ -217,6 +217,24 @@ export default class LinkedInAPI {
     return Boolean(response?.data)
   }
 
+  deleteMessage = async (threadID: string, messageID: string): Promise<boolean> => {
+    // urn:li:fsd_message:2-MTYxNzY2ODAyODc1N2IyNjY1MC0wMDQmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==
+    const messageEventId = messageID.split(':').pop()
+
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}/events/${encodeURIComponent(messageEventId)}`
+    const queryParams = { action: 'recall' }
+    const payload = {}
+
+    await this.fetch({
+      url,
+      method: 'POST',
+      json: payload,
+      searchParams: queryParams,
+    })
+
+    return true
+  }
+
   createThread = async (profileIds: string[]) => {
     const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = { action: 'create' }
