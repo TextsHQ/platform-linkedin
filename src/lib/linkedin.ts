@@ -225,14 +225,15 @@ export default class LinkedInAPI {
     const queryParams = { action: 'recall' }
     const payload = {}
 
-    await this.fetch({
+    const res = await this.fetch({
       url,
       method: 'POST',
       json: payload,
       searchParams: queryParams,
     })
-
-    return true
+    // In case this works this should be an empty response, in case this throws an error it includes a 'data' field
+    // with information of the error
+    return !res?.data
   }
 
   createThread = async (profileIds: string[]) => {
