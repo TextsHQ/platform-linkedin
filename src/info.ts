@@ -29,13 +29,14 @@ const info: PlatformInfo = {
     loginURL,
     authCookieName: LinkedInAuthCookieName,
   },
-  deletionMode: MessageDeletionMode.NONE,
+  deletionMode: MessageDeletionMode.DELETE_FOR_EVERYONE,
   attributes: new Set([
     Attribute.NO_CACHE,
     Attribute.SUPPORTS_MARK_AS_UNREAD,
     Attribute.SUPPORTS_DELETE_THREAD,
     Attribute.SUPPORTS_REQUESTS_INBOX,
     Attribute.SUPPORTS_ARCHIVE,
+    Attribute.SUPPORTS_DELETE_THREAD,
   ]),
   getUserProfileLink: ({ username }) => username && `https://www.linkedin.com/in/${username}`,
 }

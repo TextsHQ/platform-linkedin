@@ -138,6 +138,8 @@ export default class LinkedIn implements PlatformAPI {
   sendMessage = (threadID: string, content: MessageContent) =>
     this.api.sendMessage(content, threadID)
 
+  deleteMessage = (threadID: string, messageID: string) => this.api.deleteMessage(threadID, messageID)
+
   sendActivityIndicator = async (type: ActivityType, threadID: string) => {
     if (type === ActivityType.TYPING) await this.api.toggleTypingState(threadID)
   }
@@ -158,9 +160,7 @@ export default class LinkedIn implements PlatformAPI {
     await this.api.markThreadRead(threadID, false)
   }
 
-  deleteThread = async (threadID: string) => {
-    await this.api.deleteThread(threadID)
-  }
+  deleteThread = async (threadID: string) => this.api.deleteThread(threadID)
 
   archiveThread = async (threadID: string, archived: boolean) => {
     await this.api.toggleArchiveThread(threadID, archived)
