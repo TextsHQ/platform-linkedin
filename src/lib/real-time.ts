@@ -1,5 +1,6 @@
 import { OnServerEventCallback, ServerEvent, ServerEventType, texts, UNKNOWN_DATE } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
+import type { SendMessageResolveFunction } from '../api'
 
 import { REQUEST_HEADERS, LinkedInURLs } from '../constants'
 import { mapMiniProfile } from '../mappers'
@@ -10,6 +11,7 @@ export default class LinkedInRealTime {
     private api: LinkedInAPI,
     private onEvent: OnServerEventCallback,
     private updateSeenReceipt: (key: string, value: any) => void,
+    private sendMessageResolvers: Map<number, SendMessageResolveFunction> = null,
   ) {}
 
   private* parseJSON(json: any) {
@@ -19,6 +21,17 @@ export default class LinkedInRealTime {
     if (!json[newMessageEventType]?.payload) return
     const { payload, topic = '' } = json[newMessageEventType]
     const threadsIDs = []
+
+    if (topic === 'urn:li-realtime:messagesTopic:urn:li-realtime:myself' && payload?.event) {
+      if (!this.sendMessageResolvers) return
+
+      const { backendUrn } = payload?.event
+      const resolve = this.sendMessageResolvers.get(backendUrn)
+
+      if (!resolve) return console.warn('unable to find promise resolver for message sent')
+      resolve(true)
+      this.sendMessageResolvers.delete(backendUrn)
+    }
 
     if (payload?.previousEventInConversationUrn) {
       // "previousEventInConversationUrn": "urn:li:fs_event:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,2-MTYxMjk5MzkyMzQxMWI0ODMyNy0wMDMmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==)"
@@ -130,8 +143,9 @@ export default class LinkedInRealTime {
       const events = jsons.flatMap(json => [...this.parseJSON(json)])
       if (events.length > 0) this.onEvent(events)
     }
+
     eventSource.onerror = err => {
-      console.error(err)
+      this.subscribeToEvents()
     }
   }
 }
