@@ -6,6 +6,7 @@ import type { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
 import { mapConversationsResponse } from '../mappers'
+import type { SendMessageResolveFunction } from '../api'
 
 export default class LinkedInAPI {
   cookieJar: CookieJar
@@ -147,7 +148,7 @@ export default class LinkedInAPI {
     return data?.included ?? []
   }
 
-  sendMessage = async (message: MessageContent, threadID: string) => {
+  sendMessage = async (message: MessageContent, threadID: string, sendMessageResolvers: Map<number, SendMessageResolveFunction> = null) => {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
     const queryParams = { action: 'create' }
     const attachments = []
@@ -214,7 +215,12 @@ export default class LinkedInAPI {
       searchParams: queryParams,
     })
 
-    return Boolean(response?.data)
+    return new Promise<boolean>(resolve => {
+      const { backendEventUrn } = response?.data.value
+
+      if (sendMessageResolvers) sendMessageResolvers.set(backendEventUrn, resolve)
+      else resolve(Boolean(response?.data))
+    })
   }
 
   deleteMessage = async (threadID: string, messageID: string): Promise<boolean> => {
