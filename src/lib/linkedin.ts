@@ -216,7 +216,7 @@ export default class LinkedInAPI {
     })
 
     return new Promise<boolean>(resolve => {
-      const { backendEventUrn } = response?.data.value
+      const { backendEventUrn } = response?.data.value || {}
 
       if (sendMessageResolvers) sendMessageResolvers.set(backendEventUrn, resolve)
       else resolve(Boolean(response?.data))
