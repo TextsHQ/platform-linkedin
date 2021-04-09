@@ -7,6 +7,8 @@ import LinkedInAPI from './lib/linkedin'
 import LinkedInRealTime from './lib/real-time'
 import { LinkedInAuthCookieName } from './constants'
 
+export type SendMessageResolveFunction = (value: boolean) => void
+
 export default class LinkedIn implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
 
@@ -17,6 +19,8 @@ export default class LinkedIn implements PlatformAPI {
   private searchedUsers: User[]
 
   private realTimeApi: null | LinkedInRealTime = null
+
+  private sendMessageResolvers = new Map<number, SendMessageResolveFunction>()
 
   // TODO: implement something with Texts-sdk
   private seenReceipt = {}
@@ -57,7 +61,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
-    this.realTimeApi = new LinkedInRealTime(this.api, onEvent, this.updateSeenReceipt)
+    this.realTimeApi = new LinkedInRealTime(this.api, onEvent, this.updateSeenReceipt, this.sendMessageResolvers)
     this.realTimeApi.subscribeToEvents()
   }
 
@@ -135,8 +139,7 @@ export default class LinkedIn implements PlatformAPI {
     }
   }
 
-  sendMessage = (threadID: string, content: MessageContent) =>
-    this.api.sendMessage(content, threadID)
+  sendMessage = async (threadID: string, content: MessageContent) => this.api.sendMessage(content, threadID, this.sendMessageResolvers)
 
   deleteMessage = (threadID: string, messageID: string) => this.api.deleteMessage(threadID, messageID)
 
