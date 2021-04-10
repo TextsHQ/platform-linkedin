@@ -6,6 +6,18 @@ import { REQUEST_HEADERS, LinkedInURLs } from '../constants'
 import { mapMiniProfile } from '../mappers'
 import type LinkedInAPI from './linkedin'
 
+const retry = (maxRetries, fn) => {
+  try {
+    fn()
+  } catch (err) {
+    if (maxRetries <= 0) throw err
+    setTimeout(() => {
+      console.warn('Retrying in 500ms')
+      return retry(maxRetries - 1, fn)
+    }, 500)
+  }
+}
+
 export default class LinkedInRealTime {
   constructor(
     private api: LinkedInAPI,
@@ -28,9 +40,13 @@ export default class LinkedInRealTime {
       const { backendUrn } = payload?.event
       const resolve = this.sendMessageResolvers.get(backendUrn)
 
-      if (!resolve) return console.warn('unable to find promise resolver for message sent')
-      resolve(true)
-      this.sendMessageResolvers.delete(backendUrn)
+      const resolveMessageSent = () => {
+        if (!resolve) throw new Error('Not function to resolve')
+        resolve(true)
+        this.sendMessageResolvers.delete(backendUrn)
+      }
+
+      retry(50, resolveMessageSent)
     }
 
     if (payload?.previousEventInConversationUrn) {
