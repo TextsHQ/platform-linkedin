@@ -31,7 +31,7 @@ export const mapConversationsResponse = (liResponse: any): Record<string, any>[]
   const conversations = []
 
   for (const conversation of allConversations) {
-    const firstParticipant = conversation['*participants'][0] || ''
+    const firstParticipant = conversation['*participants']?.length ? conversation['*participants'][0] : ''
     const entityId = getSenderID(firstParticipant)
 
     const entity = profiles.find(p => p?.entityUrn.includes(entityId)) || {}
