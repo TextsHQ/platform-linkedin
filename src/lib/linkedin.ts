@@ -1,5 +1,4 @@
-import { InboxName, MessageContent } from '@textshq/platform-sdk'
-import got from 'got'
+import { FetchOptions, InboxName, MessageContent, texts } from '@textshq/platform-sdk'
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
 import type { CookieJar } from 'tough-cookie'
@@ -28,28 +27,32 @@ export default class LinkedInAPI {
     return csrfToken
   }
 
-  fetch = async ({ headers = {}, ...rest }) => {
+  fetch = async ({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }) => {
     if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
 
-    const res = await got({
-      throwHttpErrors: false,
+    const opts: FetchOptions = {
+      ...rest,
+      body: json ? JSON.stringify(json) : rest.body,
       cookieJar: this.cookieJar,
       headers: {
         'csrf-token': this.getCSRFToken(),
         ...REQUEST_HEADERS,
         ...headers,
       },
-      ...rest,
-    })
+    }
+    if (json) {
+      opts.headers['content-type'] = 'application/json'
+    }
 
-    if (res.body) return JSON.parse(res.body)
+    const res = await texts.fetch(url, opts)
+
+    if (res.body.length) return JSON.parse(res.body.toString('utf-8'))
   }
 
-  fetchStream = ({ headers = {}, ...rest }) => {
+  fetchStream = ({ url, headers = {}, ...rest }: FetchOptions & { url: string }) => {
     if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
 
-    return got.stream({
-      throwHttpErrors: false,
+    return texts.fetchStream(url, {
       cookieJar: this.cookieJar,
       headers: {
         'csrf-token': this.getCSRFToken(),
