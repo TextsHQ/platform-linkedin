@@ -145,7 +145,8 @@ export default class LinkedInRealTime {
     }
 
     eventSource.onerror = err => {
-      this.subscribeToEvents()
+      // this.subscribeToEvents()
+      console.error('linkedin es error', err)
     }
   }
 }
