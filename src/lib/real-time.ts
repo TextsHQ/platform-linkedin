@@ -125,14 +125,16 @@ export default class LinkedInRealTime {
     yield* events
   }
 
-  subscribeToEvents = async (): Promise<void> => {
+  private es: EventSource
+
+  setup = async (): Promise<void> => {
     const headers = {
       ...REQUEST_HEADERS,
       Cookie: this.api.cookieJar.getCookieStringSync(LinkedInURLs.HOME),
     }
-    const eventSource = new EventSource(LinkedInURLs.REALTIME, { headers })
-
-    eventSource.onmessage = event => {
+    this.es?.close()
+    this.es = new EventSource(LinkedInURLs.REALTIME, { headers })
+    this.es.onmessage = event => {
       const jsons = event.data.split('\n').map(line => {
         if (!line.startsWith('{')) {
           texts.log('unknown linkedin realtime response', event.data)
@@ -143,10 +145,14 @@ export default class LinkedInRealTime {
       const events = jsons.flatMap(json => [...this.parseJSON(json)])
       if (events.length > 0) this.onEvent(events)
     }
-
-    eventSource.onerror = err => {
-      // this.subscribeToEvents()
-      console.error('linkedin es error', err)
+    let errorCount = 0
+    this.es.onerror = event => {
+      if (this.es.readyState === this.es.CLOSED) {
+        texts.error('[linkedin]', new Date(), 'es closed, reconnecting')
+        texts.Sentry.captureMessage(`linkedin es reconnecting ${this.es.readyState}`)
+        this.setup()
+      }
+      texts.error('[linkedin]', new Date(), 'es error', event, ++errorCount)
     }
   }
 }

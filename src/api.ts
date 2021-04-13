@@ -62,7 +62,7 @@ export default class LinkedIn implements PlatformAPI {
 
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
     this.realTimeApi = new LinkedInRealTime(this.api, onEvent, this.updateSeenReceipt, this.sendMessageResolvers)
-    this.realTimeApi.subscribeToEvents()
+    this.realTimeApi.setup()
   }
 
   dispose = async () => {
