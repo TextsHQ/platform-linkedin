@@ -163,7 +163,6 @@ const mapForwardedMessage = (liForwardedMessage: any): MessagePreview => {
     id: `${originalCreatedAt}`,
     senderID,
     text,
-    attachments: [],
   }
 }
 
