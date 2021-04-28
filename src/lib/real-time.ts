@@ -73,7 +73,7 @@ export default class LinkedInRealTime {
             const miniProfile = {
               ...eventMiniProfile,
               picture: {
-                ...(eventMiniProfile.picture ? eventMiniProfile.picture['com.linkedin.common.VectorImage'] : {}),
+                ...(eventMiniProfile?.picture?.['com.linkedin.common.VectorImage'] || {}),
               },
             }
 
