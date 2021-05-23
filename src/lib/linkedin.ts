@@ -176,7 +176,6 @@ export default class LinkedInAPI {
         body: buffer,
         headers: {
           Connection: 'keep-alive',
-          'sec-ch-ua': '"Chromium";v="88", "Google Chrome";v="88", ";Not A Brand";v="99"',
           'Content-Type': 'image/png',
           accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
           'sec-fetch-site': 'cross-site',
