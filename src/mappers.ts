@@ -166,27 +166,6 @@ const mapForwardedMessage = (liForwardedMessage: any): MessagePreview => {
   }
 }
 
-const mapCustomContent = (liCustomMessage: any): MessageAttachment => {
-  const { mediaType, id, media } = liCustomMessage
-
-  const type = (() => {
-    switch (mediaType) {
-      case 'TENOR_GIF':
-        return MessageAttachmentType.IMG
-
-      default:
-        return MessageAttachmentType.UNKNOWN
-    }
-  })()
-
-  return {
-    id,
-    type,
-    isGif: mediaType === 'TENOR_GIF',
-    srcURL: media?.previewgif?.url ?? '',
-  }
-}
-
 const mapAttachment = (liAttachment: any): MessageAttachment => {
   const { name, reference, mediaType, id, byteSize } = liAttachment
 
@@ -241,8 +220,12 @@ const mapTextAttributes = (liTextAttributes: any[], text: string): TextAttribute
   return { entities }
 }
 
+export const mapParticipantAction = (liParticipant: string): string =>
+  // "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0)"
+  liParticipant.split(',').pop().replace(')', '')
+
 export const mapMessage = (liMessage: any, currentUserID: string): Message => {
-  const { reactionSummaries } = liMessage
+  const { reactionSummaries, subtype } = liMessage
   const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
 
   let textAttributes: TextAttributes
@@ -260,16 +243,20 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
 
   if (customContent?.forwardedContentType) linkedMessage = mapForwardedMessage(customContent)
 
-  const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent'
+  const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' || subtype === 'PARTICIPANT_CHANGE'
 
   const links = liMessage.eventContent['*feedUpdate'] ? [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])] : []
+  // TODO: Refactor this
+  const participantChangeText = subtype === 'PARTICIPANT_CHANGE'
+    ? `${liMessage?.fromProfile?.firstName} ${liMessage?.eventContent.removedParticipants?.length > 0 ? `removed ${liMessage?.eventContent.removedParticipants?.join(', ')}` : ''} ${liMessage?.eventContent.addedParticipants?.length > 0 ? `added ${liMessage?.eventContent.addedParticipants?.join(', ')}` : ''}`
+    : ''
 
   return {
     _original: JSON.stringify(liMessage),
     id: liMessage.dashEntityUrn,
     cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
-    text: attributedBody?.text || customContent?.body,
+    text: attributedBody?.text || customContent?.body || participantChangeText,
     isDeleted: !!liMessage.eventContent.recalledAt,
     attachments,
     links,

@@ -2,7 +2,7 @@
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
-import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapThreads } from './mappers'
+import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapParticipantAction, mapThreads } from './mappers'
 import LinkedInAPI from './lib/linkedin'
 import LinkedInRealTime from './lib/real-time'
 import { LinkedInAuthCookieName } from './constants'
@@ -104,6 +104,16 @@ export default class LinkedIn implements PlatformAPI {
     const createdBefore = +cursor || Date.now()
 
     const items = await this.api.getThreads(createdBefore, inboxName)
+    // TODO: move this to a mapper or somewhere else, but using the api function
+    for (const item of items) {
+      for (const event of (item?.liMessages || [])) {
+        if (event?.subtype === 'PARTICIPANT_CHANGE') {
+          event.eventContent.removedParticipants = (await Promise.all((event?.eventContent['*removedParticipants'] || [])?.map(mapParticipantAction)?.map(this.api.getProfile)))?.map(({ firstName }) => firstName) || []
+          event.eventContent.addedParticipants = (await Promise.all((event?.eventContent['*addedParticipants'] || [])?.map(mapParticipantAction)?.map(this.api.getProfile)))?.map(({ firstName }) => firstName) || []
+          event.fromProfile = await this.api.getProfile(mapParticipantAction(event['*from']))
+        }
+      }
+    }
 
     const currentUserId = mapCurrentUser(this.currentUser).id
     const mapped = mapThreads(items, currentUserId)
@@ -127,6 +137,14 @@ export default class LinkedIn implements PlatformAPI {
 
     const messages = await this.api.getMessages(threadID, createdBefore)
     const currentUserId = mapCurrentUser(this.currentUser).id
+    // TODO: move this to the mappers or somewhere else
+    for (const event of messages.events) {
+      if (event?.subtype === 'PARTICIPANT_CHANGE') {
+        event.eventContent.removedParticipants = (await Promise.all((event?.eventContent['*removedParticipants'] || [])?.map(mapParticipantAction)?.map(this.api.getProfile)))?.map(({ firstName }) => firstName) || []
+        event.eventContent.addedParticipants = (await Promise.all((event?.eventContent['*addedParticipants'] || [])?.map(mapParticipantAction)?.map(this.api.getProfile)))?.map(({ firstName }) => firstName) || []
+        event.fromProfile = await this.api.getProfile(mapParticipantAction(event['*from']))
+      }
+    }
 
     const items = (messages.events as any[])
       .map<Message>(message => mapMessage(message, currentUserId))

@@ -115,6 +115,23 @@ export default class LinkedInAPI {
     })
   }
 
+  getProfile = async (publicId: string): Promise<any> => {
+    const url = `${LinkedInURLs.API_BASE}/identity/dash/profiles`
+    const queryParams = {
+      q: 'memberIdentity',
+      memberIdentity: publicId,
+      decorationId: 'com.linkedin.voyager.dash.deco.identity.profile.FullProfileWithEntities-35',
+    }
+
+    const { included } = await this.fetch({
+      method: 'GET',
+      url,
+      searchParams: queryParams,
+    })
+
+    return included?.find(({ $type }) => $type === 'com.linkedin.voyager.dash.identity.profile.Profile') || {}
+  }
+
   markThreadRead = async (threadID: string, read: boolean = true) => {
     const encodedEndpoint = encodeURIComponent(`${threadID}`)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
