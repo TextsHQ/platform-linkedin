@@ -225,8 +225,8 @@ export const mapParticipantAction = (liParticipant: string): string =>
   liParticipant.split(',').pop().replace(')', '')
 
 export const mapMessage = (liMessage: any, currentUserID: string): Message => {
-  const { reactionSummaries, subtype } = liMessage
-  const { attributedBody, customContent, attachments: liAttachments } = liMessage.eventContent
+  const { reactionSummaries, subtype, eventContent } = liMessage
+  const { attributedBody, customContent, attachments: liAttachments } = eventContent
 
   let textAttributes: TextAttributes
   if (attributedBody?.attributes?.length > 0) {
@@ -245,11 +245,10 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
 
   const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' || subtype === 'PARTICIPANT_CHANGE'
 
-  const links = liMessage.eventContent['*feedUpdate'] ? [mapFeedUpdate(liMessage.eventContent['*feedUpdate'])] : []
+  const links = eventContent['*feedUpdate'] ? [mapFeedUpdate(eventContent['*feedUpdate'])] : []
   // TODO: Refactor this
   const participantChangeText = subtype === 'PARTICIPANT_CHANGE'
-    ? `${liMessage?.fromProfile?.firstName} ${liMessage?.eventContent.removedParticipants?.length > 0 ? `removed ${liMessage?.eventContent.removedParticipants?.join(', ')}` : ''} ${liMessage?.eventContent.addedParticipants?.length > 0 ? `added ${liMessage?.eventContent.addedParticipants?.join(', ')}` : ''}`
-    : ''
+    && `${liMessage.fromProfile?.firstName} ${eventContent.removedParticipants?.length > 0 ? `removed ${eventContent.removedParticipants?.join(', ')}` : ''} ${eventContent.addedParticipants?.length > 0 ? `added ${eventContent.addedParticipants?.join(', ')}` : ''}`
 
   return {
     _original: JSON.stringify(liMessage),
@@ -257,7 +256,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody?.text || customContent?.body || participantChangeText,
-    isDeleted: !!liMessage.eventContent.recalledAt,
+    isDeleted: !!eventContent.recalledAt,
     attachments,
     links,
     reactions,
