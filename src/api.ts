@@ -157,7 +157,7 @@ export default class LinkedIn implements PlatformAPI {
     }
   }
 
-  sendMessage = async (threadID: string, content: MessageContent) => this.api.sendMessage(content, threadID, this.sendMessageResolvers)
+  sendMessage = (threadID: string, content: MessageContent) => this.api.sendMessage(content, threadID, this.sendMessageResolvers)
 
   deleteMessage = (threadID: string, messageID: string) => this.api.deleteMessage(threadID, messageID)
 

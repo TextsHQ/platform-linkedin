@@ -168,40 +168,43 @@ export default class LinkedInAPI {
     return data?.included ?? []
   }
 
+  uploadBuffer = async (buffer: Buffer, filename: string) => {
+    const data = await this.fetch({
+      url: 'https://www.linkedin.com/voyager/api/voyagerMediaUploadMetadata',
+      method: 'POST',
+      json: {
+        fileSize: buffer.byteLength,
+        filename,
+        mediaUploadType: 'MESSAGING_PHOTO_ATTACHMENT',
+      },
+      searchParams: { action: 'upload' },
+    })
+
+    await this.fetch({
+      url: data.data.value.singleUploadUrl,
+      method: 'PUT',
+      body: buffer,
+      headers: {
+        Connection: 'keep-alive',
+        'Content-Type': 'image/png',
+        accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        'sec-fetch-site': 'cross-site',
+        'sec-fetch-mode': 'no-cors',
+        'sec-fetch-dest': 'image',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'en-US',
+      },
+    })
+    return data
+  }
+
   sendMessage = async (message: MessageContent, threadID: string, sendMessageResolvers: Map<number, SendMessageResolveFunction> = null) => {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
-    const queryParams = { action: 'create' }
     const attachments = []
 
     if (message.mimeType) {
       const buffer = message.fileBuffer ?? await fs.readFile(message.filePath)
-
-      const data = await this.fetch({
-        url: 'https://www.linkedin.com/voyager/api/voyagerMediaUploadMetadata',
-        method: 'POST',
-        json: {
-          fileSize: buffer.byteLength,
-          filename: message.fileName,
-          mediaUploadType: 'MESSAGING_PHOTO_ATTACHMENT',
-        },
-        searchParams: { action: 'upload' },
-      })
-
-      await this.fetch({
-        url: data.data.value.singleUploadUrl,
-        method: 'PUT',
-        body: buffer,
-        headers: {
-          Connection: 'keep-alive',
-          'Content-Type': 'image/png',
-          accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-          'sec-fetch-site': 'cross-site',
-          'sec-fetch-mode': 'no-cors',
-          'sec-fetch-dest': 'image',
-          'accept-encoding': 'gzip, deflate, br',
-          'accept-language': 'en-US',
-        },
-      })
+      const data = await this.uploadBuffer(buffer, message.fileName)
 
       attachments.push({
         id: data.data.value.urn,
@@ -231,7 +234,7 @@ export default class LinkedInAPI {
       url,
       method: 'POST',
       json: payload,
-      searchParams: queryParams,
+      searchParams: { action: 'create' },
     })
 
     return new Promise<boolean>(resolve => {
@@ -336,3 +339,4 @@ export default class LinkedInAPI {
     await this.fetch({ url, method: 'GET' })
   }
 }
+
