@@ -237,12 +237,12 @@ export default class LinkedInAPI {
       searchParams: { action: 'create' },
     })
 
-    return new Promise<boolean>(resolve => {
-      const { backendEventUrn } = response?.data.value || {}
-
-      if (sendMessageResolvers) sendMessageResolvers.set(backendEventUrn, resolve)
-      else resolve(Boolean(response?.data))
-    })
+    return Boolean(response?.data)
+    // return new Promise<boolean>(resolve => {
+    //   const { backendEventUrn } = response?.data.value || {}
+    //   if (sendMessageResolvers) sendMessageResolvers.set(backendEventUrn, resolve)
+    //   else resolve(Boolean(response?.data))
+    // })
   }
 
   deleteMessage = async (threadID: string, messageID: string): Promise<boolean> => {
