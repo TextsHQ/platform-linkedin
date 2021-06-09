@@ -248,7 +248,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
   const links = eventContent['*feedUpdate'] ? [mapFeedUpdate(eventContent['*feedUpdate'])] : []
   // TODO: Refactor this
   const participantChangeText = subtype === 'PARTICIPANT_CHANGE'
-    && `${liMessage.fromProfile?.firstName} ${eventContent.removedParticipants?.length > 0 ? `removed ${eventContent.removedParticipants?.join(', ')}` : ''} ${eventContent.addedParticipants?.length > 0 ? `added ${eventContent.addedParticipants?.join(', ')}` : ''}`
+    && `${liMessage.fromProfile?.firstName}${eventContent.removedParticipants?.length > 0 ? ` removed ${eventContent.removedParticipants?.join(', ')}` : ''}${eventContent.addedParticipants?.length > 0 ? ` added ${eventContent.addedParticipants?.join(', ')}` : ''}`
 
   return {
     _original: JSON.stringify(liMessage),
