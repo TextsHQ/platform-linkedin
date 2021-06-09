@@ -104,16 +104,13 @@ const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = fals
   }
 }
 
-const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUser: CurrentUser): Thread => {
+const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID: string): Thread => {
   const { conversation, messages: liMessages = [] } = thread
 
-  const participantsItems = [
-    ...mapParticipants(conversation['*participants'], entitiesMap),
-    currentUser,
-  ]
+  const participantsItems = mapParticipants(conversation['*participants'], entitiesMap)
 
   const messages: Message[] = liMessages
-    .map(liMessage => mapMessage(liMessage, currentUser.id))
+    .map(liMessage => mapMessage(liMessage, currentUserID))
     .map(message => mapMessageReceipt(message, conversation?.receipts, conversation.groupChat))
 
   return {
@@ -142,9 +139,9 @@ const groupEntities = (liThreads: any[]) => {
   return map
 }
 
-export const mapThreads = (liThreads: any[], currentUser: CurrentUser): Thread[] => {
+export const mapThreads = (liThreads: any[], currentUserID: string): Thread[] => {
   const grouped = groupEntities(liThreads)
-  const threads = liThreads.map(thread => mapThread(thread, grouped, currentUser))
+  const threads = liThreads.map(thread => mapThread(thread, grouped, currentUserID))
   return orderBy(threads, 'timestamp', 'desc')
 }
 

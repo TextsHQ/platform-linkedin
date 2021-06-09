@@ -119,7 +119,7 @@ export default class LinkedIn implements PlatformAPI {
       }
     }
 
-    const mapped = mapThreads(items, this.user)
+    const mapped = mapThreads(items, this.user.id)
 
     for (const thread of mapped) {
       for (const message of thread.messages.items) {
