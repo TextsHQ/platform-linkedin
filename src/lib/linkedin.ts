@@ -334,9 +334,22 @@ export default class LinkedInAPI {
     })
   }
 
+  editMessage = async (threadID: string, messageID: string, content: MessageContent): Promise<boolean> => {
+    // https://www.linkedin.com/voyager/api/messaging/conversations/2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg%3D%3D/events/2-MTYyMzIwNDQ2NzkxNGI5NTg4OC0wMDEmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg%3D%3D
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}/events/${encodeURIComponent(messageID.split(':').pop())}`
+    const payload = { patch: { eventContent: { 'com.linkedin.voyager.messaging.event.MessageEvent': { attributedBody: { $set: { text: content.text, attributes: [] } } } } } }
+
+    await this.fetch({
+      url,
+      method: 'POST',
+      json: payload,
+    })
+
+    return true
+  }
+
   logout = async (): Promise<void> => {
     const url = LinkedInURLs.LOGOUT
     await this.fetch({ url, method: 'GET' })
   }
 }
-

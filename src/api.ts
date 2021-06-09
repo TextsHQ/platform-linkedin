@@ -161,6 +161,8 @@ export default class LinkedIn implements PlatformAPI {
 
   deleteMessage = (threadID: string, messageID: string) => this.api.deleteMessage(threadID, messageID)
 
+  editMessage = this.api.editMessage
+
   sendActivityIndicator = async (type: ActivityType, threadID: string) => {
     if (type === ActivityType.TYPING) await this.api.toggleTypingState(threadID)
   }
