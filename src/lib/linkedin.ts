@@ -339,13 +339,14 @@ export default class LinkedInAPI {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}/events/${encodeURIComponent(messageID.split(':').pop())}`
     const payload = { patch: { eventContent: { 'com.linkedin.voyager.messaging.event.MessageEvent': { attributedBody: { $set: { text: content.text, attributes: [] } } } } } }
 
-    await this.fetch({
+    const res = await this.fetch({
       url,
       method: 'POST',
       json: payload,
     })
 
-    return true
+    // res will be { data: { status: 422 }, included: [] } if message could not be edited
+    return res === undefined
   }
 
   logout = async (): Promise<void> => {
