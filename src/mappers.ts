@@ -257,6 +257,7 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody?.text || customContent?.body || participantChangeText,
     isDeleted: !!eventContent.recalledAt,
+    editedTimestamp: eventContent?.lastEditedAt ? new Date(eventContent?.lastEditedAt) : undefined,
     attachments,
     links,
     reactions,
