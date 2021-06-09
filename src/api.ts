@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapParticipantAction, mapThreads } from './mappers'
@@ -13,6 +13,8 @@ export default class LinkedIn implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
 
   private currentUser = null
+
+  private user: CurrentUser
 
   private cookies: any
 
@@ -33,9 +35,10 @@ export default class LinkedIn implements PlatformAPI {
     this.cookies = cookies
 
     await this.api.setLoginState(CookieJar.fromJSON(cookies))
-    const currentUser = await this.api.getCurrentUser()
 
-    this.currentUser = currentUser
+    this.currentUser = await this.api.getCurrentUser()
+    this.user = mapCurrentUser(this.currentUser)
+
     if (!this.currentUser) throw new ReAuthError()
   }
 
@@ -45,6 +48,7 @@ export default class LinkedIn implements PlatformAPI {
     await this.api.setLoginState(CookieJar.fromJSON(cookieJarJSON))
 
     this.currentUser = await this.api.getCurrentUser()
+    this.user = mapCurrentUser(this.currentUser)
     this.cookies = cookieJarJSON
 
     return { type: 'success' }
@@ -115,15 +119,14 @@ export default class LinkedIn implements PlatformAPI {
       }
     }
 
-    const currentUserId = mapCurrentUser(this.currentUser).id
-    const mapped = mapThreads(items, currentUserId)
+    const mapped = mapThreads(items, this.user.id)
 
     for (const thread of mapped) {
       for (const message of thread.messages.items) {
         this.seenReceipt[message.id] = message.seen
       }
 
-      thread.participants.items = [...thread.participants.items, mapCurrentUser(this.currentUser)]
+      thread.participants.items = [...thread.participants.items, this.user]
     }
 
     return {
@@ -138,7 +141,7 @@ export default class LinkedIn implements PlatformAPI {
     const createdBefore = +cursor || Date.now()
 
     const messages = await this.api.getMessages(threadID, createdBefore)
-    const currentUserId = mapCurrentUser(this.currentUser).id
+    const currentUserId = this.user.id
     // TODO: move this to the mappers or somewhere else
     for (const event of messages.events) {
       if (event?.subtype === 'PARTICIPANT_CHANGE') {
