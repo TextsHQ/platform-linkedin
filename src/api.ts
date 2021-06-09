@@ -122,6 +122,8 @@ export default class LinkedIn implements PlatformAPI {
       for (const message of thread.messages.items) {
         this.seenReceipt[message.id] = message.seen
       }
+
+      thread.participants.items = [...thread.participants.items, mapCurrentUser(this.currentUser)]
     }
 
     return {
