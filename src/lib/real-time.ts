@@ -3,7 +3,7 @@ import EventSource from 'eventsource'
 import type { SendMessageResolveFunction } from '../api'
 
 import { REQUEST_HEADERS, LinkedInURLs } from '../constants'
-import { mapMiniProfile } from '../mappers'
+import { mapNewMessage, mapMiniProfile } from '../mappers'
 import type LinkedInAPI from './linkedin'
 
 export default class LinkedInRealTime {
@@ -23,14 +23,20 @@ export default class LinkedInRealTime {
     const threadsIDs = []
 
     if (topic === 'urn:li-realtime:messagesTopic:urn:li-realtime:myself' && payload?.event) {
-      if (!this.sendMessageResolvers) return
+      const { entityUrn = '' } = payload.event
+      const threadID = entityUrn.split(':').pop();
 
-      const { backendUrn } = payload?.event
-      const resolve = this.sendMessageResolvers.get(backendUrn)
+      // rumblefrog: current user is not available in this class scope, so
+      // I'm pulling it from publisher tracking
+      const user_id = json[newMessageEventType].publisherTrackingId.split('member:')[1];
 
-      if (!resolve) return console.warn('unable to find promise resolver for message sent')
-      resolve(true)
-      this.sendMessageResolvers.delete(backendUrn)
+      yield {
+        type: ServerEventType.STATE_SYNC,
+        mutationType: 'upsert',
+        objectName: 'message',
+        objectIDs: { threadID },
+        entries: [ mapNewMessage(payload.event, user_id) ],
+      }
     }
 
     if (payload?.previousEventInConversationUrn) {

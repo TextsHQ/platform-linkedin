@@ -269,3 +269,50 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     isAction,
   }
 }
+
+export const mapNewMessage = (liMessage: any, currentUserID: string): Message => {
+  const { reactionSummaries, subtype, eventContent } = liMessage
+  const { attributedBody, customContent, attachments: liAttachments } = eventContent
+
+  let textAttributes: TextAttributes
+  if (attributedBody?.attributes?.length > 0) {
+    textAttributes = mapTextAttributes(attributedBody?.attributes, attributedBody?.text)
+  }
+
+  const senderID = getSenderID(liMessage.from[LinkedInAPITypes.member].entityUrn)
+  let linkedMessage: MessagePreview
+
+  // linkedin seems to have broken reactions?
+  const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId: senderID }))
+
+  const attachments = liAttachments?.map(liAttachment => mapAttachment(liAttachment)) || []
+
+  if (customContent?.forwardedContentType) linkedMessage = mapForwardedMessage(customContent)
+
+  const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' || subtype === 'PARTICIPANT_CHANGE'
+
+  const links = eventContent['*feedUpdate'] ? [mapFeedUpdate(eventContent['*feedUpdate'])] : []
+  // TODO: Refactor this
+  const participantChangeText = subtype === 'PARTICIPANT_CHANGE'
+    && `${liMessage.fromProfile?.firstName}${eventContent.removedParticipants?.length > 0 ? ` removed ${eventContent.removedParticipants?.join(', ')}` : ''}${eventContent.addedParticipants?.length > 0 ? ` added ${eventContent.addedParticipants?.join(', ')}` : ''}`
+
+  return {
+    _original: JSON.stringify(liMessage),
+    id: liMessage.dashEntityUrn,
+    cursor: String(liMessage.createdAt),
+    timestamp: new Date(liMessage.createdAt),
+    text: attributedBody?.text || customContent?.body || participantChangeText,
+    isDeleted: !!eventContent.recalledAt,
+    editedTimestamp: eventContent?.lastEditedAt ? new Date(eventContent?.lastEditedAt) : undefined,
+    attachments,
+    links,
+    reactions,
+    senderID,
+    isSender: currentUserID === senderID,
+    linkedMessage,
+    seen: {},
+    textAttributes,
+    isAction,
+  }
+}
+
