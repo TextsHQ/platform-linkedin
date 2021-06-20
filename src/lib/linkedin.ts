@@ -10,6 +10,8 @@ import type { SendMessageResolveFunction } from '../api'
 export default class LinkedInAPI {
   cookieJar: CookieJar
 
+  httpClient = texts.createHttpClient()
+
   setLoginState = async (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError()
     this.cookieJar = cookieJar
@@ -27,26 +29,25 @@ export default class LinkedInAPI {
     return csrfToken
   }
 
-  fetch = async ({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }) => {
+  fetch = async (options: FetchOptions & { url: string, json?: any }) => {
     if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
 
     const opts: FetchOptions = {
-      ...rest,
-      body: json ? JSON.stringify(json) : rest.body,
+      ...options,
+      body: options.json ? JSON.stringify(options.json) : options.body,
       cookieJar: this.cookieJar,
       headers: {
         'csrf-token': this.getCSRFToken(),
+        ...(options.json ? { 'content-type': 'application/json' } : {}),
         ...REQUEST_HEADERS,
-        ...headers,
+        ...options.headers,
       },
     }
-    if (json) {
-      opts.headers['content-type'] = 'application/json'
-    }
 
-    const res = await texts.fetch(url, opts)
+    const res = await this.httpClient.requestAsBuffer(options.url, opts)
+    if (!res.body.length) return
 
-    if (res.body.length) return JSON.parse(res.body.toString('utf-8'))
+    return JSON.parse(res.body.toString('utf-8'))
   }
 
   fetchStream = ({ url, headers = {}, ...rest }: FetchOptions & { url: string }) => {
@@ -98,6 +99,7 @@ export default class LinkedInAPI {
     }
 
     const inbox = await this.fetch({ method: 'GET', url, searchParams: queryParams })
+
     const archive = await this.fetch({
       method: 'GET',
       // This is done this way and not using 'searchParams' because using the searchParams it'll serialize
