@@ -29,22 +29,22 @@ export default class LinkedInAPI {
     return csrfToken
   }
 
-  fetch = async (options: FetchOptions & { url: string, json?: any }) => {
+  fetch = async ({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }) => {
     if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
 
     const opts: FetchOptions = {
-      ...options,
-      body: options.json ? JSON.stringify(options.json) : options.body,
+      ...rest,
+      body: json ? JSON.stringify(json) : rest.body,
       cookieJar: this.cookieJar,
       headers: {
         'csrf-token': this.getCSRFToken(),
-        ...(options.json ? { 'content-type': 'application/json' } : {}),
+        ...(json ? { 'content-type': 'application/json' } : {}),
         ...REQUEST_HEADERS,
-        ...options.headers,
+        ...headers,
       },
     }
 
-    const res = await this.httpClient.requestAsBuffer(options.url, opts)
+    const res = await this.httpClient.requestAsBuffer(url, opts)
     if (!res.body.length) return
 
     return JSON.parse(res.body.toString('utf-8'))
