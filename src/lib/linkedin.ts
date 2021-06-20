@@ -44,10 +44,10 @@ export default class LinkedInAPI {
       },
     }
 
-    const res = await this.httpClient.requestAsBuffer(url, opts)
+    const res = await this.httpClient.requestAsString(url, opts)
     if (!res.body.length) return
 
-    return JSON.parse(res.body.toString('utf-8'))
+    return JSON.parse(res.body)
   }
 
   fetchStream = ({ url, headers = {}, ...rest }: FetchOptions & { url: string }) => {
