@@ -45,7 +45,7 @@ export default class LinkedInAPI {
     }
 
     const res = await this.httpClient.requestAsString(url, opts)
-    if (!res.body.length) return
+    if (!res.body?.length) return
 
     return JSON.parse(res.body)
   }
