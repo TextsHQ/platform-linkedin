@@ -197,4 +197,10 @@ export default class LinkedIn implements PlatformAPI {
     const url = Buffer.from(uri, 'hex').toString()
     return this.api.fetchStream({ url })
   }
+
+  updateThread = async (threadID: string, updates: Partial<Thread>) => {
+    if (updates.title) await this.api.renameThread(threadID, updates.title)
+
+    return true
+  }
 }
