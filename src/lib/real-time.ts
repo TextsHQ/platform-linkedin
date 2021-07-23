@@ -12,31 +12,33 @@ export default class LinkedInRealTime {
     private onEvent: OnServerEventCallback,
   ) {}
 
-  async resolveSendMessage(originToken: string, messages: Message[]) {
+  resolveSendMessage(originToken: string, messages: Message[]) {
     const resolve = this.papi.sendMessageResolvers.get(originToken)
-    if (!resolve) return texts.log('[li] ignoring send message with token:', originToken)
+    if (!resolve) {
+      texts.log('[li] ignoring send message with token:', originToken)
+      return
+    }
     this.papi.sendMessageResolvers.delete(originToken)
     resolve(messages)
     return true
   }
 
-  private* parseJSON(json: any) {
+  private* parseJSON(json: any): Generator<ServerEvent> {
     if (!json) return
-    if (texts.IS_DEV) console.log(JSON.stringify(json))
+    // if (texts.IS_DEV) console.log(JSON.stringify(json))
 
     const newMessageEventType = 'com.linkedin.realtimefrontend.DecoratedEvent'
     if (!json[newMessageEventType]?.payload) return
 
     const { payload, topic = '' } = json[newMessageEventType]
-    const refreshThreadsIDs = new Set<string>()
 
     switch (topic) {
       case Topic.Messages: {
-        const { entityUrn = '' } = payload.event
+        const { entityUrn = '', originToken } = payload.event
         const threadID = eventUrnToThreadID(entityUrn)
 
         const messages = [mapNewMessage(payload.event, this.papi.user.id)]
-        if (!this.resolveSendMessage(payload.event.originToken, messages)) {
+        if (!this.resolveSendMessage(originToken, messages)) {
           yield {
             type: ServerEventType.STATE_SYNC,
             mutationType: 'upsert',
@@ -50,10 +52,10 @@ export default class LinkedInRealTime {
       }
 
       case Topic.MessageReactionSummaries: {
-        const { eventUrn = '' } = payload
+        const threadID = eventUrnToThreadID(payload.eventUrn)
 
-        const threadID = eventUrnToThreadID(eventUrn)
-        refreshThreadsIDs.add(threadID)
+        // todo use state sync
+        yield { type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }
         break
       }
 
@@ -141,15 +143,6 @@ export default class LinkedInRealTime {
         console.error(msg)
       }
     }
-
-    if (payload.previousEventInConversationUrn) {
-      refreshThreadsIDs.add(eventUrnToThreadID(payload.previousEventInConversationUrn))
-    }
-    if (payload.event) {
-      refreshThreadsIDs.add(urnID(payload.event.entityUrn))
-    }
-
-    yield* [...refreshThreadsIDs].map<ServerEvent>(threadID => ({ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }))
   }
 
   private es: EventSource
@@ -162,7 +155,7 @@ export default class LinkedInRealTime {
     this.es?.close()
     this.es = new EventSource(LinkedInURLs.REALTIME, { headers })
     this.es.onmessage = event => {
-      const jsons = event.data.split('\n').map(line => {
+      const jsons = (event.data as string).split('\n').map(line => {
         if (!line.startsWith('{')) {
           texts.log('unknown linkedin realtime response', event.data)
           return

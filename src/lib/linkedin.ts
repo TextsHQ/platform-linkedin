@@ -244,7 +244,7 @@ export default class LinkedInAPI {
       json: payload,
       searchParams: { action: 'create' },
     })
-    console.log(JSON.stringify(res))
+    if (!res?.data?.value?.createdAt) throw Error(JSON.stringify(res))
     return promise
   }
 
