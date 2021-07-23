@@ -315,4 +315,3 @@ export const mapNewMessage = (liMessage: any, currentUserID: string): Message =>
     isAction,
   }
 }
-

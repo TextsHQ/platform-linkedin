@@ -24,18 +24,18 @@ export default class LinkedInRealTime {
 
     if (topic === 'urn:li-realtime:messagesTopic:urn:li-realtime:myself' && payload?.event) {
       const { entityUrn = '' } = payload.event
-      const threadID = entityUrn.split(':').pop();
+      const threadID = entityUrn.split(':').pop()
 
       // rumblefrog: current user is not available in this class scope, so
       // I'm pulling it from publisher tracking
-      const user_id = json[newMessageEventType].publisherTrackingId.split('member:')[1];
+      const user_id = json[newMessageEventType].publisherTrackingId.split('member:')[1]
 
       yield {
         type: ServerEventType.STATE_SYNC,
         mutationType: 'upsert',
         objectName: 'message',
         objectIDs: { threadID },
-        entries: [ mapNewMessage(payload.event, user_id) ],
+        entries: [mapNewMessage(payload.event, user_id)],
       }
     }
 
