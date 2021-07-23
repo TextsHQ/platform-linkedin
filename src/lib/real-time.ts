@@ -23,7 +23,7 @@ export default class LinkedInRealTime {
     return true
   }
 
-  private* parseJSON(json: any): Generator<ServerEvent> {
+  private parseJSON(json: any): ServerEvent {
     if (!json) return
     // if (texts.IS_DEV) console.log(JSON.stringify(json))
 
@@ -39,7 +39,7 @@ export default class LinkedInRealTime {
 
         const messages = [mapNewMessage(payload.event, this.papi.user.id)]
         if (!this.resolveSendMessage(originToken, messages)) {
-          yield {
+          return {
             type: ServerEventType.STATE_SYNC,
             mutationType: 'upsert',
             objectName: 'message',
@@ -55,8 +55,7 @@ export default class LinkedInRealTime {
         const threadID = eventUrnToThreadID(payload.eventUrn)
 
         // todo use state sync
-        yield { type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }
-        break
+        return { type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }
       }
 
       case Topic.Conversations: {
@@ -64,7 +63,7 @@ export default class LinkedInRealTime {
         const threadID = urnID(entityUrn)
 
         if (payload.action === 'DELETE') {
-          yield {
+          return {
             type: ServerEventType.STATE_SYNC,
             mutationType: 'delete',
             objectName: 'thread',
@@ -105,8 +104,7 @@ export default class LinkedInRealTime {
             participants,
           })
         }
-        yield serverEvent
-        break
+        return serverEvent
       }
 
       case Topic.MessageSeenReceipts: {
@@ -119,7 +117,7 @@ export default class LinkedInRealTime {
 
         this.papi.updateSeenReceipt(messageID, { [participantID]: new Date(seenAt) })
 
-        yield {
+        return {
           type: ServerEventType.STATE_SYNC,
           mutationType: 'update',
           objectName: 'message',
@@ -131,7 +129,6 @@ export default class LinkedInRealTime {
             },
           ],
         }
-        break
       }
 
       case Topic.TabBadgeUpdate: // ignore
@@ -162,7 +159,7 @@ export default class LinkedInRealTime {
         }
         return JSON.parse(line)
       })
-      const events = jsons.flatMap(json => [...this.parseJSON(json)])
+      const events = jsons.map(json => this.parseJSON(json)).filter(Boolean)
       if (events.length > 0) this.onEvent(events)
     }
     let errorCount = 0
