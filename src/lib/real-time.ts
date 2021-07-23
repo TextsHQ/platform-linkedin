@@ -1,4 +1,4 @@
-import { OnServerEventCallback, ServerEvent, ServerEventType, texts, UNKNOWN_DATE } from '@textshq/platform-sdk'
+import { Message, OnServerEventCallback, ServerEvent, ServerEventType, texts, UNKNOWN_DATE } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
 import { REQUEST_HEADERS, LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
@@ -11,6 +11,14 @@ export default class LinkedInRealTime {
     private papi: InstanceType<typeof PAPI>,
     private onEvent: OnServerEventCallback,
   ) {}
+
+  async resolveSendMessage(originToken: string, messages: Message[]) {
+    const resolve = this.papi.sendMessageResolvers.get(originToken)
+    if (!resolve) return texts.log('[li] ignoring send message with token:', originToken)
+    this.papi.sendMessageResolvers.delete(originToken)
+    resolve(messages)
+    return true
+  }
 
   private* parseJSON(json: any) {
     if (!json) return
@@ -27,13 +35,17 @@ export default class LinkedInRealTime {
         const { entityUrn = '' } = payload.event
         const threadID = eventUrnToThreadID(entityUrn)
 
-        yield {
-          type: ServerEventType.STATE_SYNC,
-          mutationType: 'upsert',
-          objectName: 'message',
-          objectIDs: { threadID },
-          entries: [mapNewMessage(payload.event, this.papi.user.id)],
+        const messages = [mapNewMessage(payload.event, this.papi.user.id)]
+        if (!this.resolveSendMessage(payload.event.originToken, messages)) {
+          yield {
+            type: ServerEventType.STATE_SYNC,
+            mutationType: 'upsert',
+            objectName: 'message',
+            objectIDs: { threadID },
+            entries: messages,
+          }
         }
+
         break
       }
 

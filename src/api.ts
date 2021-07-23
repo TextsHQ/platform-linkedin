@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapParticipantAction, mapThreads } from './mappers'
@@ -8,7 +8,7 @@ import LinkedInRealTime from './lib/real-time'
 import { LinkedInAuthCookieName } from './constants'
 import { urnID } from './util'
 
-export type SendMessageResolveFunction = (value: boolean) => void
+export type SendMessageResolveFunction = (value: Message[]) => void
 
 export default class LinkedIn implements PlatformAPI {
   private eventTimeout?: NodeJS.Timeout
@@ -23,7 +23,7 @@ export default class LinkedIn implements PlatformAPI {
 
   private realTimeApi: null | LinkedInRealTime = null
 
-  private sendMessageResolvers = new Map<number, SendMessageResolveFunction>()
+  sendMessageResolvers = new Map<string, SendMessageResolveFunction>()
 
   // TODO: implement something with Texts-sdk
   private seenReceipt = {}
@@ -167,8 +167,8 @@ export default class LinkedIn implements PlatformAPI {
     }
   }
 
-  sendMessage = (threadID: string, content: MessageContent) =>
-    this.api.sendMessage(content, threadID, this.sendMessageResolvers)
+  sendMessage = (threadID: string, content: MessageContent, options: MessageSendOptions) =>
+    this.api.sendMessage(threadID, content, options, this.sendMessageResolvers)
 
   deleteMessage = (threadID: string, messageID: string) =>
     this.api.deleteMessage(threadID, messageID)

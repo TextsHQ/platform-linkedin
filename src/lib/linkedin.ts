@@ -1,4 +1,4 @@
-import { FetchOptions, InboxName, MessageContent, texts } from '@textshq/platform-sdk'
+import { FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
 import type { CookieJar } from 'tough-cookie'
@@ -201,7 +201,7 @@ export default class LinkedInAPI {
     return data
   }
 
-  sendMessage = async (message: MessageContent, threadID: string, sendMessageResolvers: Map<number, SendMessageResolveFunction> = null) => {
+  sendMessage = async (threadID: string, message: MessageContent, options: MessageSendOptions, sendMessageResolvers: Map<string, SendMessageResolveFunction> = null) => {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
     const attachments = []
 
@@ -219,7 +219,10 @@ export default class LinkedInAPI {
     }
 
     const payload = {
+      dedupeByClientGeneratedToken: false,
       eventCreate: {
+        originToken: options.pendingMessageID,
+        // trackingId: '',
         value: {
           'com.linkedin.voyager.messaging.create.MessageCreate': {
             attributedBody: {
@@ -230,22 +233,19 @@ export default class LinkedInAPI {
           },
         },
       },
-      dedupeByClientGeneratedToken: false,
     }
 
-    const response = await this.fetch({
+    const promise = new Promise<Message[]>(resolve => {
+      sendMessageResolvers.set(options.pendingMessageID, resolve)
+    })
+    const res = await this.fetch({
       url,
       method: 'POST',
       json: payload,
       searchParams: { action: 'create' },
     })
-
-    return Boolean(response?.data)
-    // return new Promise<boolean>(resolve => {
-    //   const { backendEventUrn } = response?.data.value || {}
-    //   if (sendMessageResolvers) sendMessageResolvers.set(backendEventUrn, resolve)
-    //   else resolve(Boolean(response?.data))
-    // })
+    console.log(JSON.stringify(res))
+    return promise
   }
 
   deleteMessage = async (threadID: string, messageID: string): Promise<boolean> => {
