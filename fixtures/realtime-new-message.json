@@ -1,0 +1,81 @@
+{
+  "com.linkedin.realtimefrontend.DecoratedEvent": {
+    "topic": "urn:li-realtime:messagesTopic:urn:li-realtime:myself",
+    "publisherTrackingId": "urn:li:messagingMessage:2-MTYyNzA0NDM1Nzg2OWIxNzQwNS0wMDMmZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==_urn:li:member:249247061",
+    "leftServerAt": 1627044358128,
+    "id": "88d4ae76-ab84-4080-94c9-25f9843c1397",
+    "payload": {
+      "previousEventInConversationUrn": "urn:li:fs_event:(2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==,2-MTYyNzA0NDExMDQ3MWI0NTgzMS0wMDMmZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==)",
+      "event": {
+        "reactionSummaries": [],
+        "createdAt": 1627044358006,
+        "dashEntityUrn": "urn:li:fsd_message:2-MTYyNzA0NDM1Nzg2OWIxNzQwNS0wMDMmZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==",
+        "quickReplyRecommendations": [],
+        "subtype": "MEMBER_TO_MEMBER",
+        "eventContent": {
+          "com.linkedin.voyager.messaging.event.MessageEvent": {
+            "body": "",
+            "attributedBody": {
+              "text": "msg1111"
+            },
+            "messageBodyRenderFormat": "DEFAULT"
+          }
+        },
+        "entityUrn": "urn:li:fs_event:(2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==,2-MTYyNzA0NDM1Nzg2OWIxNzQwNS0wMDMmZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==)",
+        "from": {
+          "com.linkedin.voyager.messaging.MessagingMember": {
+            "entityUrn": "urn:li:fs_messagingMember:(2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==,ACoAAA7bNVUBXo4wls3McYpXWVndS6LXypCdluU)",
+            "nameInitials": "KB",
+            "miniProfile": {
+              "lastName": "Bagaria",
+              "firstName": "Kishan",
+              "memorialized": false,
+              "occupation": "Founder at Texts.com (we're hiring!)",
+              "objectUrn": "urn:li:member:249247061",
+              "entityUrn": "urn:li:fs_miniProfile:ACoAAA7bNVUBXo4wls3McYpXWVndS6LXypCdluU",
+              "publicIdentifier": "kishanbagaria",
+              "picture": {
+                "com.linkedin.common.VectorImage": {
+                  "rootUrl": "https://media-exp1.licdn.com/dms/image/C5103AQF3PzZ6c8FhPQ/profile-displayphoto-shrink_",
+                  "artifacts": [
+                    {
+                      "width": 100,
+                      "expiresAt": 1632355200000,
+                      "fileIdentifyingUrlPathSegment": "100_100/0/1571661314175?e=1632355200&v=beta&t=IKE0x8JyU921hhF7LQYOZ_ToBeIPnNInYCF4ZCagtS0",
+                      "height": 100
+                    },
+                    {
+                      "width": 200,
+                      "expiresAt": 1632355200000,
+                      "fileIdentifyingUrlPathSegment": "200_200/0/1571661314175?e=1632355200&v=beta&t=X5INc3pG4UNKLhm0iHZPgfH9JPoWimNv0YHmmSNg-Qc",
+                      "height": 200
+                    },
+                    {
+                      "width": 400,
+                      "expiresAt": 1632355200000,
+                      "fileIdentifyingUrlPathSegment": "400_400/0/1571661314175?e=1632355200&v=beta&t=arj2r2CPBov9BlwvljSXEAI4lEu9dL61IwNY3BppR0M",
+                      "height": 400
+                    },
+                    {
+                      "width": 800,
+                      "expiresAt": 1632355200000,
+                      "fileIdentifyingUrlPathSegment": "800_800/0/1571661314175?e=1632355200&v=beta&t=AgeZqXTQsivPUSW1NkfPVFR8vrvaAGPZQx4v2xrtfVQ",
+                      "height": 800
+                    }
+                  ]
+                }
+              },
+              "trackingId": "VLlqzPjyT7mIPIIHwDULHw=="
+            }
+          }
+        },
+        "previousEventInConversation": "urn:li:fs_event:(2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==,2-MTYyNzA0NDExMDQ3MWI0NTgzMS0wMDMmZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==)",
+        "backendUrn": "urn:li:messagingMessage:2-MTYyNzA0NDM1Nzg2OWIxNzQwNS0wMDMmZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg=="
+      },
+      "unreadConversationsCount": 5,
+      "conversationLastActivityAt": 1627044358024,
+      "conversationUnreadCount": 0
+    },
+    "trackingId": "ÿ½\u001bÁ¦\r÷ÀÉ¸}aÓM"
+  }
+}

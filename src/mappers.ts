@@ -2,6 +2,7 @@ import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Messa
 import { orderBy, groupBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
+import { urnID, getFeedUpdateURL } from './util'
 
 export const getSenderID = (from: string) =>
   // "*from": "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)",
@@ -56,8 +57,7 @@ const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.p
   : undefined)
 
 export const mapMiniProfile = (liMiniProfile: any): User => ({
-  // "entityUrn": "urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM"
-  id: liMiniProfile?.entityUrn.split(':').pop(),
+  id: urnID(liMiniProfile?.entityUrn),
   username: liMiniProfile?.publicIdentifier,
   fullName: [liMiniProfile?.firstName, liMiniProfile?.lastName].filter(Boolean).join(' '),
   imgURL: mapPicture(liMiniProfile),
@@ -85,12 +85,12 @@ const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = fals
 
   const messageReceipt = liReceipts.find(receipt => {
     const { eventUrn } = receipt.seenReceipt
-    return eventUrn.includes(message.id.split(':').pop())
+    return eventUrn.includes(urnID(message.id))
   })
 
   const previousSeenState = typeof message.seen === 'object' ? message.seen : {}
   const newSeenState = messageReceipt
-    ? { [messageReceipt.fromEntity.split(':').pop()]: new Date(messageReceipt.seenReceipt.seenAt) }
+    ? { [urnID(messageReceipt.fromEntity)]: new Date(messageReceipt.seenReceipt.seenAt) }
     : {}
 
   return {
@@ -115,8 +115,7 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
 
   return {
     _original: JSON.stringify(thread),
-    // "entityUrn": "urn:li:fs_conversation:2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg=="
-    id: conversation.entityUrn?.split(':').pop(),
+    id: urnID(conversation.entityUrn),
     type: conversation.groupChat ? 'group' : 'single',
     title: conversation.name,
     isUnread: !conversation.read,
@@ -132,8 +131,7 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
 const groupEntities = (liThreads: any[]) => {
   const map = {}
   for (const liThread of liThreads) {
-    // "entityUrn": "urn:li:fs_miniProfile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
-    const id = liThread.entity?.entityUrn?.split(':').pop()
+    const id = urnID(liThread.entity?.entityUrn)
     map[id] = liThread.entity
   }
   return map
@@ -186,17 +184,10 @@ const mapAttachment = (liAttachment: any): MessageAttachment => {
   }
 }
 
-const mapFeedUpdate = (liFeedUpdate: string): MessageLink => {
-  // *feedUpdate : "urn:li:fs_updateV2:(urn:li:activity:6767570017279066112,MESSAGING_RESHARE,EMPTY,DEFAULT,false)"
-  const urn = liFeedUpdate.split(':(').pop().split(',')[0]
-  const baseUrl = 'https://www.linkedin.com/feed/update'
-  const url = `${baseUrl}/${urn}`
-
-  return {
-    url,
-    title: 'Feed Update',
-  }
-}
+const mapFeedUpdate = (liFeedUpdate: string): MessageLink => ({
+  url: getFeedUpdateURL(liFeedUpdate),
+  title: 'Feed Update',
+})
 
 export const mapMessageSeenState = (message: Message, seenReceipt: any): Message => ({
   ...message,
@@ -212,8 +203,7 @@ const mapTextAttributes = (liTextAttributes: any[], text: string): TextAttribute
     to: liEntity.start + liEntity.length,
     bold: true,
     mentionedUser: {
-      // urn : "urn:li:fs_miniProfile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
-      id: liEntity.type.urn.split(':').pop(),
+      id: urnID(liEntity.type.urn),
     },
   }))
 
@@ -224,31 +214,33 @@ export const mapParticipantAction = (liParticipant: string): string =>
   // "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0)"
   liParticipant.split(',').pop().replace(')', '')
 
-export const mapMessage = (liMessage: any, currentUserID: string): Message => {
+// TODO: Refactor
+const getParticipantChangeText = (liMsg: any) =>
+  (liMsg.subtype === 'PARTICIPANT_CHANGE'
+    ? `${liMsg.fromProfile?.firstName}${liMsg.eventContent.removedParticipants?.length > 0 ? ` removed ${liMsg.eventContent.removedParticipants?.join(', ')}` : ''}${liMsg.eventContent.addedParticipants?.length > 0 ? ` added ${liMsg.eventContent.addedParticipants?.join(', ')}` : ''}`
+    : undefined)
+
+const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string) => {
   const { reactionSummaries, subtype, eventContent } = liMessage
-  const { attributedBody, customContent, attachments: liAttachments } = eventContent
+  // eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] is used for real time events
+  const { attributedBody, customContent, attachments: liAttachments } = eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] || eventContent
 
   let textAttributes: TextAttributes
   if (attributedBody?.attributes?.length > 0) {
     textAttributes = mapTextAttributes(attributedBody?.attributes, attributedBody?.text)
   }
 
-  const senderID = getSenderID(liMessage['*from'])
-  let linkedMessage: MessagePreview
+  const linkedMessage = customContent?.forwardedContentType ? mapForwardedMessage(customContent) : undefined
 
   // linkedin seems to have broken reactions?
   const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId: senderID }))
 
   const attachments = liAttachments?.map(liAttachment => mapAttachment(liAttachment)) || []
 
-  if (customContent?.forwardedContentType) linkedMessage = mapForwardedMessage(customContent)
-
   const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' || subtype === 'PARTICIPANT_CHANGE'
 
   const links = eventContent['*feedUpdate'] ? [mapFeedUpdate(eventContent['*feedUpdate'])] : []
-  // TODO: Refactor this
-  const participantChangeText = subtype === 'PARTICIPANT_CHANGE'
-    && `${liMessage.fromProfile?.firstName}${eventContent.removedParticipants?.length > 0 ? ` removed ${eventContent.removedParticipants?.join(', ')}` : ''}${eventContent.addedParticipants?.length > 0 ? ` added ${eventContent.addedParticipants?.join(', ')}` : ''}`
+  const participantChangeText = getParticipantChangeText(liMessage)
 
   return {
     _original: JSON.stringify(liMessage),
@@ -264,8 +256,17 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
     senderID,
     isSender: currentUserID === senderID,
     linkedMessage,
-    seen: {},
     textAttributes,
     isAction,
   }
+}
+
+export const mapMessage = (liMessage: any, currentUserID: string): Message => {
+  const senderID = getSenderID(liMessage['*from'])
+  return mapMessageInner(liMessage, currentUserID, senderID)
+}
+
+export const mapNewMessage = (liMessage: any, currentUserID: string): Message => {
+  const senderID = getSenderID(liMessage.from[LinkedInAPITypes.member].entityUrn)
+  return mapMessageInner(liMessage, currentUserID, senderID)
 }

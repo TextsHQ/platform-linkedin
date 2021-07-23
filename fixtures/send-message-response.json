@@ -1,0 +1,14 @@
+{
+  "data": {
+    "value": {
+      "createdAt": 1627048908139,
+      "eventUrn": "urn:li:fs_event:(2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==,2-MTYyNzA0ODkwNzg3MmI3NTI2MC0wMDMmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==)",
+      "backendEventUrn": "urn:li:messagingMessage:2-MTYyNzA0ODkwNzg3MmI3NTI2MC0wMDMmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==",
+      "conversationUrn": "urn:li:fs_conversation:2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==",
+      "backendConversationUrn": "urn:li:messagingThread:2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==",
+      "$type": "com.linkedin.voyager.messaging.create.EventCreateResponse"
+    },
+    "$type": "com.linkedin.restli.common.ActionResponse"
+  },
+  "included": []
+}

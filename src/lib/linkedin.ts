@@ -1,4 +1,4 @@
-import { FetchOptions, InboxName, MessageContent, texts } from '@textshq/platform-sdk'
+import { FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
 import type { CookieJar } from 'tough-cookie'
@@ -6,6 +6,7 @@ import type { CookieJar } from 'tough-cookie'
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
 import { mapConversationsResponse } from '../mappers'
 import type { SendMessageResolveFunction } from '../api'
+import { urnID } from '../util'
 
 export default class LinkedInAPI {
   cookieJar: CookieJar
@@ -200,7 +201,7 @@ export default class LinkedInAPI {
     return data
   }
 
-  sendMessage = async (message: MessageContent, threadID: string, sendMessageResolvers: Map<number, SendMessageResolveFunction> = null) => {
+  sendMessage = async (threadID: string, message: MessageContent, options: MessageSendOptions, sendMessageResolvers: Map<string, SendMessageResolveFunction> = null) => {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
     const attachments = []
 
@@ -218,7 +219,10 @@ export default class LinkedInAPI {
     }
 
     const payload = {
+      dedupeByClientGeneratedToken: false,
       eventCreate: {
+        originToken: options.pendingMessageID,
+        // trackingId: '',
         value: {
           'com.linkedin.voyager.messaging.create.MessageCreate': {
             attributedBody: {
@@ -229,27 +233,23 @@ export default class LinkedInAPI {
           },
         },
       },
-      dedupeByClientGeneratedToken: false,
     }
 
-    const response = await this.fetch({
+    const promise = new Promise<Message[]>(resolve => {
+      sendMessageResolvers.set(options.pendingMessageID, resolve)
+    })
+    const res = await this.fetch({
       url,
       method: 'POST',
       json: payload,
       searchParams: { action: 'create' },
     })
-
-    return Boolean(response?.data)
-    // return new Promise<boolean>(resolve => {
-    //   const { backendEventUrn } = response?.data.value || {}
-    //   if (sendMessageResolvers) sendMessageResolvers.set(backendEventUrn, resolve)
-    //   else resolve(Boolean(response?.data))
-    // })
+    if (!res?.data?.value?.createdAt) throw Error(JSON.stringify(res))
+    return promise
   }
 
   deleteMessage = async (threadID: string, messageID: string): Promise<boolean> => {
-    // urn:li:fsd_message:2-MTYxNzY2ODAyODc1N2IyNjY1MC0wMDQmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==
-    const messageEventId = messageID.split(':').pop()
+    const messageEventId = urnID(messageID)
 
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}/events/${encodeURIComponent(messageEventId)}`
     const queryParams = { action: 'recall' }
@@ -309,9 +309,7 @@ export default class LinkedInAPI {
   }
 
   toggleReaction = async (emoji: string, messageID: string, threadID: string, react: boolean) => {
-    const parsedMessageId = messageID.split(':').pop()
-    const encodedEndpoint = encodeURIComponent(`${parsedMessageId}`)
-    const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events/${encodedEndpoint}`
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events/${encodeURIComponent(urnID(messageID))}`
     const queryParams = { action: react ? 'reactWithEmoji' : 'unreactWithEmoji' }
     const payload = { emoji }
 
@@ -323,7 +321,7 @@ export default class LinkedInAPI {
     })
   }
 
-  toggleTypingState = async (threadID: string) => {
+  sendTypingState = async (threadID: string) => {
     const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = { action: 'typing' }
     const payload = { conversationId: threadID }
@@ -338,7 +336,7 @@ export default class LinkedInAPI {
 
   editMessage = async (threadID: string, messageID: string, content: MessageContent): Promise<boolean> => {
     // https://www.linkedin.com/voyager/api/messaging/conversations/2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg%3D%3D/events/2-MTYyMzIwNDQ2NzkxNGI5NTg4OC0wMDEmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg%3D%3D
-    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}/events/${encodeURIComponent(messageID.split(':').pop())}`
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}/events/${encodeURIComponent(urnID(messageID))}`
     const payload = { patch: { eventContent: { 'com.linkedin.voyager.messaging.event.MessageEvent': { attributedBody: { $set: { text: content.text, attributes: [] } } } } } }
 
     const res = await this.fetch({

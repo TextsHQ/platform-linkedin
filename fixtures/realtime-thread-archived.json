@@ -1,0 +1,65 @@
+{
+  "com.linkedin.realtimefrontend.DecoratedEvent": {
+    "topic": "urn:li-realtime:conversationsTopic:urn:li-realtime:myself",
+    "leftServerAt": 1627047518214,
+    "id": "75a88579-612a-44a2-8d8e-39745ab33019",
+    "payload": {
+      "action": "UPDATE",
+      "unreadConversationsCount": 5,
+      "entityUrn": "urn:li:fs_conversation:2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==",
+      "conversation": {
+        "notificationStatus": "ACTIVE",
+        "dashEntityUrn": "urn:li:fsd_conversation:2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==",
+        "read": true,
+        "groupChat": false,
+        "totalEventCount": 0,
+        "unreadCount": 0,
+        "lastActivityAt": 1627044910533,
+        "firstMessageUrn": "urn:li:fs_event:(2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==,2-MTYxMzU5OTMzOTQ3N2IzNTk0MS0wMDMmZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==)",
+        "backendUrn": "urn:li:messagingThread:2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==",
+        "receipts": [
+          {
+            "fromEntity": "urn:li:fs_miniProfile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0",
+            "fromParticipant": {
+              "string": "urn:li:member:877798912"
+            },
+            "seenReceipt": {
+              "eventUrn": "urn:li:fs_event:(2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==,2-MTYxMzU5OTM0ODc5OWI5MDE2NS0wMDMmZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==)",
+              "seenAt": 1613699816179
+            }
+          }
+        ],
+        "archived": true,
+        "blocked": false,
+        "entityUrn": "urn:li:fs_conversation:2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==",
+        "viewerCurrentParticipant": true,
+        "featureTypes": [
+          "REACTIONS",
+          "CREATE_NEW_GROUP_CHAT",
+          "CREATE_LINKEDIN_VIRTUAL_MEETING"
+        ],
+        "withNonConnection": false,
+        "muted": false,
+        "participants": [
+          {
+            "com.linkedin.voyager.messaging.MessagingMember": {
+              "entityUrn": "urn:li:fs_messagingMember:(2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==,ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0)",
+              "nameInitials": "JD",
+              "miniProfile": {
+                "lastName": "Doe",
+                "firstName": "John",
+                "memorialized": false,
+                "occupation": "Developer at Stealth",
+                "objectUrn": "urn:li:member:877798912",
+                "entityUrn": "urn:li:fs_miniProfile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0",
+                "publicIdentifier": "john-doe-594b81205",
+                "trackingId": "DUnwcS8JTUmkyaDhNsX7ag=="
+              }
+            }
+          }
+        ]
+      }
+    },
+    "trackingId": "L1ìöy®\u0018ý¤\u001f$ ,!"
+  }
+}
