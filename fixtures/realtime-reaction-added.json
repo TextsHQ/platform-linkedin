@@ -1,0 +1,19 @@
+{
+  "com.linkedin.realtimefrontend.DecoratedEvent": {
+    "topic": "urn:li-realtime:messageReactionSummariesTopic:urn:li-realtime:myself",
+    "leftServerAt": 1627047418495,
+    "id": "dae6b37b-1e19-4a86-9365-f4e10db1f4ab",
+    "payload": {
+      "reactionAdded": true,
+      "actorMiniProfileUrn": "urn:li:fs_miniProfile:ACoAAA7bNVUBXo4wls3McYpXWVndS6LXypCdluU",
+      "eventUrn": "urn:li:fs_event:(2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==,2-MTYyNzA0NDkxMDM5MWI3ODM5MC0wMDMmZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg==)",
+      "reactionSummary": {
+        "count": 1,
+        "firstReactedAt": 1627047418448,
+        "emoji": "👏",
+        "viewerReacted": true
+      }
+    },
+    "trackingId": "\u000e´\u0007á1:á\u001c¸y\fÁ3"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "com.linkedin.realtimefrontend.ClientConnection": {
+    "personalTopics": [
+      "conversationsTopic",
+      "messageSeenReceiptsTopic",
+      "messagesTopic",
+      "replySuggestionTopicV2",
+      "tabBadgeUpdateTopic",
+      "typingIndicatorsTopic",
+      "invitationsTopic",
+      "inAppAlertsTopic",
+      "messageReactionSummariesTopic",
+      "socialPermissionsPersonalTopic",
+      "jobPostingPersonalTopic"
+    ],
+    "leftServerAt": 1627047317534,
+    "id": "27548213-b8ec-4850-b142-a7609fefd767",
+    "serverProcessingTime": 2
+  }
+}

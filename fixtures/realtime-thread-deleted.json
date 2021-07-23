@@ -1,0 +1,12 @@
+{
+  "com.linkedin.realtimefrontend.DecoratedEvent": {
+    "topic": "urn:li-realtime:conversationsTopic:urn:li-realtime:myself",
+    "leftServerAt": 1627047613503,
+    "id": "4215258c-e5cd-41d9-af87-9d2f0b8aa3ef",
+    "payload": {
+      "action": "DELETE",
+      "entityUrn": "urn:li:fs_conversation:2-ZGE1M2EzMTQtOGFkMy00NWJlLWE0NjYtMzNhOWU5MzZiYzQ2XzAxMg=="
+    },
+    "trackingId": "<m=ø\u001el|\"ðº©/P;"
+  }
+}

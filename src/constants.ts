@@ -42,3 +42,11 @@ export const LinkedInAPITypes = {
   member: 'com.linkedin.voyager.messaging.MessagingMember',
   event: 'com.linkedin.voyager.messaging.Event',
 }
+
+export enum Topic {
+  Messages = 'urn:li-realtime:messagesTopic:urn:li-realtime:myself',
+  MessageReactionSummaries = 'urn:li-realtime:messageReactionSummariesTopic:urn:li-realtime:myself',
+  MessageSeenReceipts = 'urn:li-realtime:messageSeenReceiptsTopic:urn:li-realtime:myself',
+  Conversations = 'urn:li-realtime:conversationsTopic:urn:li-realtime:myself',
+  TabBadgeUpdate = 'urn:li-realtime:tabBadgeUpdateTopic:urn:li-realtime:myself',
+}
