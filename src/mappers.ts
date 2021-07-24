@@ -221,9 +221,10 @@ const getParticipantChangeText = (liMsg: any) =>
     : undefined)
 
 const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string) => {
-  const { reactionSummaries, subtype, eventContent } = liMessage
-  // eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] is used for real time events
-  const { attributedBody, customContent, attachments: liAttachments } = eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] || eventContent
+  const { reactionSummaries, subtype } = liMessage
+  // liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] is present in real time events
+  const eventContent = liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] || liMessage.eventContent
+  const { attributedBody, customContent, attachments: liAttachments } = eventContent
 
   let textAttributes: TextAttributes
   if (attributedBody?.attributes?.length > 0) {
