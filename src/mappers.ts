@@ -56,12 +56,13 @@ const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.p
   ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment
   : undefined)
 
-export const mapMiniProfile = (liMiniProfile: any): User => ({
-  id: urnID(liMiniProfile?.entityUrn),
-  username: liMiniProfile?.publicIdentifier,
-  fullName: [liMiniProfile?.firstName, liMiniProfile?.lastName].filter(Boolean).join(' '),
-  imgURL: mapPicture(liMiniProfile),
-})
+export const mapMiniProfile = (liMiniProfile: any): User =>
+  (liMiniProfile ? {
+    id: urnID(liMiniProfile.entityUrn),
+    username: liMiniProfile.publicIdentifier,
+    fullName: [liMiniProfile.firstName, liMiniProfile.lastName].filter(Boolean).join(' '),
+    imgURL: mapPicture(liMiniProfile),
+  } : undefined)
 
 export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
   ...mapMiniProfile(liCurrentUser),
