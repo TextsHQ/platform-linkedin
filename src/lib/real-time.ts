@@ -3,12 +3,12 @@ import EventSource from 'eventsource'
 
 import { REQUEST_HEADERS, LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
 import { mapNewMessage, mapMiniProfile } from '../mappers'
-import { urnID, eventUrnToMessageID, eventUrnToThreadID } from '../util'
+import { urnID, eventUrnToMessageID, eventUrnToThreadID, eventUrnTupleToIDs } from '../util'
 import type PAPI from '../api'
 
 export default class LinkedInRealTime {
   constructor(
-    private papi: InstanceType<typeof PAPI>,
+    private readonly papi: InstanceType<typeof PAPI>,
     private onEvent: OnServerEventCallback,
   ) {}
 
@@ -25,7 +25,7 @@ export default class LinkedInRealTime {
 
   private parseJSON(json: any): ServerEvent {
     if (!json) return
-    // if (texts.IS_DEV) console.log(JSON.stringify(json))
+    // texts.log(JSON.stringify(json))
 
     const newMessageEventType = 'com.linkedin.realtimefrontend.DecoratedEvent'
     if (!json[newMessageEventType]?.payload) return
@@ -53,7 +53,24 @@ export default class LinkedInRealTime {
 
       case Topic.MessageReactionSummaries: {
         const threadID = eventUrnToThreadID(payload.eventUrn)
-
+        const messageID = eventUrnToMessageID(payload.eventUrn)
+        if (payload.reactionAdded) {
+          return {
+            type: ServerEventType.STATE_SYNC,
+            mutationType: 'upsert',
+            objectName: 'message_reaction',
+            objectIDs: {
+              threadID,
+              messageID,
+            },
+            entries: [{
+              id: String(payload.reactionSummary.firstReactedAt),
+              reactionKey: payload.reactionSummary.emoji,
+              participantID: urnID(payload.actorMiniProfileUrn),
+              emoji: true,
+            }],
+          }
+        }
         // todo use state sync
         return { type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }
       }

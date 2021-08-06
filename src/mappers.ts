@@ -145,7 +145,7 @@ export const mapThreads = (liThreads: any[], currentUserID: string): Thread[] =>
 }
 
 export const mapReactions = (liReactionSummaries: any, { currentUserID, participantId }): MessageReaction => ({
-  id: liReactionSummaries?.firstReactedAt,
+  id: String(liReactionSummaries?.firstReactedAt),
   reactionKey: liReactionSummaries?.emoji,
   participantID: liReactionSummaries?.viewerReacted ? currentUserID : participantId,
   emoji: true,

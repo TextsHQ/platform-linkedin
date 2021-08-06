@@ -7,6 +7,11 @@ export const urnID = (entityUrn: string) => entityUrn.split(':').pop()
 // urn:li:fs_updateV2:(urn:li:activity:6767570017279066112,MESSAGING_RESHARE,EMPTY,DEFAULT,false)
 export const eventUrnToThreadID = (eventUrn: string) => eventUrn.split(':(').pop().split(',')[0]
 
+export const eventUrnTupleToIDs = (eventUrn: string) => {
+  const [, threadID, messageID] = /fs_event:\((.+),(.+)\)/.exec(eventUrn)
+  return { threadID, messageID }
+}
+
 export const eventUrnToMessageID = (eventUrn: string) => `urn:li:fsd_message:${eventUrn.split(',').pop().replace(')', '')}`
 
 export const getFeedUpdateURL = (feedUpdate: string) => {
