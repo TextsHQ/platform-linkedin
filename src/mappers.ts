@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts } from '@textshq/platform-sdk'
 import { orderBy, groupBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
@@ -175,6 +175,12 @@ const mapAttachment = (liAttachment: any): MessageAttachment => {
     return MessageAttachmentType.UNKNOWN
   })()
 
+  if (typeof reference !== 'string') {
+    texts.log("linkedin: reference isn't string", JSON.stringify(liAttachment, null, 2))
+    texts.Sentry.captureMessage(`linkedin: reference isn't string, keys: ${Object.keys(liAttachment)}`)
+    return
+  }
+
   return {
     id,
     fileName: name,
@@ -235,9 +241,9 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
   const linkedMessage = customContent?.forwardedContentType ? mapForwardedMessage(customContent) : undefined
 
   // linkedin seems to have broken reactions?
-  const reactions = reactionSummaries.map((reaction: any) => mapReactions(reaction, { currentUserID, participantId: senderID }))
+  const reactions = (reactionSummaries as any[]).map(reaction => mapReactions(reaction, { currentUserID, participantId: senderID }))
 
-  const attachments = liAttachments?.map(liAttachment => mapAttachment(liAttachment)) || []
+  const attachments = (liAttachments as any[])?.map(liAttachment => mapAttachment(liAttachment)).filter(Boolean) || []
 
   const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' || subtype === 'PARTICIPANT_CHANGE'
 
