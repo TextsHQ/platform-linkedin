@@ -1,9 +1,9 @@
-import { Message, OnServerEventCallback, ServerEvent, ServerEventType, texts, UNKNOWN_DATE } from '@textshq/platform-sdk'
+import { Message, OnServerEventCallback, ServerEvent, ServerEventType, texts, UNKNOWN_DATE, UpdateStateSyncEvent } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
 import { REQUEST_HEADERS, LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
 import { mapNewMessage, mapMiniProfile } from '../mappers'
-import { urnID, eventUrnToMessageID, eventUrnToThreadID, eventUrnTupleToIDs } from '../util'
+import { urnID, eventUrnToMessageID, eventUrnToThreadID } from '../util'
 import type PAPI from '../api'
 
 export default class LinkedInRealTime {
@@ -23,7 +23,7 @@ export default class LinkedInRealTime {
     return true
   }
 
-  private parseJSON(json: any): ServerEvent {
+  private parseJSON(json: any): ServerEvent[] {
     if (!json) return
     // texts.log(JSON.stringify(json))
 
@@ -39,13 +39,13 @@ export default class LinkedInRealTime {
 
         const messages = [mapNewMessage(payload.event, this.papi.user.id)]
         if (!this.resolveSendMessage(originToken, messages)) {
-          return {
+          return [{
             type: ServerEventType.STATE_SYNC,
             mutationType: 'upsert',
             objectName: 'message',
             objectIDs: { threadID },
             entries: messages,
-          }
+          }]
         }
 
         break
@@ -55,7 +55,7 @@ export default class LinkedInRealTime {
         const threadID = eventUrnToThreadID(payload.eventUrn)
         const messageID = eventUrnToMessageID(payload.eventUrn)
         if (payload.reactionAdded) {
-          return {
+          return [{
             type: ServerEventType.STATE_SYNC,
             mutationType: 'upsert',
             objectName: 'message_reaction',
@@ -69,10 +69,10 @@ export default class LinkedInRealTime {
               participantID: urnID(payload.actorMiniProfileUrn),
               emoji: true,
             }],
-          }
+          }]
         }
         // todo use state sync
-        return { type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }
+        return [{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }]
       }
 
       case Topic.Conversations: {
@@ -80,28 +80,27 @@ export default class LinkedInRealTime {
         const threadID = urnID(entityUrn)
 
         if (payload.action === 'DELETE') {
-          return {
+          return [{
             type: ServerEventType.STATE_SYNC,
             mutationType: 'delete',
             objectName: 'thread',
             objectIDs: {},
             entries: [threadID],
-          }
+          }]
         }
         if (!conversation) return
 
-        const serverEvent: ServerEvent = {
+        const firstEvent: UpdateStateSyncEvent = {
           type: ServerEventType.STATE_SYNC,
           mutationType: 'update',
           objectName: 'thread',
           objectIDs: { threadID },
-          entries: [
-            {
-              id: threadID,
-              isUnread: !conversation.read,
-            },
-          ],
+          entries: [{
+            id: threadID,
+            isUnread: !conversation.read,
+          }],
         }
+        const serverEvents: ServerEvent[] = [firstEvent]
 
         if (payload.action === 'UPDATE') {
           const participants = (conversation.participants as any[])
@@ -114,14 +113,20 @@ export default class LinkedInRealTime {
                 },
               })
             })
-
-          Object.assign(serverEvent.entries[0], {
+          Object.assign(firstEvent.entries[0], {
             isArchived: conversation.archived,
             mutedUntil: conversation.muted ? 'forever' : undefined,
-            participants,
+          })
+          // todo delete existing participants
+          serverEvents.push({
+            type: ServerEventType.STATE_SYNC,
+            mutationType: 'upsert',
+            objectName: 'participant',
+            objectIDs: { threadID },
+            entries: participants,
           })
         }
-        return serverEvent
+        return serverEvents
       }
 
       case Topic.MessageSeenReceipts: {
@@ -134,18 +139,16 @@ export default class LinkedInRealTime {
 
         this.papi.updateSeenReceipt(messageID, { [participantID]: new Date(seenAt) })
 
-        return {
+        return [{
           type: ServerEventType.STATE_SYNC,
           mutationType: 'update',
           objectName: 'message',
           objectIDs: { messageID, threadID },
-          entries: [
-            {
-              id: messageID,
-              seen: { [participantID]: UNKNOWN_DATE },
-            },
-          ],
-        }
+          entries: [{
+            id: messageID,
+            seen: { [participantID]: UNKNOWN_DATE },
+          }],
+        }]
       }
 
       case Topic.TabBadgeUpdate: // ignore
@@ -176,7 +179,7 @@ export default class LinkedInRealTime {
         }
         return JSON.parse(line)
       })
-      const events = jsons.map(json => this.parseJSON(json)).filter(Boolean)
+      const events = jsons.flatMap(json => this.parseJSON(json)).filter(Boolean)
       if (events.length > 0) this.onEvent(events)
     }
     let errorCount = 0

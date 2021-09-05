@@ -218,10 +218,12 @@ export default class LinkedInAPI {
       })
     }
 
+    const originToken = options.pendingMessageID
+
     const payload = {
       dedupeByClientGeneratedToken: false,
       eventCreate: {
-        originToken: options.pendingMessageID,
+        originToken,
         // trackingId: '',
         value: {
           'com.linkedin.voyager.messaging.create.MessageCreate': {
@@ -236,7 +238,7 @@ export default class LinkedInAPI {
     }
 
     const promise = new Promise<Message[]>(resolve => {
-      sendMessageResolvers.set(options.pendingMessageID, resolve)
+      sendMessageResolvers.set(originToken, resolve)
     })
     const res = await this.fetch({
       url,
