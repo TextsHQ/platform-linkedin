@@ -23,14 +23,23 @@ export default class LinkedInRealTime {
     return true
   }
 
+  private lastHeartbeat: Date
+
   private parseJSON(json: any): ServerEvent[] {
     if (!json) return
     // texts.log(JSON.stringify(json))
 
-    const newMessageEventType = 'com.linkedin.realtimefrontend.DecoratedEvent'
-    if (!json[newMessageEventType]?.payload) return
+    if (json['com.linkedin.realtimefrontend.Heartbeat']) {
+      this.lastHeartbeat = new Date()
+    }
 
-    const { payload, topic = '' } = json[newMessageEventType]
+    const newEvent = json['com.linkedin.realtimefrontend.DecoratedEvent']
+    if (!newEvent?.payload) {
+      texts.log('[linkedin] ignoring event because no payload', json)
+      return
+    }
+
+    const { payload, topic = '' } = newEvent
 
     switch (topic) {
       case Topic.Messages: {
@@ -164,6 +173,10 @@ export default class LinkedInRealTime {
 
   private es: EventSource
 
+  private reconnectTimeout: NodeJS.Timeout
+
+  private retryAttempt = 0
+
   setup = async (): Promise<void> => {
     const headers = {
       ...REQUEST_HEADERS,
@@ -171,6 +184,10 @@ export default class LinkedInRealTime {
     }
     this.es?.close()
     this.es = new EventSource(LinkedInURLs.REALTIME, { headers })
+    this.es.onopen = () => {
+      texts.log('[linkedin] es open')
+      this.retryAttempt = 0
+    }
     this.es.onmessage = event => {
       const jsons = (event.data as string).split('\n').map(line => {
         if (!line.startsWith('{')) {
@@ -184,12 +201,19 @@ export default class LinkedInRealTime {
     }
     let errorCount = 0
     this.es.onerror = event => {
-      if (this.es.readyState === this.es.CLOSED) {
-        texts.error('[linkedin]', new Date(), 'es closed, reconnecting')
-        texts.Sentry.captureMessage(`linkedin es reconnecting ${this.es.readyState}`)
-        this.setup()
-      }
       texts.error('[linkedin]', new Date(), 'es error', event, ++errorCount)
+      clearTimeout(this.reconnectTimeout)
+      // min 1 second, max 60 seconds
+      const timeoutSeconds = Math.min(60, ++this.retryAttempt)
+      texts.error(`[linkedin] retrying in ${timeoutSeconds} seconds, attempt: ${this.retryAttempt}`)
+      this.reconnectTimeout = setTimeout(() => {
+        this.setup()
+      }, timeoutSeconds * 1000)
     }
+  }
+
+  dispose = () => {
+    this.es?.close()
+    this.es = null
   }
 }

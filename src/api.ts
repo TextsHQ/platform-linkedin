@@ -11,8 +11,6 @@ import { urnID } from './util'
 export type SendMessageResolveFunction = (value: Message[]) => void
 
 export default class LinkedIn implements PlatformAPI {
-  private eventTimeout?: NodeJS.Timeout
-
   private currentUser = null
 
   user: CurrentUser
@@ -71,7 +69,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   dispose = async () => {
-    if (this.eventTimeout) clearInterval(this.eventTimeout)
+    this.realTimeApi?.dispose()
   }
 
   searchUsers = async (typed: string) => {
