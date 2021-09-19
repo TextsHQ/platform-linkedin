@@ -7,10 +7,20 @@ import { urnID, eventUrnToMessageID, eventUrnToThreadID } from '../util'
 import type PAPI from '../api'
 
 export default class LinkedInRealTime {
+  private heartbeatCheckerInterval: NodeJS.Timeout
+
   constructor(
     private readonly papi: InstanceType<typeof PAPI>,
     private onEvent: OnServerEventCallback,
-  ) {}
+  ) {
+    this.heartbeatCheckerInterval = setInterval(() => {
+      if (!this.lastHeartbeat) return
+      if ((Date.now() - this.lastHeartbeat.getTime()) > 180_000) { // > 3 mins
+        // todo: fix resync dropped events
+        this.setup()
+      }
+    }, 180_000)
+  }
 
   resolveSendMessage(originToken: string, messages: Message[]) {
     const resolve = this.papi.sendMessageResolvers.get(originToken)
@@ -31,6 +41,7 @@ export default class LinkedInRealTime {
 
     if (json['com.linkedin.realtimefrontend.Heartbeat']) {
       this.lastHeartbeat = new Date()
+      return
     }
 
     const newEvent = json['com.linkedin.realtimefrontend.DecoratedEvent']
@@ -213,6 +224,7 @@ export default class LinkedInRealTime {
   }
 
   dispose = () => {
+    clearInterval(this.heartbeatCheckerInterval)
     this.es?.close()
     this.es = null
   }
