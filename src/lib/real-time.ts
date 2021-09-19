@@ -53,7 +53,7 @@ export default class LinkedInRealTime {
     const { payload, topic = '' } = newEvent
 
     switch (topic) {
-      case Topic.Messages: {
+      case Topic.messagesTopic: {
         const { entityUrn = '', originToken } = payload.event
         const threadID = eventUrnToThreadID(entityUrn)
 
@@ -71,7 +71,7 @@ export default class LinkedInRealTime {
         break
       }
 
-      case Topic.MessageReactionSummaries: {
+      case Topic.messageReactionSummariesTopic: {
         const threadID = eventUrnToThreadID(payload.eventUrn)
         const messageID = eventUrnToMessageID(payload.eventUrn)
         if (payload.reactionAdded) {
@@ -95,7 +95,7 @@ export default class LinkedInRealTime {
         return [{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }]
       }
 
-      case Topic.Conversations: {
+      case Topic.conversationsTopic: {
         const { entityUrn = '', conversation } = payload
         const threadID = urnID(entityUrn)
 
@@ -149,7 +149,7 @@ export default class LinkedInRealTime {
         return serverEvents
       }
 
-      case Topic.MessageSeenReceipts: {
+      case Topic.messageSeenReceiptsTopic: {
         const { fromEntity, seenReceipt } = payload
         const { eventUrn, seenAt } = seenReceipt
 
@@ -171,12 +171,12 @@ export default class LinkedInRealTime {
         }]
       }
 
-      case Topic.TabBadgeUpdate: // ignore
+      case Topic.tabBadgeUpdateTopic: // ignore
         break
 
       default: {
-        const msg = `unknown linkedin topic: ${topic}`
-        texts.Sentry.captureMessage(msg)
+        const msg = `unhandled linkedin topic: ${topic}`
+        texts.log(newEvent)
         console.error(msg)
       }
     }

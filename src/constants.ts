@@ -44,9 +44,17 @@ export const LinkedInAPITypes = {
 }
 
 export enum Topic {
-  Messages = 'urn:li-realtime:messagesTopic:urn:li-realtime:myself',
-  MessageReactionSummaries = 'urn:li-realtime:messageReactionSummariesTopic:urn:li-realtime:myself',
-  MessageSeenReceipts = 'urn:li-realtime:messageSeenReceiptsTopic:urn:li-realtime:myself',
-  Conversations = 'urn:li-realtime:conversationsTopic:urn:li-realtime:myself',
-  TabBadgeUpdate = 'urn:li-realtime:tabBadgeUpdateTopic:urn:li-realtime:myself',
+  conversationsTopic = 'urn:li-realtime:conversationsTopic:urn:li-realtime:myself',
+  messageSeenReceiptsTopic = 'urn:li-realtime:messageSeenReceiptsTopic:urn:li-realtime:myself',
+  messagesTopic = 'urn:li-realtime:messagesTopic:urn:li-realtime:myself',
+  replySuggestionTopicV2 = 'urn:li-realtime:replySuggestionTopicV2:urn:li-realtime:myself',
+  tabBadgeUpdateTopic = 'urn:li-realtime:tabBadgeUpdateTopic:urn:li-realtime:myself',
+  typingIndicatorsTopic = 'urn:li-realtime:typingIndicatorsTopic:urn:li-realtime:myself',
+  invitationsTopic = 'urn:li-realtime:invitationsTopic:urn:li-realtime:myself',
+  inAppAlertsTopic = 'urn:li-realtime:inAppAlertsTopic:urn:li-realtime:myself',
+  messageReactionSummariesTopic = 'urn:li-realtime:messageReactionSummariesTopic:urn:li-realtime:myself',
+  socialPermissionsPersonalTopic = 'urn:li-realtime:socialPermissionsPersonalTopic:urn:li-realtime:myself',
+  jobPostingPersonalTopic = 'urn:li-realtime:jobPostingPersonalTopic:urn:li-realtime:myself',
+  messagingProgressIndicatorTopic = 'urn:li-realtime:messagingProgressIndicatorTopic:urn:li-realtime:myself',
+  messagingDataSyncTopic = 'urn:li-realtime:messagingDataSyncTopic:urn:li-realtime:myself,',
 }
