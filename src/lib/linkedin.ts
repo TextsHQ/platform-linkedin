@@ -1,10 +1,11 @@
 import { FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
+import bluebird from 'bluebird'
 import type { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
-import { mapConversationsResponse } from '../mappers'
+import { getSenderID, mapConversationsResponse } from '../mappers'
 import type { SendMessageResolveFunction } from '../api'
 import { urnID } from '../util'
 
@@ -12,6 +13,8 @@ export default class LinkedInAPI {
   cookieJar: CookieJar
 
   httpClient = texts.createHttpClient()
+
+  public participantEntities: Record<string, any> = {}
 
   setLoginState = async (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError()
@@ -92,6 +95,34 @@ export default class LinkedInAPI {
     }
   }
 
+  _mapThreadParticipants = async participant => {
+    const participantId = getSenderID(participant)
+
+    if (!this.participantEntities[participantId]) {
+      const profile = await this.getProfile(participantId)
+
+      this.participantEntities[participantId] = {
+        entityUrn: profile.entityUrn,
+        publicIdentifier: profile.publicIdentifier,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        picture: profile.profilePicture?.displayImageReference?.vectorImage,
+      }
+    }
+  }
+
+  _mapThreadEntity = async thread => {
+    const { conversation } = thread
+    const { entityUrn } = thread?.entity || {}
+    const entityId = urnID(entityUrn)
+
+    if (!this.participantEntities[entityId]) {
+      this.participantEntities[entityId] = thread?.entity
+    }
+
+    await bluebird.map(conversation['*participants'] || [], this._mapThreadParticipants)
+  }
+
   getThreads = async (createdBefore = Date.now(), inboxType: InboxName = InboxName.NORMAL) => {
     const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = {
@@ -109,6 +140,8 @@ export default class LinkedInAPI {
     })
 
     const parsed = [...mapConversationsResponse(inbox), ...mapConversationsResponse(archive)]
+
+    await bluebird.map(parsed, this._mapThreadEntity)
 
     return parsed.filter((x: any) => {
       const { entityUrn: threadId } = x?.conversation || {}
@@ -132,7 +165,7 @@ export default class LinkedInAPI {
       searchParams: queryParams,
     })
 
-    return included?.find(({ $type }) => $type === 'com.linkedin.voyager.dash.identity.profile.Profile') || {}
+    return included?.find(({ $type, entityUrn }) => $type === 'com.linkedin.voyager.dash.identity.profile.Profile' && urnID(entityUrn) === publicId) || {}
   }
 
   markThreadRead = async (threadID: string, read: boolean = true) => {
