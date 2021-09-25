@@ -94,6 +94,36 @@ export default class LinkedInAPI {
     }
   }
 
+  _mapThreadParticipants = async participant => {
+    const participantId = getSenderID(participant)
+
+    if (!this.participantEntities[participantId]) {
+      const profile = await this.getProfile(participantId)
+
+      this.participantEntities[participantId] = {
+        entityUrn: profile.entityUrn,
+        publicIdentifier: profile.publicIdentifier,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        picture: profile.profilePicture?.displayImageReference?.vectorImage,
+      }
+    }
+  }
+
+  _mapThreadEntity = async thread => {
+    const { conversation } = thread
+    const { entityUrn } = thread?.entity || {}
+    const entityId = urnID(entityUrn)
+
+    if (!this.participantEntities[entityId]) {
+      this.participantEntities[entityId] = thread?.entity
+    }
+
+    const promises = conversation['*participants'].map(this._mapThreadParticipants)
+    // TODO: use bluebird
+    await Promise.all(promises)
+  }
+
   getThreads = async (createdBefore = Date.now(), inboxType: InboxName = InboxName.NORMAL) => {
     const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = {
@@ -112,31 +142,7 @@ export default class LinkedInAPI {
 
     const parsed = [...mapConversationsResponse(inbox), ...mapConversationsResponse(archive)]
 
-    for (const thread of parsed) {
-      const { conversation } = thread
-      const { entityUrn } = thread?.entity || {}
-      const entityId = urnID(entityUrn)
-
-      if (!this.participantEntities[entityId]) {
-        this.participantEntities[entityId] = thread?.entity
-      }
-
-      for (const participant of conversation['*participants']) {
-        const participantId = getSenderID(participant)
-
-        if (!this.participantEntities[participantId]) {
-          const profile = await this.getProfile(participantId)
-
-          this.participantEntities[participantId] = {
-            entityUrn: profile.entityUrn,
-            publicIdentifier: profile.publicIdentifier,
-            firstName: profile.firstName,
-            lastName: profile.lastName,
-            picture: profile.profilePicture?.displayImageReference?.vectorImage,
-          }
-        }
-      }
-    }
+    await Promise.all(parsed.map(this._mapThreadEntity))
 
     return parsed.filter((x: any) => {
       const { entityUrn: threadId } = x?.conversation || {}
