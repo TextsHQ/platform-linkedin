@@ -130,8 +130,8 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
   }
 }
 
-export const mapThreads = (liThreads: any[], currentUserID: string, grouped: Record<string, any>): Thread[] => {
-  const threads = liThreads.map(thread => mapThread(thread, grouped, currentUserID))
+export const mapThreads = (liThreads: any[], currentUserID: string, participantEntities: Record<string, any>): Thread[] => {
+  const threads = liThreads.map(thread => mapThread(thread, participantEntities, currentUserID))
   return orderBy(threads, 'timestamp', 'desc')
 }
 
