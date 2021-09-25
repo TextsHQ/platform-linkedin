@@ -1,6 +1,7 @@
 import { FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
+import bluebird from 'bluebird'
 import type { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
@@ -119,9 +120,7 @@ export default class LinkedInAPI {
       this.participantEntities[entityId] = thread?.entity
     }
 
-    const promises = conversation['*participants'].map(this._mapThreadParticipants)
-    // TODO: use bluebird
-    await Promise.all(promises)
+    await bluebird.map(conversation['*participants'] || [], this._mapThreadParticipants)
   }
 
   getThreads = async (createdBefore = Date.now(), inboxType: InboxName = InboxName.NORMAL) => {
@@ -142,7 +141,7 @@ export default class LinkedInAPI {
 
     const parsed = [...mapConversationsResponse(inbox), ...mapConversationsResponse(archive)]
 
-    await Promise.all(parsed.map(this._mapThreadEntity))
+    await bluebird.map(parsed, this._mapThreadEntity)
 
     return parsed.filter((x: any) => {
       const { entityUrn: threadId } = x?.conversation || {}
