@@ -73,6 +73,7 @@ const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>
   liParticipants.map<Participant>(p => {
     const id = getSenderID(p)
     const entity = entitiesMap[id]
+
     return {
       id,
       username: entity?.publicIdentifier,
@@ -129,17 +130,7 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
   }
 }
 
-const groupEntities = (liThreads: any[]) => {
-  const map = {}
-  for (const liThread of liThreads) {
-    const id = urnID(liThread.entity?.entityUrn)
-    map[id] = liThread.entity
-  }
-  return map
-}
-
-export const mapThreads = (liThreads: any[], currentUserID: string): Thread[] => {
-  const grouped = groupEntities(liThreads)
+export const mapThreads = (liThreads: any[], currentUserID: string, grouped: Record<string, any>): Thread[] => {
   const threads = liThreads.map(thread => mapThread(thread, grouped, currentUserID))
   return orderBy(threads, 'timestamp', 'desc')
 }
