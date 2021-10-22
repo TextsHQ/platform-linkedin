@@ -100,13 +100,14 @@ export default class LinkedInAPI {
 
     if (!this.participantEntities[participantId]) {
       const profile = await this.getProfile(participantId)
-
-      this.participantEntities[participantId] = {
-        entityUrn: profile.entityUrn,
-        publicIdentifier: profile.publicIdentifier,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        picture: profile.profilePicture?.displayImageReference?.vectorImage,
+      if (profile) {
+        this.participantEntities[participantId] = {
+          entityUrn: profile.entityUrn,
+          publicIdentifier: profile.publicIdentifier,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          picture: profile.profilePicture?.displayImageReference?.vectorImage,
+        }
       }
     }
   }
@@ -159,13 +160,15 @@ export default class LinkedInAPI {
       decorationId: 'com.linkedin.voyager.dash.deco.identity.profile.FullProfileWithEntities-35',
     }
 
-    const { included } = await this.fetch({
+    const res = await this.fetch({
       method: 'GET',
       url,
       searchParams: queryParams,
     })
+    if (!res) return
 
-    return included?.find(({ $type, entityUrn }) => $type === 'com.linkedin.voyager.dash.identity.profile.Profile' && urnID(entityUrn) === publicId) || {}
+    const { included } = res
+    return included?.find(({ $type, entityUrn }) => $type === 'com.linkedin.voyager.dash.identity.profile.Profile' && urnID(entityUrn) === publicId)
   }
 
   markThreadRead = async (threadID: string, read: boolean = true) => {

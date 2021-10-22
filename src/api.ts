@@ -110,9 +110,14 @@ export default class LinkedIn implements PlatformAPI {
     for (const item of items) {
       for (const event of (item?.liMessages || [])) {
         if (event?.subtype === 'PARTICIPANT_CHANGE') {
-          event.eventContent.removedParticipants = await this.mapParticipants(event, '*removedParticipants')
-          event.eventContent.addedParticipants = await this.mapParticipants(event, '*addedParticipants')
-          event.fromProfile = await this.api.getProfile(mapParticipantAction(event['*from']))
+          const [removedParticipants, addedParticipants, fromProfile] = await Promise.all([
+            this.mapParticipants(event, '*removedParticipants'),
+            this.mapParticipants(event, '*addedParticipants'),
+            this.api.getProfile(mapParticipantAction(event['*from'])),
+          ])
+          event.eventContent.removedParticipants = removedParticipants
+          event.eventContent.addedParticipants = addedParticipants
+          event.fromProfile = fromProfile
         }
       }
     }
@@ -148,8 +153,12 @@ export default class LinkedIn implements PlatformAPI {
     // TODO: refactor
     for (const event of messages.events) {
       if (event?.subtype === 'PARTICIPANT_CHANGE') {
-        event.eventContent.removedParticipants = await this.mapParticipants(event, '*removedParticipants')
-        event.eventContent.addedParticipants = await this.mapParticipants(event, '*addedParticipants')
+        const [removed, added] = await Promise.all([
+          this.mapParticipants(event, '*removedParticipants'),
+          this.mapParticipants(event, '*addedParticipants'),
+        ])
+        event.eventContent.removedParticipants = removed
+        event.eventContent.addedParticipants = added
       }
     }
 
