@@ -223,7 +223,7 @@ export default class LinkedInRealTime {
     }
   }
 
-  dispose = () => {
+  dispose = async () => {
     clearInterval(this.heartbeatCheckerInterval)
     this.es?.close()
     this.es = null
