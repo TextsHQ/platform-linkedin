@@ -71,8 +71,10 @@ export default class LinkedIn implements PlatformAPI {
   dispose = async () => this.realTimeApi?.dispose()
 
   onResumeFromSleep = async () => {
-    await this.realTimeApi?.dispose()
-    await this.realTimeApi.setup()
+    setTimeout(async () => {
+      await this.realTimeApi?.dispose()
+      await this.realTimeApi.setup()
+    }, 1000)
   }
 
   searchUsers = async (typed: string) => {
