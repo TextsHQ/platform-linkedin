@@ -74,6 +74,7 @@ export default class LinkedInRealTime {
       case Topic.messageReactionSummariesTopic: {
         const threadID = eventUrnToThreadID(payload.eventUrn)
         const messageID = eventUrnToMessageID(payload.eventUrn)
+
         if (payload.reactionAdded) {
           return [{
             type: ServerEventType.STATE_SYNC,
@@ -84,7 +85,7 @@ export default class LinkedInRealTime {
               messageID,
             },
             entries: [{
-              id: String(payload.reactionSummary.firstReactedAt),
+              id: `${urnID(payload.actorMiniProfileUrn)}${payload.reactionSummary?.emoji}`,
               reactionKey: payload.reactionSummary.emoji,
               participantID: urnID(payload.actorMiniProfileUrn),
               emoji: true,
