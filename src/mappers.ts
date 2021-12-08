@@ -182,6 +182,20 @@ const mapAttachment = (liAttachment: any): MessageAttachment => {
   }
 }
 
+const mapMediaAudio = (liMediaAttachment: any): MessageAttachment => ({
+  id: liMediaAttachment?.audioMetadata?.urn,
+  srcURL: `asset://$accountID/proxy/${Buffer.from(liMediaAttachment?.audioMetadata?.url).toString('hex')}`,
+  type: MessageAttachmentType.AUDIO,
+  isVoiceNote: true,
+})
+
+const mapMediaAttachments = (liAttachments: any): MessageAttachment[] => {
+  if (!liAttachments?.length) return []
+  const audios = liAttachments.filter(({ mediaType }) => mediaType === 'AUDIO')
+
+  return [...audios?.map(mapMediaAudio)]
+}
+
 const mapFeedUpdate = (liFeedUpdate: string): MessageLink => ({
   url: getFeedUpdateURL(liFeedUpdate),
   title: 'Feed Update',
@@ -222,7 +236,7 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
   const { reactionSummaries, subtype } = liMessage
   // liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] is present in real time events
   const eventContent = liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] || liMessage.eventContent
-  const { attributedBody, customContent, attachments: liAttachments } = eventContent
+  const { attributedBody, customContent, attachments: liAttachments, mediaAttachments } = eventContent
 
   let textAttributes: TextAttributes
   if (attributedBody?.attributes?.length > 0) {
@@ -234,7 +248,10 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
   // linkedin seems to have broken reactions?
   const reactions = (reactionSummaries as any[]).map(reaction => mapReactions(reaction, { currentUserID, participantId: senderID }))
 
-  const attachments = (liAttachments as any[])?.map(liAttachment => mapAttachment(liAttachment)).filter(Boolean) || []
+  const attachments = [
+    ...((liAttachments as any[])?.map(liAttachment => mapAttachment(liAttachment)).filter(Boolean) || []),
+    ...(mapMediaAttachments(mediaAttachments) || []),
+  ]
 
   const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' || subtype === 'PARTICIPANT_CHANGE'
 
