@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapParticipantAction, mapThreads } from './mappers'
@@ -25,6 +25,8 @@ export default class LinkedIn implements PlatformAPI {
 
   // TODO: implement something with Texts-sdk
   private seenReceipt = {}
+
+  onEvent: OnServerEventCallback
 
   readonly api = new LinkedInAPI()
 
@@ -66,6 +68,8 @@ export default class LinkedIn implements PlatformAPI {
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
     this.realTimeApi = new LinkedInRealTime(this, onEvent)
     this.realTimeApi.setup()
+
+    this.onEvent = onEvent
   }
 
   dispose = async () => this.realTimeApi?.dispose()
@@ -221,5 +225,20 @@ export default class LinkedIn implements PlatformAPI {
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
     if (updates.title) await this.api.renameThread(threadID, updates.title)
     return true
+  }
+
+  onThreadSelected = async (threadID: string) => {
+    const participantsPresence = await this.api.getUserPresence(threadID)
+    const presenceEvents: ServerEvent[] = participantsPresence.map(presence => ({
+      type: ServerEventType.USER_PRESENCE_UPDATED,
+      presence: {
+        userID: presence.userID,
+        status: presence.status === 'ONLINE' ? 'online' : 'offline',
+        isActive: presence.status === 'ONLINE',
+        lastActive: new Date(presence.lastActiveAt),
+      },
+    }))
+
+    this.onEvent(presenceEvents)
   }
 }
