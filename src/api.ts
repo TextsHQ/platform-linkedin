@@ -234,7 +234,6 @@ export default class LinkedIn implements PlatformAPI {
       presence: {
         userID: presence.userID,
         status: presence.status === 'ONLINE' ? 'online' : 'offline',
-        isActive: presence.status === 'ONLINE',
         lastActive: new Date(presence.lastActiveAt),
       },
     }))
