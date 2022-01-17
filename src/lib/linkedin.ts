@@ -2,12 +2,13 @@ import { FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, t
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
 import bluebird from 'bluebird'
+import FormData from 'form-data'
 import type { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
 import { getSenderID, mapConversationsResponse } from '../mappers'
+import { getParticipantID, urnID } from '../util'
 import type { SendMessageResolveFunction } from '../api'
-import { urnID } from '../util'
 
 export default class LinkedInAPI {
   cookieJar: CookieJar
@@ -15,6 +16,8 @@ export default class LinkedInAPI {
   httpClient = texts.createHttpClient()
 
   public participantEntities: Record<string, any> = {}
+
+  private conversationsParticipants: Record<string, string[]> = {}
 
   setLoginState = async (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError()
@@ -115,13 +118,20 @@ export default class LinkedInAPI {
   _mapThreadEntity = async thread => {
     const { conversation } = thread
     const { entityUrn } = thread?.entity || {}
+    const threadID = urnID(conversation.backendUrn)
     const entityId = urnID(entityUrn)
+    const participants = conversation['*participants'] || []
 
     if (!this.participantEntities[entityId]) {
       this.participantEntities[entityId] = thread?.entity
     }
 
-    await bluebird.map(conversation['*participants'] || [], this._mapThreadParticipants)
+    if (threadID && participants.length) {
+      const participantsIds = participants.map(getParticipantID)
+      this.conversationsParticipants[threadID] = participantsIds
+    }
+
+    await bluebird.map(participants, this._mapThreadParticipants)
   }
 
   getThreads = async (createdBefore = Date.now(), inboxType: InboxName = InboxName.NORMAL) => {
@@ -396,6 +406,45 @@ export default class LinkedInAPI {
       method: 'POST',
       json: payload,
     })
+  }
+
+  getUserPresence = async (threadID: string): Promise<{ userID: string, status: 'OFFLINE' | 'ONLINE', lastActiveAt: number }[]> => {
+    const participants = this.conversationsParticipants[threadID] || []
+    const ids = participants.map(id => encodeURIComponent(`urn:li:fs_miniProfile:${id}`))
+    const url = `${LinkedInURLs.API_MESSAGING}/presenceStatuses`
+    const body = `ids=List(${ids.join(',')})`
+    // {
+    //   "data": {
+    //     "statuses": {},
+    //     "results": {
+    //       "urn:li:fs_miniProfile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0": {
+    //         "lastActiveAt": 1642356480000,
+    //         "availability": "OFFLINE",
+    //         "instantlyReachable": false,
+    //         "$type": "com.linkedin.voyager.messaging.presence.MessagingPresenceStatus"
+    //       }
+    //     },
+    //     "errors": {}
+    //   },
+    //   "included": []
+    // }
+    const { data: { results } } = await this.fetch({
+      url,
+      body,
+      method: 'POST',
+      headers: {
+        accept: 'application/vnd.linkedin.normalized+json+2.1',
+        'content-type': 'application/x-www-form-urlencoded',
+        'x-http-method-override': 'GET',
+      },
+    })
+
+    const keys = Object.keys(results)
+    return keys.map(key => ({
+      userID: urnID(key),
+      status: results[key].availability,
+      lastActiveAt: results[key].lastActiveAt,
+    }))
   }
 
   logout = async (): Promise<void> => {
