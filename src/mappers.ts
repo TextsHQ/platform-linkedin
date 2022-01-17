@@ -232,6 +232,19 @@ const getParticipantChangeText = (liMsg: any) =>
     ? `${liMsg.fromProfile?.firstName}${liMsg.eventContent.removedParticipants?.length > 0 ? ` removed ${liMsg.eventContent.removedParticipants?.join(', ')}` : ''}${liMsg.eventContent.addedParticipants?.length > 0 ? ` added ${liMsg.eventContent.addedParticipants?.join(', ')}` : ''}`
     : undefined)
 
+const mapMediaCustomAttachment = (liCustomContent: any): MessageAttachment[] => {
+  if (liCustomContent?.mediaType !== 'TENOR_GIF') return []
+
+  const { media: { gif }, id } = liCustomContent
+
+  return [{
+    id: `${id}`,
+    isGif: true,
+    srcURL: gif.url,
+    type: MessageAttachmentType.IMG,
+  }]
+}
+
 const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string) => {
   const { reactionSummaries, subtype } = liMessage
   // liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] is present in real time events
@@ -251,6 +264,7 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
   const attachments = [
     ...((liAttachments as any[])?.map(liAttachment => mapAttachment(liAttachment)).filter(Boolean) || []),
     ...(mapMediaAttachments(mediaAttachments) || []),
+    ...(mapMediaCustomAttachment(customContent) || []),
   ]
 
   const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' || subtype === 'PARTICIPANT_CHANGE'
