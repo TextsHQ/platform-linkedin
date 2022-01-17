@@ -229,7 +229,7 @@ export default class LinkedIn implements PlatformAPI {
 
   onThreadSelected = async (threadID: string) => {
     const participantsPresence = await this.api.getUserPresence(threadID)
-    const presenceEvents: ServerEvent[] = participantsPresence.map(presence => ({
+    const presenceEvents = participantsPresence.map<ServerEvent>(presence => ({
       type: ServerEventType.USER_PRESENCE_UPDATED,
       presence: {
         userID: presence.userID,
