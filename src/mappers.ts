@@ -82,7 +82,6 @@ const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>
       social: {
         coverImgURL: entity?.backgroundImage ? mapPicture({ picture: entity?.backgroundImage }) : undefined,
         bio: { text: entity?.occupation },
-        website: `https://www.linkedin.com/in/${entity?.publicIdentifier}`,
       },
     }
   })
