@@ -79,6 +79,11 @@ const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>
       username: entity?.publicIdentifier,
       fullName: [entity?.firstName, entity?.lastName].filter(Boolean).join(' '),
       imgURL: mapPicture(entity),
+      social: {
+        coverImgURL: entity?.backgroundImage ? mapPicture({ picture: entity?.backgroundImage }) : undefined,
+        bio: { text: entity?.occupation },
+        website: `https://www.linkedin.com/in/${entity?.publicIdentifier}`,
+      },
     }
   })
 
