@@ -29,6 +29,16 @@ const info: PlatformInfo = {
     loginURL,
     authCookieName: LinkedInAuthCookieName,
   },
+  attachments: {
+    // https://www.linkedin.com/help/linkedin/answer/53703/attaching-files-and-images-to-linkedin-messages
+    // "The combined file sizes cannot exceed 20 MB."
+    maxSize: {
+      image: 20 * 1024 * 1024,
+      video: 20 * 1024 * 1024,
+      audio: 20 * 1024 * 1024,
+      files: 20 * 1024 * 1024,
+    },
+  },
   deletionMode: MessageDeletionMode.DELETE_FOR_EVERYONE,
   attributes: new Set([
     Attribute.NO_CACHE,
