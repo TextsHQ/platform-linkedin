@@ -161,7 +161,8 @@ const mapForwardedMessage = (liForwardedMessage: any): MessagePreview => {
 }
 
 const mapAttachment = (liAttachment: any): MessageAttachment => {
-  const { name, reference, mediaType, id, byteSize } = liAttachment
+  const { name, reference: ref, mediaType, id, byteSize } = liAttachment
+  const reference = typeof ref === 'string' ? ref : ref?.string
 
   const type = (() => {
     if (mediaType.startsWith('image')) return MessageAttachmentType.IMG
