@@ -115,7 +115,7 @@ export default class LinkedInRealTime {
           type: ServerEventType.STATE_SYNC,
           mutationType: 'update',
           objectName: 'thread',
-          objectIDs: { threadID },
+          objectIDs: {},
           entries: [{
             id: threadID,
             isUnread: !conversation.read,
