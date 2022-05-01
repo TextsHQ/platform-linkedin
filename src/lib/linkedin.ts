@@ -154,7 +154,7 @@ export default class LinkedInAPI {
 
     await bluebird.map(parsed, this._mapThreadEntity)
 
-    return parsed.filter((x: any) => {
+    return (parsed || []).filter((x: any) => {
       const { entityUrn: threadId } = x?.conversation || {}
       const { entityUrn: entityId, $type } = x?.entity || {}
 

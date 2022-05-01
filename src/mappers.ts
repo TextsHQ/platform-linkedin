@@ -113,7 +113,7 @@ const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = fals
 const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID: string): Thread => {
   const { conversation, messages: liMessages = [] } = thread
 
-  const participantsItems = mapParticipants(conversation['*participants'], entitiesMap)
+  const participantsItems = mapParticipants(conversation['*participants'] || [], entitiesMap)
 
   const messages: Message[] = liMessages
     .map(liMessage => mapMessage(liMessage, currentUserID))
@@ -135,7 +135,7 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
 }
 
 export const mapThreads = (liThreads: any[], currentUserID: string, participantEntities: Record<string, any>): Thread[] => {
-  const threads = liThreads.map(thread => mapThread(thread, participantEntities, currentUserID))
+  const threads = (liThreads || []).map(thread => mapThread(thread, participantEntities, currentUserID))
   return orderBy(threads, 'timestamp', 'desc')
 }
 
@@ -264,7 +264,7 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
   const linkedMessage = customContent?.forwardedContentType ? mapForwardedMessage(customContent) : undefined
 
   // linkedin seems to have broken reactions?
-  const reactions = (reactionSummaries as any[]).map(reaction => mapReactions(reaction, { currentUserID, participantId: senderID }))
+  const reactions = (reactionSummaries as any[] || []).map(reaction => mapReactions(reaction, { currentUserID, participantId: senderID }))
 
   const attachments = [
     ...((liAttachments as any[])?.map(liAttachment => mapAttachment(liAttachment)).filter(Boolean) || []),
