@@ -16,7 +16,7 @@
     }
   },
   "dependencies": {
-    "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#1fecb954d2530c482aad8c40b4ef5d4be6b2ae23",
+    "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#2dc321597a9ed232946e3d7bb2c3831cb527b7ba",
     "bluebird": "^3.7.2",
     "eventsource": "^1.0.7",
     "jest": "^26.6.0",
