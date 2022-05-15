@@ -29,7 +29,6 @@ export default class LinkedInAPI {
       .getCookiesSync(LinkedInURLs.HOME)
       .find(c => c.key === 'JSESSIONID')
       ?.value
-      // @ts-expect-error
       .replaceAll('"', '')
 
     if (!csrfToken) throw Error('could not find csrf token')
