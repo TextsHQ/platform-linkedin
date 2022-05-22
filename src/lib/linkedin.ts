@@ -1,4 +1,4 @@
-import { FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
+import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
 import bluebird from 'bluebird'
@@ -444,6 +444,39 @@ export default class LinkedInAPI {
       status: results[key].availability,
       lastActiveAt: results[key].lastActiveAt,
     }))
+  }
+
+  sendPresenceChange = async (type: ActivityType): Promise<void> => {
+    const url = `${LinkedInURLs.HOME}/psettings/presence/update-presence-settings`
+    const form = new FormData()
+
+    const value = type === ActivityType.ONLINE ? 'CONNECTIONS' : 'HIDDEN'
+    const token = this.getCSRFToken()
+
+    form.append('dataKey', 'isPresenceEnabled')
+    form.append('#el', '#setting-presence')
+    form.append('name', 'presence')
+    form.append('locale', 'en_US')
+    form.append('setting', 'presence')
+    form.append('isNotCnDomain', 'true')
+    form.append('path', '/psettings/presence')
+    form.append('device', 'DESKTOP')
+    form.append('visibility', value)
+    form.append('csrfToken', token)
+
+    const boundary = form.getBoundary()
+
+    await this.fetch({
+      url,
+      body: form,
+      method: 'POST',
+      headers: {
+        accept: 'application/json, text/javascript, */*; q=0.01',
+        'content-type': `multipart/form-data; boundary=${boundary}`,
+        'x-requested-with': 'XMLHttpRequest',
+        'csrf-token': token,
+      },
+    })
   }
 
   logout = async (): Promise<void> => {
