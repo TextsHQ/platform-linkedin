@@ -479,6 +479,18 @@ export default class LinkedInAPI {
     })
   }
 
+  sendMutePatch = async (threadID: string, mutedUntil: 'forever' | Date | null): Promise<void> => {
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}`
+    const value = !!(mutedUntil === 'forever')
+    const payload = { patch: { "$set": { "muted": value } } }
+
+    await this.fetch({
+      url,
+      method: 'POST',
+      json: payload,
+    })
+  }
+
   logout = async (): Promise<void> => {
     const url = LinkedInURLs.LOGOUT
     await this.fetch({ url, method: 'GET' })
