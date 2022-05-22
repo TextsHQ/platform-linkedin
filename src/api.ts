@@ -223,6 +223,7 @@ export default class LinkedIn implements PlatformAPI {
 
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
     if (updates.title) await this.api.renameThread(threadID, updates.title)
+    if (updates.mutedUntil || updates.mutedUntil === null) await this.api.sendMutePatch(threadID, updates.mutedUntil)
 
     return true
   }
