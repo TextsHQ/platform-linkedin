@@ -190,6 +190,7 @@ export default class LinkedIn implements PlatformAPI {
 
   sendActivityIndicator = async (type: ActivityType, threadID: string) => {
     if (type === ActivityType.TYPING) await this.api.sendTypingState(threadID)
+    if (type === ActivityType.ONLINE || type === ActivityType.OFFLINE) await this.api.sendPresenceChange(type)
   }
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
@@ -222,6 +223,7 @@ export default class LinkedIn implements PlatformAPI {
 
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
     if (updates.title) await this.api.renameThread(threadID, updates.title)
+
     return true
   }
 
