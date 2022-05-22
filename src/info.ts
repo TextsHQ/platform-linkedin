@@ -49,6 +49,7 @@ const info: PlatformInfo = {
     Attribute.SUPPORTS_EDIT_MESSAGE,
     Attribute.SUPPORTS_PRESENCE,
     Attribute.SUBSCRIBE_TO_THREAD_SELECTION,
+    Attribute.SUBSCRIBE_TO_ONLINE_OFFLINE_ACTIVITY,
   ]),
   getUserProfileLink: ({ username }) => username && `https://www.linkedin.com/in/${username}`,
 }
