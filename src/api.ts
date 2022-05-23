@@ -189,8 +189,14 @@ export default class LinkedIn implements PlatformAPI {
   editMessage = this.api.editMessage
 
   sendActivityIndicator = async (type: ActivityType, threadID: string) => {
-    if (type === ActivityType.TYPING) await this.api.sendTypingState(threadID)
-    if (type === ActivityType.ONLINE || type === ActivityType.OFFLINE) await this.api.sendPresenceChange(type)
+    switch (type) {
+      case ActivityType.TYPING:
+        await this.api.sendTypingState(threadID)
+        break
+      case ActivityType.ONLINE:
+      case ActivityType.OFFLINE:
+        await this.api.sendPresenceChange(type)
+    }
   }
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
@@ -223,7 +229,7 @@ export default class LinkedIn implements PlatformAPI {
 
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
     if (updates.title) await this.api.renameThread(threadID, updates.title)
-    if (updates.mutedUntil || updates.mutedUntil === null) await this.api.sendMutePatch(threadID, updates.mutedUntil)
+    if ('mutedUntil' in updates) await this.api.sendMutePatch(threadID, updates.mutedUntil)
 
     return true
   }

@@ -127,7 +127,7 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
     isUnread: !conversation.read,
     timestamp: new Date(conversation?.lastActivityAt),
     isReadOnly: false,
-    mutedUntil: !!conversation.muted ? 'forever' : undefined,
+    mutedUntil: conversation.muted ? 'forever' : undefined,
     messages: { items: messages, hasMore: true },
     participants: { items: participantsItems, hasMore: false },
     isArchived: conversation.archived || undefined,
