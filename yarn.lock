@@ -743,7 +743,7 @@ __metadata:
   resolution: "@textshq/platform-linkedin@workspace:."
   dependencies:
     "@textshq/eslint-config": "https://github.com/TextsHQ/eslint-config"
-    "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#2dc321597a9ed232946e3d7bb2c3831cb527b7ba"
+    "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#main"
     "@types/bluebird": ^3.5.36
     "@types/eslint": ^7.2.6
     "@types/eventsource": ^1.1.5
@@ -760,12 +760,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@textshq/platform-sdk@https://github.com/TextsHQ/platform-sdk#2dc321597a9ed232946e3d7bb2c3831cb527b7ba":
+"@textshq/platform-sdk@https://github.com/TextsHQ/platform-sdk#main":
   version: 0.4.4
-  resolution: "@textshq/platform-sdk@https://github.com/TextsHQ/platform-sdk.git#commit=2dc321597a9ed232946e3d7bb2c3831cb527b7ba"
+  resolution: "@textshq/platform-sdk@https://github.com/TextsHQ/platform-sdk.git#commit=872b1e896be308bb0120924dabdefa9fd451a861"
   dependencies:
     form-data: ^4.0.0
-  checksum: d5868c2e98835a9dbce3141d3e63879ae5804d1739122b6ed9db7ce624381996e67d44e4741bfea3fecff4c71d3800d92313ee036310d766ded9cf4c476dad3f
+  checksum: 8fac33a19bd63bec00c1c999f2a343ebcc410629e8f82c4548d820aa2bba6c03081d5285c2f5420c6cadd36958b5dc6103ced7891cb34a5e4fa4914f768e8c12
   languageName: node
   linkType: hard
 

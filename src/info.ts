@@ -38,6 +38,11 @@ const info: PlatformInfo = {
       files: 20 * 1024 * 1024,
     },
   },
+  notifications: {
+    android: {
+      senderID: '789113911969',
+    },
+  },
   deletionMode: MessageDeletionMode.DELETE_FOR_EVERYONE,
   attributes: new Set([
     Attribute.NO_CACHE,
@@ -50,6 +55,7 @@ const info: PlatformInfo = {
     Attribute.SUPPORTS_PRESENCE,
     Attribute.SUBSCRIBE_TO_THREAD_SELECTION,
     Attribute.SUBSCRIBE_TO_ONLINE_OFFLINE_ACTIVITY,
+    // Attribute.SUPPORTS_PUSH_NOTIFICATIONS,
   ]),
   getUserProfileLink: ({ username }) => username && `https://www.linkedin.com/in/${username}`,
 }
