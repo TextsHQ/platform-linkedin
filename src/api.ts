@@ -66,17 +66,15 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
-    this.realTimeApi = new LinkedInRealTime(this, onEvent)
-    this.realTimeApi.setup()
-
     this.onEvent = onEvent
+    this.realTimeApi = new LinkedInRealTime(this)
+    this.realTimeApi.setup()
   }
 
   dispose = async () => this.realTimeApi?.dispose()
 
-  reconnectRealtime = async () => {
-    await this.realTimeApi?.dispose()
-    await this.realTimeApi.setup()
+  reconnectRealtime = () => {
+    this.realTimeApi?.checkLastHeartbeat()
   }
 
   searchUsers = async (typed: string) => {
@@ -180,8 +178,10 @@ export default class LinkedIn implements PlatformAPI {
     }
   }
 
-  sendMessage = (threadID: string, content: MessageContent, options: MessageSendOptions) =>
-    this.api.sendMessage(threadID, content, options, this.sendMessageResolvers)
+  sendMessage = (threadID: string, content: MessageContent, options: MessageSendOptions) => {
+    this.realTimeApi.checkLastHeartbeat()
+    return this.api.sendMessage(threadID, content, options, this.sendMessageResolvers)
+  }
 
   deleteMessage = (threadID: string, messageID: string) =>
     this.api.deleteMessage(threadID, messageID)

@@ -1,4 +1,4 @@
-import { Message, OnServerEventCallback, ServerEvent, ServerEventType, texts, UNKNOWN_DATE, UpdateStateSyncEvent } from '@textshq/platform-sdk'
+import { Message, ServerEvent, ServerEventType, texts, UNKNOWN_DATE, UpdateStateSyncEvent } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
 import { REQUEST_HEADERS, LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
@@ -6,26 +6,34 @@ import { mapNewMessage, mapMiniProfile } from '../mappers'
 import { urnID, eventUrnToMessageID, eventUrnToThreadID } from '../util'
 import type PAPI from '../api'
 
+const HEARTBEAT_CHECK_INTERVAL_MS = 30 * 1_000 // 30 seconds
+
+// linkedin sends heartbeats every 15 seconds
+const HEARTBEAT_FREQUENCY_MS = 15 * 1_000 // 15 seconds
+
 export default class LinkedInRealTime {
   private heartbeatCheckerInterval: NodeJS.Timeout
 
+  checkLastHeartbeat = () => {
+    if (!this.lastHeartbeat) return
+    const diff = Date.now() - this.lastHeartbeat.getTime()
+    if (diff > HEARTBEAT_FREQUENCY_MS) {
+      texts.log('[li] reconnecting realtime, last heartbeat:', diff / 1000, 'seconds ago')
+      // todo: fix resync dropped events?
+      this.setup()
+    }
+  }
+
   constructor(
     private readonly papi: InstanceType<typeof PAPI>,
-    private onEvent: OnServerEventCallback,
   ) {
-    this.heartbeatCheckerInterval = setInterval(() => {
-      if (!this.lastHeartbeat) return
-      if ((Date.now() - this.lastHeartbeat.getTime()) > 180_000) { // > 3 mins
-        // todo: fix resync dropped events
-        this.setup()
-      }
-    }, 180_000)
+    this.heartbeatCheckerInterval = setInterval(this.checkLastHeartbeat, HEARTBEAT_CHECK_INTERVAL_MS)
   }
 
   resolveSendMessage(originToken: string, messages: Message[]) {
     const resolve = this.papi.sendMessageResolvers.get(originToken)
     if (!resolve) {
-      texts.log('[li] ignoring send message with token:', originToken)
+      texts.log('[li] ignoring sent message with token:', originToken)
       return
     }
     this.papi.sendMessageResolvers.delete(originToken)
@@ -37,7 +45,7 @@ export default class LinkedInRealTime {
 
   private parseJSON(json: any): ServerEvent[] {
     if (!json) return
-    // texts.log(JSON.stringify(json))
+    // texts.log(new Date(), JSON.stringify(json))
 
     if (json['com.linkedin.realtimefrontend.Heartbeat']) {
       this.lastHeartbeat = new Date()
@@ -46,7 +54,7 @@ export default class LinkedInRealTime {
 
     const newEvent = json['com.linkedin.realtimefrontend.DecoratedEvent']
     if (!newEvent?.payload) {
-      texts.log('[linkedin] ignoring event because no payload', json)
+      texts.log('[li] ignoring event because no payload', json)
       return
     }
 
@@ -197,7 +205,7 @@ export default class LinkedInRealTime {
     this.es?.close()
     this.es = new EventSource(LinkedInURLs.REALTIME, { headers })
     this.es.onopen = () => {
-      texts.log('[linkedin] es open')
+      texts.log('[li] es open')
       this.retryAttempt = 0
     }
     this.es.onmessage = event => {
@@ -209,15 +217,15 @@ export default class LinkedInRealTime {
         return JSON.parse(line)
       })
       const events = jsons.flatMap(json => this.parseJSON(json)).filter(Boolean)
-      if (events.length > 0) this.onEvent(events)
+      if (events.length > 0) this.papi.onEvent(events)
     }
     let errorCount = 0
     this.es.onerror = event => {
-      texts.error('[linkedin]', new Date(), 'es error', event, ++errorCount)
+      texts.error('[li]', new Date(), 'es error', event, ++errorCount)
       clearTimeout(this.reconnectTimeout)
       // min 1 second, max 60 seconds
       const timeoutSeconds = Math.min(60, ++this.retryAttempt)
-      texts.error(`[linkedin] retrying in ${timeoutSeconds} seconds, attempt: ${this.retryAttempt}`)
+      texts.error(`[li] retrying in ${timeoutSeconds} seconds, attempt: ${this.retryAttempt}`)
       this.reconnectTimeout = setTimeout(() => {
         this.setup()
       }, timeoutSeconds * 1000)
