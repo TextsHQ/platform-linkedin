@@ -250,6 +250,11 @@ export default class LinkedIn implements PlatformAPI {
 
   registerForPushNotifications = async (type: keyof NotificationsInfo, token: string) => {
     if (type !== 'android') throw Error('invalid type')
-    await this.api.registerPush(token)
+    await this.api.registerPush(token, true)
+  }
+
+  unregisterForPushNotifications = async (type: keyof NotificationsInfo, token: string) => {
+    if (type !== 'android') throw Error('invalid type')
+    await this.api.registerPush(token, false)
   }
 }

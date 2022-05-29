@@ -502,13 +502,13 @@ export default class LinkedInAPI {
     })
   }
 
-  registerPush = async (token: string) => {
+  registerPush = async (token: string, register: boolean) => {
     // linkedin encodes the following json into protobuf but we simply hardcode the binary data
     // {
     //   pushNotificationTokens: [token],
     //   pushNotificationEnabled: true,
     // }
-    const res = await this.fetchRaw(`${LinkedInURLs.API_BASE}/voyagerNotificationsDashPushRegistration?action=register`, {
+    const res = await this.fetchRaw(`${LinkedInURLs.API_BASE}/voyagerNotificationsDashPushRegistration?action=${register ? 'register' : 'deregister'}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-protobuf2 ;symbol-table=voyager-11626',
@@ -546,7 +546,6 @@ export default class LinkedInAPI {
         Buffer.from('08', 'hex'), // unknown protobuf
       ]),
     })
-    texts.log('asdkjnajksdn',res)
     if (res.statusCode !== 200) {
       throw Error(`invalid status code ${res.statusCode}`)
     }
