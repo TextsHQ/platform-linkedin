@@ -503,11 +503,40 @@ export default class LinkedInAPI {
   }
 
   registerPush = async (token: string, register: boolean) => {
-    // linkedin encodes the following json into protobuf but we simply hardcode the binary data
-    // {
-    //   pushNotificationTokens: [token],
-    //   pushNotificationEnabled: true,
-    // }
+    /* refer to:
+      LinkedIn v4.1.698 JADX/sources/com/linkedin/data/lite/protobuf/ProtoWriter.java
+      LinkedIn v4.1.698 JADX/sources/com/linkedin/data/lite/protobuf/ProtobufGenerator.java
+      linkedin encodes the following json into protobuf, we simply hardcode the binary data
+      {
+        pushNotificationTokens: [token],
+        pushNotificationEnabled: true,
+      }
+    */
+    const MAP_START = Buffer.from([0x00])
+    const ARRAY_START = Buffer.from([0x01])
+    const TRUE = Buffer.from([0x08])
+    const FALSE = Buffer.from([0x09])
+    const LEADING_ORDINAL = Buffer.from([0x14])
+    const arrayLength = 1
+    const keysLength = 2 // ['pushNotificationTokens', 'pushNotificationEnabled'].length
+    const body = Buffer.concat([
+      MAP_START,
+      Buffer.from([keysLength]),
+      LEADING_ORDINAL,
+      Buffer.from(['pushNotificationTokens'.length]),
+      Buffer.from('pushNotificationTokens'),
+      ARRAY_START,
+      Buffer.from([arrayLength]),
+      LEADING_ORDINAL,
+      Buffer.from([token.length]), // safe to assume token length is <256
+      Buffer.from([1]), // unknown
+      Buffer.from(token),
+      LEADING_ORDINAL,
+      Buffer.from(['pushNotificationEnabled'.length]),
+      Buffer.from('pushNotificationEnabled'),
+      TRUE,
+    ])
+
     const res = await this.fetchRaw(`${LinkedInURLs.API_BASE}/voyagerNotificationsDashPushRegistration?action=${register ? 'register' : 'deregister'}`, {
       method: 'POST',
       headers: {
@@ -534,17 +563,7 @@ export default class LinkedInAPI {
           mpVersion: '0.771.88',
         }),
       },
-      body: Buffer.concat([
-        Buffer.from('00021416', 'hex'), // unknown protobuf
-        Buffer.from('pushNotificationTokens'),
-        Buffer.from('010114', 'hex'), // unknown protobuf
-        Buffer.from([token.length]), // safe to assume token length is <256
-        Buffer.from([1]), // unknown protobuf
-        Buffer.from(token),
-        Buffer.from('1417', 'hex'), // unknown protobuf
-        Buffer.from('pushNotificationEnabled'),
-        Buffer.from('08', 'hex'), // unknown protobuf
-      ]),
+      body,
     })
     if (res.statusCode !== 200) {
       throw Error(`invalid status code ${res.statusCode}`)
