@@ -12,6 +12,8 @@ export const getSenderID = (from: string) =>
     .replace(')', '')
 
 export const mapConversationsResponse = (liResponse: any): Record<string, any>[] => {
+  if (!liResponse) return []
+
   const { included = [] } = liResponse
   const grouped = groupBy(included, '$type')
 
