@@ -537,7 +537,9 @@ export default class LinkedInAPI {
       body: Buffer.concat([
         Buffer.from('00021416', 'hex'), // unknown protobuf
         Buffer.from('pushNotificationTokens'),
-        Buffer.from('010114a301', 'hex'), // unknown protobuf
+        Buffer.from('010114', 'hex'), // unknown protobuf
+        Buffer.from([token.length]), // safe to assume token length is <256
+        Buffer.from([1]), // unknown protobuf
         Buffer.from(token),
         Buffer.from('1417', 'hex'), // unknown protobuf
         Buffer.from('pushNotificationEnabled'),
