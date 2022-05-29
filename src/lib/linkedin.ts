@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
@@ -35,24 +36,34 @@ export default class LinkedInAPI {
     return csrfToken
   }
 
-  fetch = async ({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }) => {
+  fetchRaw = (url: string, { headers = {}, ...rest }: FetchOptions) => {
     if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
 
     const opts: FetchOptions = {
       ...rest,
-      body: json ? JSON.stringify(json) : rest.body,
+      body: rest.body,
       cookieJar: this.cookieJar,
       headers: {
         'csrf-token': this.getCSRFToken(),
-        ...(json ? { 'content-type': 'application/json' } : {}),
-        ...REQUEST_HEADERS,
         ...headers,
       },
     }
 
-    const res = await this.httpClient.requestAsString(url, opts)
-    if (!res.body?.length) return
+    return this.httpClient.requestAsString(url, opts)
+  }
 
+  fetch = async ({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }) => {
+    const opts: FetchOptions = {
+      ...rest,
+      body: json ? JSON.stringify(json) : rest.body,
+      headers: {
+        ...REQUEST_HEADERS,
+        ...json ? { 'content-type': 'application/json' } : {},
+      },
+    }
+
+    const res = await this.fetchRaw(url, opts)
+    if (!res.body?.length) return
     return JSON.parse(res.body)
   }
 
@@ -489,6 +500,55 @@ export default class LinkedInAPI {
       method: 'POST',
       json: payload,
     })
+  }
+
+  registerPush = async (token: string, register: boolean) => {
+    // linkedin encodes the following json into protobuf but we simply hardcode the binary data
+    // {
+    //   pushNotificationTokens: [token],
+    //   pushNotificationEnabled: true,
+    // }
+    const res = await this.fetchRaw(`${LinkedInURLs.API_BASE}/voyagerNotificationsDashPushRegistration?action=${register ? 'register' : 'deregister'}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-protobuf2 ;symbol-table=voyager-11626',
+        Accept: 'application/vnd.linkedin.deduped+x-protobuf',
+        'X-Li-Track': JSON.stringify({
+          osName: 'Android OS',
+          osVersion: '32',
+          clientVersion: '4.1.698',
+          clientMinorVersion: 160600,
+          model: 'Google_sdk_gphone64_arm64',
+          displayDensity: 2.75,
+          displayWidth: 1080,
+          displayHeight: 2296,
+          dpi: 'xhdpi',
+          deviceType: 'android',
+          appId: 'com.linkedin.android',
+          deviceId: crypto.randomUUID(),
+          timezoneOffset: 0,
+          timezone: 'Europe/London',
+          storeId: 'us_googleplay',
+          isAdTrackingLimited: false,
+          mpName: 'voyager-android',
+          mpVersion: '0.771.88',
+        }),
+      },
+      body: Buffer.concat([
+        Buffer.from('00021416', 'hex'), // unknown protobuf
+        Buffer.from('pushNotificationTokens'),
+        Buffer.from('010114', 'hex'), // unknown protobuf
+        Buffer.from([token.length]), // safe to assume token length is <256
+        Buffer.from([1]), // unknown protobuf
+        Buffer.from(token),
+        Buffer.from('1417', 'hex'), // unknown protobuf
+        Buffer.from('pushNotificationEnabled'),
+        Buffer.from('08', 'hex'), // unknown protobuf
+      ]),
+    })
+    if (res.statusCode !== 200) {
+      throw Error(`invalid status code ${res.statusCode}`)
+    }
   }
 
   logout = async (): Promise<void> => {

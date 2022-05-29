@@ -21,7 +21,7 @@ export const REQUEST_HEADERS: Record<string, string> = {
   'sec-fetch-mode': 'cors',
   referer: 'https://www.linkedin.com/',
   'accept-encoding': 'gzip, deflate, br',
-  'accept-language': 'en-US,en;q=0.9',
+  'accept-language': 'en',
 }
 
 export const LinkedInAuthCookieName = 'li_at'
