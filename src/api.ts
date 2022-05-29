@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapParticipantAction, mapThreads } from './mappers'
@@ -235,6 +235,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   onThreadSelected = async (threadID: string) => {
+    if (!threadID) return
     const participantsPresence = await this.api.getUserPresence(threadID)
     const presenceEvents = participantsPresence.map<ServerEvent>(presence => ({
       type: ServerEventType.USER_PRESENCE_UPDATED,
@@ -244,7 +245,11 @@ export default class LinkedIn implements PlatformAPI {
         lastActive: new Date(presence.lastActiveAt),
       },
     }))
-
     this.onEvent(presenceEvents)
+  }
+
+  registerForPushNotifications = async (type: keyof NotificationsInfo, token: string) => {
+    if (type !== 'android') throw Error('invalid type')
+    await this.api.registerPush(token)
   }
 }
