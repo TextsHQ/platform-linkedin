@@ -64,6 +64,10 @@ export default class LinkedInAPI {
 
     const res = await this.fetchRaw(url, opts)
     if (!res.body?.length) return
+    if (res.body[0] === '<') {
+      texts.log(url, res.body)
+      throw Error('got html instead of json')
+    }
     return JSON.parse(res.body)
   }
 
