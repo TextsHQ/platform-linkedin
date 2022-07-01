@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, Awaitable } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapParticipantAction, mapThreads } from './mappers'
@@ -80,6 +80,7 @@ export default class LinkedIn implements PlatformAPI {
   searchUsers = async (typed: string) => {
     const res = await this.api.searchUsers(typed)
     const users = res.map((miniProfile: any) => mapMiniProfile(miniProfile)).filter(Boolean)
+
     this.searchedUsers = [...users]
     return users
   }
@@ -226,6 +227,10 @@ export default class LinkedIn implements PlatformAPI {
     const url = Buffer.from(uri, 'hex').toString()
     return this.api.fetchStream({ url })
   }
+
+  removeParticipant = this.api.removeParticipant
+
+  addParticipant = this.api.addParticipant
 
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
     if (updates.title) await this.api.renameThread(threadID, updates.title)
