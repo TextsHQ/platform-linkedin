@@ -233,11 +233,28 @@ export const mapParticipantAction = (liParticipant: string): string =>
   // "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0)"
   liParticipant.split(',').pop().replace(')', '')
 
-// TODO: Refactor
-const getParticipantChangeText = (liMsg: any) =>
-  (liMsg.subtype === 'PARTICIPANT_CHANGE'
-    ? `${liMsg.fromProfile?.firstName}${liMsg.eventContent.removedParticipants?.length > 0 ? ` removed ${liMsg.eventContent.removedParticipants?.join(', ')}` : ''}${liMsg.eventContent.addedParticipants?.length > 0 ? ` added ${liMsg.eventContent.addedParticipants?.join(', ')}` : ''}`
-    : undefined)
+// FIXME: Refactor
+const getParticipantChangeText = (liMsg: any) => {
+  if (liMsg.subtype !== 'PARTICIPANT_CHANGE') return undefined
+
+  const first = `${liMsg.fromProfile?.firstName || 'You'}`
+  const hasRemoved = liMsg.eventContent.removedParticipants?.length > 0 || liMsg.eventContent['com.linkedin.voyager.messaging.event.ParticipantChangeEvent']?.removedParticipants?.length > 0
+  const hasAdded = liMsg.eventContent.addedParticipants?.length > 0 || liMsg.eventContent['com.linkedin.voyager.messaging.event.ParticipantChangeEvent']?.addedParticipants?.length > 0
+
+  const extractName = participantEventProfile => (
+    participantEventProfile?.['com.linkedin.voyager.messaging.MessagingMember']?.miniProfile?.firstName
+  )
+
+  const removedParticipants = hasRemoved
+    ? (liMsg.eventContent.removedParticipants?.join(', ') || liMsg.eventContent['com.linkedin.voyager.messaging.event.ParticipantChangeEvent']?.removedParticipants?.map(extractName).join(', '))
+    : []
+
+  const addedParticipants = hasAdded
+    ? (liMsg.eventContent.addedParticipants?.join(', ') || liMsg.eventContent['com.linkedin.voyager.messaging.event.ParticipantChangeEvent']?.addedParticipants?.map(extractName).join(', '))
+    : []
+
+  return `${first}${hasRemoved ? ` removed ${removedParticipants}` : ''}${hasAdded ? ` added ${addedParticipants}` : ''}`
+}
 
 const mapMediaCustomAttachment = (liCustomContent: any): MessageAttachment[] => {
   if (liCustomContent?.mediaType !== 'TENOR_GIF') return []
