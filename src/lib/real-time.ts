@@ -30,7 +30,7 @@ export default class LinkedInRealTime {
     this.heartbeatCheckerInterval = setInterval(this.checkLastHeartbeat, HEARTBEAT_CHECK_INTERVAL_MS)
   }
 
-  resolveSendMessage(originToken: string, messages: Message[]) {
+  private resolveSendMessage(originToken: string, messages: Message[]) {
     const resolve = this.papi.sendMessageResolvers.get(originToken)
     if (!resolve) {
       texts.log('[li] ignoring sent message with token:', originToken)

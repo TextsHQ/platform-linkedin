@@ -2,23 +2,20 @@ import crypto from 'crypto'
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
-import bluebird from 'bluebird'
 import FormData from 'form-data'
 import type { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
-import { mapConversationsResponse } from '../mappers'
-import { getParticipantID, urnID } from '../util'
+import { urnID } from '../util'
 import type { SendMessageResolveFunction } from '../api'
 
 export default class LinkedInAPI {
   cookieJar: CookieJar
 
-  httpClient = texts.createHttpClient()
+  private httpClient = texts.createHttpClient()
 
-  public participantEntities: Record<string, any> = {}
-
-  private conversationsParticipants: Record<string, string[]> = {}
+  // key is threadID, values are participantIDs
+  conversationsParticipants: Record<string, string[]> = {}
 
   setLoginState = async (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError()
@@ -63,6 +60,9 @@ export default class LinkedInAPI {
     }
 
     const res = await this.fetchRaw(url, opts)
+    if (texts.IS_DEV && res.statusCode >= 400) {
+      console.log(`[LinkedIn] ${url} returned ${res.statusCode} status code`)
+    }
     if (!res.body?.length) return
     if (res.body[0] === '<') {
       texts.log(url, res.body)
@@ -112,68 +112,24 @@ export default class LinkedInAPI {
     }
   }
 
-  _mapThreadParticipants = async participant => {
-    const participantId = getParticipantID(participant)
+  getThreads = async (cursors: [number, number], inboxType: InboxName = InboxName.NORMAL) => {
+    const [inbox, archive] = await Promise.all([
+      this.fetch({
+        method: 'GET',
+        url: LinkedInURLs.API_CONVERSATIONS,
+        searchParams: {
+          createdBefore: cursors[0],
+          ...(inboxType === InboxName.REQUESTS ? { q: 'systemLabel', type: 'MESSAGE_REQUEST_PENDING' } : {}),
+        },
+      }),
+      this.fetch({
+        method: 'GET',
+        // we're not using searchParams here to ensure () is not URL-encoded
+        url: `${LinkedInURLs.API_CONVERSATIONS}?folders=List(ARCHIVED)&createdBefore=${cursors[1]}&q=search`,
+      }),
+    ])
 
-    if (!this.participantEntities[participantId]) {
-      const profile = await this.getProfile(participantId)
-      if (profile) {
-        this.participantEntities[participantId] = {
-          entityUrn: profile.entityUrn,
-          publicIdentifier: profile.publicIdentifier,
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          picture: profile.profilePicture?.displayImageReference?.vectorImage,
-        }
-      }
-    }
-  }
-
-  _mapThreadEntity = async thread => {
-    const { conversation } = thread
-    const { entityUrn } = thread?.entity || {}
-    const threadID = urnID(conversation.backendUrn)
-    const entityId = urnID(entityUrn)
-    const participants = conversation['*participants'] || []
-
-    if (!this.participantEntities[entityId]) {
-      this.participantEntities[entityId] = thread?.entity
-    }
-
-    if (threadID && participants.length) {
-      const participantsIds = participants.map(getParticipantID)
-      this.conversationsParticipants[threadID] = participantsIds
-    }
-
-    await bluebird.map(participants, this._mapThreadParticipants)
-  }
-
-  getThreads = async (createdBefore = Date.now(), inboxType: InboxName = InboxName.NORMAL) => {
-    const url = LinkedInURLs.API_CONVERSATIONS
-    const queryParams = {
-      createdBefore,
-      ...(inboxType === InboxName.REQUESTS ? { q: 'systemLabel', type: 'MESSAGE_REQUEST_PENDING' } : {}),
-    }
-
-    const inbox = await this.fetch({ method: 'GET', url, searchParams: queryParams })
-
-    const archive = await this.fetch({
-      method: 'GET',
-      // This is done this way and not using 'searchParams' because using the searchParams it'll serialize
-      // them and LinkedIn receives it with the ().
-      url: `${url}?folders=List(ARCHIVED)&createdBefore=${createdBefore}&q=search`,
-    })
-
-    const parsed = [...mapConversationsResponse(inbox), ...mapConversationsResponse(archive)]
-
-    await bluebird.map(parsed, this._mapThreadEntity)
-
-    return (parsed || []).filter((x: any) => {
-      const { entityUrn: threadId } = x?.conversation || {}
-      const { entityUrn: entityId, $type } = x?.entity || {}
-
-      return Boolean(threadId && entityId && $type === 'com.linkedin.voyager.identity.shared.MiniProfile')
-    })
+    return [inbox, archive]
   }
 
   getProfile = async (publicId: string): Promise<any> => {
@@ -456,7 +412,7 @@ export default class LinkedInAPI {
     //   },
     //   "included": []
     // }
-    const { data: { results } } = await this.fetch({
+    const { data } = await this.fetch({
       url,
       body,
       method: 'POST',
@@ -466,7 +422,11 @@ export default class LinkedInAPI {
         'x-http-method-override': 'GET',
       },
     })
-
+    if (!data) {
+      texts.log('fetching presenceStatuses returned undefined')
+      return
+    }
+    const { results } = data
     const keys = Object.keys(results)
     return keys.map(key => ({
       userID: urnID(key),

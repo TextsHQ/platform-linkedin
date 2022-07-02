@@ -1,51 +1,10 @@
 import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts } from '@textshq/platform-sdk'
-import { orderBy, groupBy } from 'lodash'
+import { orderBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
 import { urnID, getFeedUpdateURL, getParticipantID } from './util'
 
-export const mapConversationsResponse = (liResponse: any): Record<string, any>[] => {
-  if (!liResponse) return []
-
-  const { included = [] } = liResponse
-  const grouped = groupBy(included, '$type')
-
-  const {
-    miniProfile: miniProfileType,
-    conversation: conversationType,
-    member: memberType,
-    event: eventType,
-  } = LinkedInAPITypes
-
-  const {
-    [miniProfileType]: profiles = [],
-    [conversationType]: allConversations = [],
-    [memberType]: members = [],
-    [eventType]: allMessages = [],
-  } = grouped
-
-  const conversations = []
-
-  for (const conversation of allConversations) {
-    const firstParticipant = conversation['*participants']?.[0] || ''
-    const entityId = getParticipantID(firstParticipant)
-
-    const entity = profiles.find(p => p?.entityUrn.includes(entityId)) || {}
-    const messagingMember = members.find(m => m.entityUrn.includes(entityId)) || {}
-    const messages = allMessages.filter(e => e['*from'].includes(entityId)) || []
-
-    if (entityId !== 'UNKNOWN') {
-      conversations.push({
-        entity,
-        conversation,
-        messagingMember,
-        messages,
-      })
-    }
-  }
-
-  return conversations
-}
+type LIMappedThread = { conversation: any, messages: any[] }
 
 const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.picture?.rootUrl
   ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment
@@ -63,23 +22,6 @@ export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
   ...mapMiniProfile(liCurrentUser),
   displayText: liCurrentUser?.publicIdentifier,
 })
-
-const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>) =>
-  liParticipants.map<Participant>(p => {
-    const id = getParticipantID(p)
-    const entity = entitiesMap[id]
-
-    return {
-      id,
-      username: entity?.publicIdentifier,
-      fullName: [entity?.firstName, entity?.lastName].filter(Boolean).join(' '),
-      imgURL: mapPicture(entity),
-      social: {
-        coverImgURL: entity?.backgroundImage ? mapPicture({ picture: entity?.backgroundImage }) : undefined,
-        bio: { text: entity?.occupation },
-      },
-    }
-  })
 
 const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = false): Message => {
   if (!liReceipts || !liReceipts?.length) return message
@@ -105,13 +47,28 @@ const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = fals
   }
 }
 
-const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID: string): Thread => {
+const mapParticipant = (entity: any): Participant => ({
+  id: urnID(entity.entityUrn),
+  username: entity?.publicIdentifier,
+  fullName: [entity?.firstName, entity?.lastName].filter(Boolean).join(' '),
+  imgURL: mapPicture(entity),
+  social: {
+    coverImgURL: entity?.backgroundImage ? mapPicture({ picture: entity?.backgroundImage }) : undefined,
+    bio: { text: entity?.occupation },
+  },
+})
+
+const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, currentUserID: string): Thread => {
   const { conversation, messages: liMessages = [] } = thread
 
-  const participantsItems = mapParticipants(conversation['*participants'] || [], entitiesMap)
+  const participantsItems = (conversation['*participants'] as string[]).map(pid => {
+    const entity = allProfiles[getParticipantID(pid)]
+    // if (!entity) texts.log('404 entity', pid, getParticipantID(pid))
+    return entity ? mapParticipant(entity) : undefined
+  }).filter(Boolean)
 
-  const messages: Message[] = liMessages
-    .map(liMessage => mapMessage(liMessage, currentUserID))
+  const messages = (liMessages as any[])
+    .map<Message>(liMessage => mapMessage(liMessage, currentUserID))
     .map(message => mapMessageReceipt(message, conversation?.receipts, conversation.groupChat))
 
   return {
@@ -129,8 +86,38 @@ const mapThread = (thread: any, entitiesMap: Record<string, any>, currentUserID:
   }
 }
 
-export const mapThreads = (liThreads: any[], currentUserID: string, participantEntities: Record<string, any>): Thread[] => {
-  const threads = (liThreads || []).map(thread => mapThread(thread, participantEntities, currentUserID))
+export const mapThreads = (liResponse: any, currentUserID: string): Thread[] => {
+  const { included = [] } = liResponse
+
+  const allProfiles = {}
+  const allConversations = []
+  const allEvents = []
+  for (const item of included) {
+    switch (item.$type) {
+      case LinkedInAPITypes.miniProfile:
+        allProfiles[urnID(item.entityUrn)] = item
+        break
+      case LinkedInAPITypes.conversation:
+        allConversations.push(item)
+        break
+      case LinkedInAPITypes.event:
+        allEvents.push(item)
+        break
+      case LinkedInAPITypes.member: // ignore
+        break
+    }
+  }
+
+  const conversations: LIMappedThread[] = []
+  for (const conversation of allConversations) {
+    if (conversation.entityUrn && !conversation['*participants']?.[0]?.endsWith(',UNKNOWN)')) { // UNKNOWN filters inmail
+      const threadID = urnID(conversation.entityUrn)
+      const messages = allEvents.filter(e => e.entityUrn.includes(threadID))
+      conversations.push({ conversation, messages })
+    }
+  }
+
+  const threads = conversations.map(thread => mapThread(thread, allProfiles, currentUserID))
   return orderBy(threads, 'timestamp', 'desc')
 }
 
@@ -144,9 +131,8 @@ export const mapReactions = (liReactionSummaries: any, { currentUserID, particip
 const mapForwardedMessage = (liForwardedMessage: any): MessagePreview => {
   const { originalCreatedAt, forwardedBody } = liForwardedMessage
   const { text } = forwardedBody
-  // urn:li:fs_messagingMember:(2-ZDVjZjEzYjYtNTc4YS01Nzc4LTk2NTctNzRjN2M1ZWYzN2M1XzAxMg==,ACoAAA7bNVUBXo4wls3McYpXWVndS6LXypCdluU)
   const messagingMember = liForwardedMessage['*originalFrom']
-  const senderID = messagingMember.split(',').pop().replace(')', '')
+  const senderID = getParticipantID(messagingMember)
 
   return {
     id: `${originalCreatedAt}`,
@@ -222,15 +208,10 @@ const mapTextAttributes = (liTextAttributes: any[], text: string): TextAttribute
   return { entities }
 }
 
-export const mapParticipantAction = (liParticipant: string): string =>
-  // "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0)"
-  liParticipant.split(',').pop().replace(')', '')
-
 const extractName = (participantEventProfile: any) => {
   const mp = participantEventProfile?.['com.linkedin.voyager.messaging.MessagingMember']?.miniProfile
   if (mp) return [mp.firstName, mp.lastName].filter(Boolean).join(' ')
 }
-// FIXME: Refactor
 const getParticipantChangeText = (liMsg: any) => {
   if (liMsg.subtype !== 'PARTICIPANT_CHANGE') return undefined
 

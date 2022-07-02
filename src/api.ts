@@ -1,7 +1,7 @@
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
-import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapParticipantAction, mapThreads } from './mappers'
+import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapThreads } from './mappers'
 import LinkedInAPI from './lib/linkedin'
 import LinkedInRealTime from './lib/real-time'
 import { LinkedInAuthCookieName } from './constants'
@@ -106,29 +106,16 @@ export default class LinkedIn implements PlatformAPI {
 
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
     const { cursor } = pagination ?? {}
-    const createdBefore = +cursor || Date.now()
 
-    const items = await this.api.getThreads(createdBefore, inboxName)
+    const cursors = cursor ? JSON.parse(cursor) : [Date.now(), Date.now()]
+    const [inbox, archive] = await this.api.getThreads(cursors, inboxName)
 
-    // TODO: refactor
-    for (const item of items) {
-      for (const event of (item?.liMessages || [])) {
-        if (event?.subtype === 'PARTICIPANT_CHANGE') {
-          const [removedParticipants, addedParticipants, fromProfile] = await Promise.all([
-            this.mapParticipants(event, '*removedParticipants'),
-            this.mapParticipants(event, '*addedParticipants'),
-            this.api.getProfile(mapParticipantAction(event['*from'])),
-          ])
-          event.eventContent.removedParticipants = removedParticipants
-          event.eventContent.addedParticipants = addedParticipants
-          event.fromProfile = fromProfile
-        }
-      }
-    }
-
-    const mapped = mapThreads(items, this.user.id, this.api.participantEntities)
+    const inboxThreads = mapThreads(inbox, this.user.id)
+    const archiveThreads = mapThreads(archive, this.user.id)
+    const mapped = [...inboxThreads, ...archiveThreads]
 
     for (const thread of mapped) {
+      this.api.conversationsParticipants[thread.id] = thread.participants.items.map(p => p.id)
       for (const message of thread.messages.items) {
         this.seenReceipt[message.id] = message.seen
       }
@@ -137,15 +124,9 @@ export default class LinkedIn implements PlatformAPI {
     return {
       items: mapped,
       hasMore: mapped.length > 0,
-      oldestCursor: mapped[mapped.length - 1]?.timestamp.getTime().toString(),
+      oldestCursor: JSON.stringify([inboxThreads[inboxThreads.length - 1]?.timestamp.getTime(), archiveThreads[archiveThreads.length - 1]?.timestamp.getTime()]),
     }
   }
-
-  mapParticipants = async (event: any, key: string) =>
-    (await Promise.all((event?.eventContent[key] || [])
-      ?.map(mapParticipantAction)
-      ?.map(this.api.getProfile)))
-      ?.map(({ firstName }) => firstName) || []
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
     const { cursor } = pagination ?? {}
@@ -153,18 +134,6 @@ export default class LinkedIn implements PlatformAPI {
 
     const messages = await this.api.getMessages(threadID, createdBefore)
     const currentUserId = this.user.id
-
-    // TODO: refactor
-    for (const event of messages.events) {
-      if (event?.subtype === 'PARTICIPANT_CHANGE') {
-        const [removed, added] = await Promise.all([
-          this.mapParticipants(event, '*removedParticipants'),
-          this.mapParticipants(event, '*addedParticipants'),
-        ])
-        event.eventContent.removedParticipants = removed
-        event.eventContent.addedParticipants = added
-      }
-    }
 
     const items = (messages.events as any[])
       .map<Message>(message => mapMessage(message, currentUserId))
@@ -194,7 +163,7 @@ export default class LinkedIn implements PlatformAPI {
         break
       case ActivityType.ONLINE:
       case ActivityType.OFFLINE:
-        await this.api.sendPresenceChange(type)
+        // await this.api.sendPresenceChange(type)
     }
   }
 
@@ -240,6 +209,7 @@ export default class LinkedIn implements PlatformAPI {
   onThreadSelected = async (threadID: string) => {
     if (!threadID) return
     const participantsPresence = await this.api.getUserPresence(threadID)
+    if (!participantsPresence) return
     const presenceEvents = participantsPresence.map<ServerEvent>(presence => ({
       type: ServerEventType.USER_PRESENCE_UPDATED,
       presence: {
