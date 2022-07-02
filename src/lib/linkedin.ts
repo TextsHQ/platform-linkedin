@@ -52,7 +52,7 @@ export default class LinkedInAPI {
     return this.httpClient.requestAsString(url, opts)
   }
 
-  fetch = async ({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any, allowHtml?: boolean }) => {
+  fetch = async ({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }) => {
     const opts: FetchOptions = {
       ...rest,
       body: json ? JSON.stringify(json) : rest.body,
@@ -64,7 +64,7 @@ export default class LinkedInAPI {
 
     const res = await this.fetchRaw(url, opts)
     if (!res.body?.length) return
-    if (res.body[0] === '<' && !rest.allowHtml) {
+    if (res.body[0] === '<') {
       texts.log(url, res.body)
       throw Error('got html instead of json')
     }
