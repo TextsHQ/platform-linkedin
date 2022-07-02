@@ -2,14 +2,7 @@ import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Messa
 import { orderBy, groupBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
-import { urnID, getFeedUpdateURL } from './util'
-
-export const getSenderID = (from: string) =>
-  // "*from": "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)",
-  from
-    .split(',')
-    .pop() // ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)
-    .replace(')', '')
+import { urnID, getFeedUpdateURL, getParticipantID } from './util'
 
 export const mapConversationsResponse = (liResponse: any): Record<string, any>[] => {
   if (!liResponse) return []
@@ -35,7 +28,7 @@ export const mapConversationsResponse = (liResponse: any): Record<string, any>[]
 
   for (const conversation of allConversations) {
     const firstParticipant = conversation['*participants']?.[0] || ''
-    const entityId = getSenderID(firstParticipant)
+    const entityId = getParticipantID(firstParticipant)
 
     const entity = profiles.find(p => p?.entityUrn.includes(entityId)) || {}
     const messagingMember = members.find(m => m.entityUrn.includes(entityId)) || {}
@@ -73,7 +66,7 @@ export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
 
 const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>) =>
   liParticipants.map<Participant>(p => {
-    const id = getSenderID(p)
+    const id = getParticipantID(p)
     const entity = entitiesMap[id]
 
     return {
@@ -233,11 +226,26 @@ export const mapParticipantAction = (liParticipant: string): string =>
   // "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0)"
   liParticipant.split(',').pop().replace(')', '')
 
-// TODO: Refactor
-const getParticipantChangeText = (liMsg: any) =>
-  (liMsg.subtype === 'PARTICIPANT_CHANGE'
-    ? `${liMsg.fromProfile?.firstName}${liMsg.eventContent.removedParticipants?.length > 0 ? ` removed ${liMsg.eventContent.removedParticipants?.join(', ')}` : ''}${liMsg.eventContent.addedParticipants?.length > 0 ? ` added ${liMsg.eventContent.addedParticipants?.join(', ')}` : ''}`
-    : undefined)
+const extractName = (participantEventProfile: any) => {
+  const mp = participantEventProfile?.['com.linkedin.voyager.messaging.MessagingMember']?.miniProfile
+  if (mp) return [mp.firstName, mp.lastName].filter(Boolean).join(' ')
+}
+// FIXME: Refactor
+const getParticipantChangeText = (liMsg: any) => {
+  if (liMsg.subtype !== 'PARTICIPANT_CHANGE') return undefined
+
+  const changeEvent = liMsg.eventContent['com.linkedin.voyager.messaging.event.ParticipantChangeEvent']
+  const removedNames = liMsg.eventContent['*removedParticipants']?.map(p => `{{${getParticipantID(p)}}}`)
+    || changeEvent?.removedParticipants?.map(extractName)
+  const addedNames = liMsg.eventContent['*addedParticipants']?.map(p => `{{${getParticipantID(p)}}}`)
+    || changeEvent?.addedParticipants?.map(extractName)
+
+  if (removedNames?.length > 0 && addedNames?.length > 0) {
+    return `{{sender}} removed ${removedNames} and added ${addedNames}`
+  }
+  if (removedNames?.length > 0) return `{{sender}} removed ${removedNames}`
+  if (addedNames?.length > 0) return `{{sender}} added ${addedNames}`
+}
 
 const mapMediaCustomAttachment = (liCustomContent: any): MessageAttachment[] => {
   if (liCustomContent?.mediaType !== 'TENOR_GIF') return []
@@ -252,7 +260,7 @@ const mapMediaCustomAttachment = (liCustomContent: any): MessageAttachment[] => 
   }]
 }
 
-const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string) => {
+const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string): Message => {
   const { reactionSummaries, subtype } = liMessage
   // liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] is present in real time events
   const eventContent = liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] || liMessage.eventContent
@@ -285,6 +293,7 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
     cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody?.text || customContent?.body || participantChangeText,
+    parseTemplate: !!participantChangeText,
     isDeleted: !!eventContent.recalledAt,
     editedTimestamp: eventContent?.lastEditedAt ? new Date(eventContent?.lastEditedAt) : undefined,
     attachments,
@@ -299,11 +308,11 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
 }
 
 export const mapMessage = (liMessage: any, currentUserID: string): Message => {
-  const senderID = getSenderID(liMessage['*from'])
+  const senderID = getParticipantID(liMessage['*from'])
   return mapMessageInner(liMessage, currentUserID, senderID)
 }
 
 export const mapNewMessage = (liMessage: any, currentUserID: string): Message => {
-  const senderID = getSenderID(liMessage.from[LinkedInAPITypes.member].entityUrn)
+  const senderID = getParticipantID(liMessage.from[LinkedInAPITypes.member].entityUrn)
   return mapMessageInner(liMessage, currentUserID, senderID)
 }

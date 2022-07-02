@@ -7,7 +7,7 @@ import FormData from 'form-data'
 import type { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
-import { getSenderID, mapConversationsResponse } from '../mappers'
+import { mapConversationsResponse } from '../mappers'
 import { getParticipantID, urnID } from '../util'
 import type { SendMessageResolveFunction } from '../api'
 
@@ -113,7 +113,7 @@ export default class LinkedInAPI {
   }
 
   _mapThreadParticipants = async participant => {
-    const participantId = getSenderID(participant)
+    const participantId = getParticipantID(participant)
 
     if (!this.participantEntities[participantId]) {
       const profile = await this.getProfile(participantId)
@@ -213,22 +213,20 @@ export default class LinkedInAPI {
 
   searchUsers = async (keyword: string) => {
     const url = `${LinkedInURLs.API_BASE}/voyagerMessagingTypeaheadHits`
-    const queryParams = {
+    const queryParams = Object.entries({
       keyword,
       q: 'typeaheadKeyword',
-      types: 'List(CONNECTIONS,GROUP_THREADS,PEOPLE,COWORKERS)',
-    }
+      types: 'List(CONNECTIONS,COWORKERS)',
+    }).map(([key, value]) => `${key}=${value}`)
 
-    const { data } = await this.fetch({
+    const res = await this.fetch({
       method: 'GET',
-      url,
-      headers: {
-        referer: 'https://www.linkedin.com/messaging/thread/new/',
-      },
-      searchParams: queryParams,
+      // Using query params this way because if we use fetch searchParams it'll serialize them
+      // and List(...) won't work
+      url: `${url}?${queryParams.join('&')}`,
     })
 
-    return data?.included ?? []
+    return res?.included ?? []
   }
 
   uploadBuffer = async (buffer: Buffer, filename: string) => {
@@ -422,6 +420,22 @@ export default class LinkedInAPI {
     })
   }
 
+  changeParticipants = async (threadID: string, participantID: string, action: 'add' | 'remove') => {
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}`
+    const payload = action === 'add' ? {
+      addMessageRequestParticipants: [],
+      showHistory: true,
+      addParticipants: [participantID],
+    } : { removeParticipants: [participantID] }
+
+    await this.fetch({
+      url,
+      method: 'POST',
+      json: payload,
+      searchParams: { action: 'changeParticipants' },
+    })
+  }
+
   getUserPresence = async (threadID: string): Promise<{ userID: string, status: 'OFFLINE' | 'ONLINE', lastActiveAt: number }[]> => {
     const participants = this.conversationsParticipants[threadID] || []
     const ids = participants.map(id => encodeURIComponent(`urn:li:fs_miniProfile:${id}`))
@@ -462,7 +476,7 @@ export default class LinkedInAPI {
   }
 
   sendPresenceChange = async (type: ActivityType): Promise<void> => {
-    const url = `${LinkedInURLs.HOME}/psettings/presence/update-presence-settings`
+    const url = `${LinkedInURLs.HOME}psettings/presence/update-presence-settings`
     const form = new FormData()
 
     const value = type === ActivityType.ONLINE ? 'CONNECTIONS' : 'HIDDEN'
@@ -472,10 +486,17 @@ export default class LinkedInAPI {
     form.append('#el', '#setting-presence')
     form.append('name', 'presence')
     form.append('locale', 'en_US')
+    form.append('backUrl', 'https://www.linkedin.com/mypreferences/m')
+    form.append('helpCenterPath', '/help/linkedin')
+    form.append('pageTitle', 'Manage active status')
     form.append('setting', 'presence')
     form.append('isNotCnDomain', 'true')
+    form.append('shouldHideMobileHeader', 'false')
     form.append('path', '/psettings/presence')
     form.append('device', 'DESKTOP')
+    form.append('initialFetch', 'true')
+    form.append('dataVal', 'undefined')
+    form.append('hasSuccess', 'false')
     form.append('visibility', value)
     form.append('csrfToken', token)
 
@@ -488,6 +509,12 @@ export default class LinkedInAPI {
       headers: {
         accept: 'application/json, text/javascript, */*; q=0.01',
         'content-type': `multipart/form-data; boundary=${boundary}`,
+        'sec-ch-ua': texts.constants.USER_AGENT,
+        'sec-ch-ua-mobile': '?0',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+        'x-li-page-instance': 'urn:li:page:psettings-presence-view-settings;d6hZx3qWQEedu9VqAgwoqQ==',
         'x-requested-with': 'XMLHttpRequest',
         'csrf-token': token,
       },

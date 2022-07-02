@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
@@ -226,6 +225,10 @@ export default class LinkedIn implements PlatformAPI {
     const url = Buffer.from(uri, 'hex').toString()
     return this.api.fetchStream({ url })
   }
+
+  addParticipant = (threadID: string, participantID: string) => this.api.changeParticipants(threadID, participantID, 'add')
+
+  removeParticipant = (threadID: string, participantID: string) => this.api.changeParticipants(threadID, participantID, 'remove')
 
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
     if (updates.title) await this.api.renameThread(threadID, updates.title)
