@@ -56,6 +56,8 @@ const info: PlatformInfo = {
     Attribute.SUBSCRIBE_TO_THREAD_SELECTION,
     Attribute.SUBSCRIBE_TO_ONLINE_OFFLINE_ACTIVITY,
     // Attribute.SUPPORTS_PUSH_NOTIFICATIONS,
+    Attribute.SINGLE_THREAD_CREATION_REQUIRES_MESSAGE,
+    Attribute.GROUP_THREAD_CREATION_REQUIRES_MESSAGE,
   ]),
   getUserProfileLink: ({ username }) => username && `https://www.linkedin.com/in/${username}`,
 }
