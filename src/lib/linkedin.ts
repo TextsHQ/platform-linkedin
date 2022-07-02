@@ -282,7 +282,7 @@ export default class LinkedInAPI {
     return !res?.data
   }
 
-  createThread = async (profileIds: string[]) => {
+  createThread = async (profileIds: string[], message?: string) => {
     const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = { action: 'create' }
 
@@ -292,7 +292,7 @@ export default class LinkedInAPI {
           value: {
             'com.linkedin.voyager.messaging.create.MessageCreate': {
               attributedBody: {
-                text: '',
+                text: message || '',
                 attributes: [],
               },
               attachments: [],
