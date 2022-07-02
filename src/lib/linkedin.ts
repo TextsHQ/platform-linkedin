@@ -7,7 +7,7 @@ import FormData from 'form-data'
 import type { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
-import { getSenderID, mapConversationsResponse } from '../mappers'
+import { mapConversationsResponse } from '../mappers'
 import { getParticipantID, urnID } from '../util'
 import type { SendMessageResolveFunction } from '../api'
 
@@ -113,7 +113,7 @@ export default class LinkedInAPI {
   }
 
   _mapThreadParticipants = async participant => {
-    const participantId = getSenderID(participant)
+    const participantId = getParticipantID(participant)
 
     if (!this.participantEntities[participantId]) {
       const profile = await this.getProfile(participantId)
