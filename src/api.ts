@@ -228,9 +228,9 @@ export default class LinkedIn implements PlatformAPI {
     return this.api.fetchStream({ url })
   }
 
-  removeParticipant = this.api.removeParticipant
+  addParticipant = (threadID: string, participantID: string) => this.api.changeParticipants(threadID, participantID, 'add')
 
-  addParticipant = this.api.addParticipant
+  removeParticipant = (threadID: string, participantID: string) => this.api.changeParticipants(threadID, participantID, 'remove')
 
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
     if (updates.title) await this.api.renameThread(threadID, updates.title)

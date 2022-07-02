@@ -420,25 +420,13 @@ export default class LinkedInAPI {
     })
   }
 
-  removeParticipant = async (threadID: string, participantID: string) => {
+  changeParticipants = async (threadID: string, participantID: string, action: 'add' | 'remove') => {
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}`
-    const payload = { removeParticipants: [participantID] }
-
-    await this.fetch({
-      url,
-      method: 'POST',
-      json: payload,
-      searchParams: { action: 'changeParticipants' },
-    })
-  }
-
-  addParticipant = async (threadID: string, participantID: string) => {
-    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}`
-    const payload = {
+    const payload = action === 'add' ? {
       addMessageRequestParticipants: [],
       showHistory: true,
       addParticipants: [participantID],
-    }
+    } : { removeParticipants: [participantID] }
 
     await this.fetch({
       url,
