@@ -16,10 +16,11 @@ export const eventUrnToMessageID = (eventUrn: string) => `urn:li:fsd_message:${e
 
 // urn:li:fs_messagingMember:(2-YjM5NTM2YTEtMDBkNy00YjhlLTk4NzUtMmY5MTE3NjA0YmVkXzAxMw==,ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0)
 // urn:li:fs_messagingMember:(THREAD_ID,PARTICIPANT_ID)
-export const getParticipantID = (participantUrn: string) => {
-  const [,, participantID] = /fs_messagingMember:\((.+),(.+)\)/.exec(participantUrn)
-  return participantID
-}
+// urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)
+export const getParticipantID = (participantUrn: string) =>
+  participantUrn
+    .split(',', 2)?.[1] // ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)
+    .replace(')', '')
 
 export const getFeedUpdateURL = (feedUpdate: string) => {
   // urn:li:fs_updateV2:(urn:li:activity:6767570017279066112,MESSAGING_RESHARE,EMPTY,DEFAULT,false)

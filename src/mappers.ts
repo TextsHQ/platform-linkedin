@@ -4,13 +4,6 @@ import { orderBy, groupBy } from 'lodash'
 import { LinkedInAPITypes } from './constants'
 import { urnID, getFeedUpdateURL, getParticipantID } from './util'
 
-export const getSenderID = (from: string) =>
-  // "*from": "urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)",
-  from
-    .split(',')
-    .pop() // ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)
-    .replace(')', '')
-
 export const mapConversationsResponse = (liResponse: any): Record<string, any>[] => {
   if (!liResponse) return []
 
@@ -35,7 +28,7 @@ export const mapConversationsResponse = (liResponse: any): Record<string, any>[]
 
   for (const conversation of allConversations) {
     const firstParticipant = conversation['*participants']?.[0] || ''
-    const entityId = getSenderID(firstParticipant)
+    const entityId = getParticipantID(firstParticipant)
 
     const entity = profiles.find(p => p?.entityUrn.includes(entityId)) || {}
     const messagingMember = members.find(m => m.entityUrn.includes(entityId)) || {}
@@ -73,7 +66,7 @@ export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
 
 const mapParticipants = (liParticipants: any[], entitiesMap: Record<string, any>) =>
   liParticipants.map<Participant>(p => {
-    const id = getSenderID(p)
+    const id = getParticipantID(p)
     const entity = entitiesMap[id]
 
     return {
@@ -315,11 +308,11 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
 }
 
 export const mapMessage = (liMessage: any, currentUserID: string): Message => {
-  const senderID = getSenderID(liMessage['*from'])
+  const senderID = getParticipantID(liMessage['*from'])
   return mapMessageInner(liMessage, currentUserID, senderID)
 }
 
 export const mapNewMessage = (liMessage: any, currentUserID: string): Message => {
-  const senderID = getSenderID(liMessage.from[LinkedInAPITypes.member].entityUrn)
+  const senderID = getParticipantID(liMessage.from[LinkedInAPITypes.member].entityUrn)
   return mapMessageInner(liMessage, currentUserID, senderID)
 }
