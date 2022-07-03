@@ -5,7 +5,7 @@ import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapThr
 import LinkedInAPI from './lib/linkedin'
 import LinkedInRealTime from './lib/real-time'
 import { LinkedInAuthCookieName } from './constants'
-import { urnID } from './util'
+import { extractSecondEntity, urnID } from './util'
 
 export type SendMessageResolveFunction = (value: Message[]) => void
 
@@ -208,9 +208,9 @@ export default class LinkedIn implements PlatformAPI {
 
   onThreadSelected = async (threadID: string) => {
     if (!threadID) return
+
     const participantsPresence = await this.api.getUserPresence(threadID)
-    if (!participantsPresence) return
-    const presenceEvents = participantsPresence.map<ServerEvent>(presence => ({
+    const presenceEvents = (participantsPresence || []).map<ServerEvent>(presence => ({
       type: ServerEventType.USER_PRESENCE_UPDATED,
       presence: {
         userID: presence.userID,
@@ -218,7 +218,25 @@ export default class LinkedIn implements PlatformAPI {
         lastActive: new Date(presence.lastActiveAt),
       },
     }))
-    this.onEvent(presenceEvents)
+
+    const participantsReceipt = await this.api.getParticipantsReceipt(threadID)
+    const receiptEvents = participantsReceipt.map<ServerEvent>(receipt => {
+      const { seenAt, eventUrn } = receipt.seenReceipt
+      const messageID = extractSecondEntity(eventUrn)
+
+      const { fromEntity } = receipt
+      const participantId = fromEntity.split(':').pop()
+
+      return {
+        type: ServerEventType.STATE_SYNC,
+        objectIDs: {},
+        objectName: 'message',
+        mutationType: 'update',
+        entries: [{ id: messageID, seen: { [participantId]: new Date(seenAt) } }],
+      }
+    })
+
+    this.onEvent([...presenceEvents, ...receiptEvents])
   }
 
   registerForPushNotifications = async (type: keyof NotificationsInfo, token: string) => {
