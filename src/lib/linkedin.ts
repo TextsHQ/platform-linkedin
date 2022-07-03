@@ -8,6 +8,7 @@ import type { CookieJar } from 'tough-cookie'
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
 import { urnID } from '../util'
 import type { SendMessageResolveFunction } from '../api'
+import type { ParticipantsReceiptResponse } from './linkedin.types'
 
 export default class LinkedInAPI {
   cookieJar: CookieJar
@@ -49,7 +50,7 @@ export default class LinkedInAPI {
     return this.httpClient.requestAsString(url, opts)
   }
 
-  fetch = async ({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }) => {
+  fetch = async <T = any>({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }): Promise<T> => {
     const opts: FetchOptions = {
       ...rest,
       body: json ? JSON.stringify(json) : rest.body,
@@ -433,6 +434,16 @@ export default class LinkedInAPI {
       status: results[key].availability,
       lastActiveAt: results[key].lastActiveAt,
     }))
+  }
+
+  getParticipantsReceipt = async (threadID: string): Promise<ParticipantsReceiptResponse['data']['elements']> => {
+    const encodedEndpoint = encodeURIComponent(`${threadID}`)
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}/participantReceipts`
+
+    const res = await this.fetch<ParticipantsReceiptResponse>({ url })
+    const { elements } = res.data
+
+    return elements || []
   }
 
   sendPresenceChange = async (type: ActivityType): Promise<void> => {
