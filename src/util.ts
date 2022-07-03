@@ -15,14 +15,13 @@ export const eventUrnTupleToIDs = (eventUrn: string) => {
 export const eventUrnToMessageID = (eventUrn: string) =>
   `urn:li:fsd_message:${eventUrn.split(',', 2)?.[1].replace(')', '')}`
 
+// urn:SOMETHING:(FIRST_ENTITY,SECONDENTITY)
+export const extractSecondEntity = (urn: string) => urn.split(',', 2)?.[1]?.replace(')', '')
+
 // urn:li:fs_messagingMember:(2-YjM5NTM2YTEtMDBkNy00YjhlLTk4NzUtMmY5MTE3NjA0YmVkXzAxMw==,ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0)
 // urn:li:fs_messagingMember:(THREAD_ID,PARTICIPANT_ID)
 // urn:li:fs_messagingMember:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)
-export const getParticipantID = (participantUrn: string) =>
-  participantUrn
-    .split(',', 2)
-    ?.[1] // ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM)
-    ?.replace(')', '')
+export const getParticipantID = extractSecondEntity
 
 export const getFeedUpdateURL = (feedUpdate: string) => {
   // urn:li:fs_updateV2:(urn:li:activity:6767570017279066112,MESSAGING_RESHARE,EMPTY,DEFAULT,false)
