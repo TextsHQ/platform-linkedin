@@ -87,7 +87,7 @@ const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, cur
 }
 
 export const mapThreads = (liResponse: any, currentUserID: string): Thread[] => {
-  const { included = [] } = liResponse
+  const { included = [] } = liResponse || {}
 
   const allProfiles = {}
   const allConversations = []
