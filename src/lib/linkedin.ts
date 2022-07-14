@@ -463,7 +463,7 @@ export default class LinkedInAPI {
   }
 
   getParticipantsReceipt = async (threadID: string): Promise<ParticipantsReceiptResponse['data']['elements']> => {
-    const encodedEndpoint = encodeURIComponent(`${threadID}`)
+    const encodedEndpoint = encodeURIComponent(threadID)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}/participantReceipts`
 
     const res = await this.fetch<ParticipantsReceiptResponse>({ url })
