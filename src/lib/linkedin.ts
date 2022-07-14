@@ -270,7 +270,7 @@ export default class LinkedInAPI {
           'com.linkedin.voyager.messaging.create.MessageCreate': {
             attributedBody: {
               text: message.text ?? '',
-              attributes: [...mentionedAttributes],
+              attributes: mentionedAttributes,
             },
             attachments,
           },
