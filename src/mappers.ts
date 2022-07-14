@@ -199,15 +199,25 @@ const mapTextAttributes = (liTextAttributes: any[]): TextAttributes => {
         return {
           from: liEntity.start,
           to: liEntity.start + liEntity.length,
-          mentionedUser: {
-            id: urnID(liEntity.type.urn),
-          },
+          mentionedUser: { id: urnID(liEntity.type.urn) },
         }
       case 'com.linkedin.pemberly.text.Bold':
         return {
           from: liEntity.start,
           to: liEntity.start + liEntity.length,
           bold: true,
+        }
+      case 'com.linkedin.pemberly.text.Italic':
+        return {
+          from: liEntity.start,
+          to: liEntity.start + liEntity.length,
+          italic: true,
+        }
+      case 'com.linkedin.pemberly.text.Underline':
+        return {
+          from: liEntity.start,
+          to: liEntity.start + liEntity.length,
+          underline: true,
         }
     }
     return undefined
