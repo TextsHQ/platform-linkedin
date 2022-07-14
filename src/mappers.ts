@@ -199,7 +199,6 @@ const mapTextAttributes = (liTextAttributes: any[], text: string): TextAttribute
   const entities = entitiesAttributes.map<TextEntity>((liEntity: any) => ({
     from: liEntity.start,
     to: liEntity.start + liEntity.length,
-    bold: true,
     mentionedUser: {
       id: urnID(liEntity.type.urn),
     },
