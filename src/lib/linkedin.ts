@@ -236,7 +236,7 @@ export default class LinkedInAPI {
     const originToken = options.pendingMessageID
 
     const mentionedAttributes = (() => {
-      if (!message.mentionedUserIDs.length) return []
+      if (!message.mentionedUserIDs?.length) return []
 
       const re = new RegExp('@', 'gi')
       const results = [...message.text?.matchAll(re)]
