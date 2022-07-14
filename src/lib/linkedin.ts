@@ -235,6 +235,32 @@ export default class LinkedInAPI {
 
     const originToken = options.pendingMessageID
 
+    const mentionedAttributes = (() => {
+      if (!message.mentionedUserIDs?.length) return []
+
+      const re = new RegExp('@', 'gi')
+      const results = [...message.text?.matchAll(re)]
+
+      return results.map(({ index: initialIndex }, index) => {
+        const remainingText = message.text.slice(initialIndex)
+        const endIndex = remainingText.indexOf(' ')
+
+        return {
+          length: endIndex >= 0 ? endIndex : remainingText.length,
+          start: initialIndex,
+          type: {
+            'com.linkedin.pemberly.text.Entity': {
+              emberEntityName: 'pemberly/text/entity',
+              isEntity: true,
+              tag: 'span',
+              type: 'Entity',
+              urn: `urn:li:fs_miniProfile:${message.mentionedUserIDs[index]}`,
+            },
+          },
+        }
+      })
+    })()
+
     const payload = {
       dedupeByClientGeneratedToken: false,
       eventCreate: {
@@ -244,7 +270,7 @@ export default class LinkedInAPI {
           'com.linkedin.voyager.messaging.create.MessageCreate': {
             attributedBody: {
               text: message.text ?? '',
-              attributes: [],
+              attributes: mentionedAttributes,
             },
             attachments,
           },
