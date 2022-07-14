@@ -87,7 +87,7 @@ const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, cur
 }
 
 export const mapThreads = (liResponse: any, currentUserID: string): Thread[] => {
-  const { included = [] } = liResponse
+  const { included = [] } = liResponse || {}
 
   const allProfiles = {}
   const allConversations = []
@@ -192,18 +192,37 @@ export const mapMessageSeenState = (message: Message, seenReceipt: any): Message
   seen: seenReceipt[message.id] || message.seen,
 })
 
-const mapTextAttributes = (liTextAttributes: any[], text: string): TextAttributes => {
-  const entitiesAttributes = liTextAttributes.filter(({ type }) => type.$type === 'com.linkedin.pemberly.text.Entity')
-  if (!entitiesAttributes.length) return
-
-  const entities = entitiesAttributes.map<TextEntity>((liEntity: any) => ({
-    from: liEntity.start,
-    to: liEntity.start + liEntity.length,
-    mentionedUser: {
-      id: urnID(liEntity.type.urn),
-    },
-  }))
-
+const mapTextAttributes = (liTextAttributes: any[]): TextAttributes => {
+  const entities = liTextAttributes.map<TextEntity>(liEntity => {
+    switch (liEntity.type.$type) {
+      case 'com.linkedin.pemberly.text.Entity':
+        return {
+          from: liEntity.start,
+          to: liEntity.start + liEntity.length,
+          mentionedUser: { id: urnID(liEntity.type.urn) },
+        }
+      case 'com.linkedin.pemberly.text.Bold':
+        return {
+          from: liEntity.start,
+          to: liEntity.start + liEntity.length,
+          bold: true,
+        }
+      case 'com.linkedin.pemberly.text.Italic':
+        return {
+          from: liEntity.start,
+          to: liEntity.start + liEntity.length,
+          italic: true,
+        }
+      case 'com.linkedin.pemberly.text.Underline':
+        return {
+          from: liEntity.start,
+          to: liEntity.start + liEntity.length,
+          underline: true,
+        }
+    }
+    return undefined
+  }).filter(Boolean)
+  if (!entities.length) return
   return { entities }
 }
 
@@ -248,7 +267,7 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
 
   let textAttributes: TextAttributes
   if (attributedBody?.attributes?.length > 0) {
-    textAttributes = mapTextAttributes(attributedBody?.attributes, attributedBody?.text)
+    textAttributes = mapTextAttributes(attributedBody?.attributes)
   }
 
   const linkedMessage = customContent?.forwardedContentType ? mapForwardedMessage(customContent) : undefined
