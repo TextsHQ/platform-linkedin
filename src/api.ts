@@ -225,7 +225,7 @@ export default class LinkedIn implements PlatformAPI {
       const messageID = extractSecondEntity(eventUrn)
 
       const { fromEntity } = receipt
-      const participantId = fromEntity.split(':').pop()
+      const participantId = urnID(fromEntity)
 
       return {
         type: ServerEventType.STATE_SYNC,
