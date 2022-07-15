@@ -69,7 +69,7 @@ const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, cur
 
   const messages = (liMessages as any[])
     .map<Message>(liMessage => mapMessage(liMessage, currentUserID))
-    .map(message => mapMessageReceipt(message, conversation?.receipts, conversation.groupChat))
+    .map(message => mapMessageReceipt(message, conversation.receipts, conversation.groupChat))
 
   return {
     _original: JSON.stringify(thread),
@@ -77,7 +77,7 @@ const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, cur
     type: conversation.groupChat ? 'group' : 'single',
     title: conversation.name,
     isUnread: !conversation.read,
-    timestamp: new Date(conversation?.lastActivityAt),
+    timestamp: new Date(conversation.lastActivityAt),
     isReadOnly: false,
     mutedUntil: conversation.muted ? 'forever' : undefined,
     messages: { items: messages, hasMore: true },

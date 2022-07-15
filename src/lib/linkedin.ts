@@ -8,6 +8,7 @@ import type { CookieJar } from 'tough-cookie'
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
 import { urnID } from '../util'
 import type { SendMessageResolveFunction } from '../api'
+import type { ParticipantsReceiptResponse } from './linkedin.types'
 
 export default class LinkedInAPI {
   cookieJar: CookieJar
@@ -49,7 +50,7 @@ export default class LinkedInAPI {
     return this.httpClient.requestAsString(url, opts)
   }
 
-  fetch = async ({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }) => {
+  fetch = async <T = any>({ url, json, headers = {}, ...rest }: FetchOptions & { url: string, json?: any }): Promise<T> => {
     const opts: FetchOptions = {
       ...rest,
       body: json ? JSON.stringify(json) : rest.body,
@@ -234,6 +235,32 @@ export default class LinkedInAPI {
 
     const originToken = options.pendingMessageID
 
+    const mentionedAttributes = (() => {
+      if (!message.mentionedUserIDs?.length) return []
+
+      const re = new RegExp('@', 'gi')
+      const results = [...message.text?.matchAll(re)]
+
+      return results.map(({ index: initialIndex }, index) => {
+        const remainingText = message.text.slice(initialIndex)
+        const endIndex = remainingText.indexOf(' ')
+
+        return {
+          length: endIndex >= 0 ? endIndex : remainingText.length,
+          start: initialIndex,
+          type: {
+            'com.linkedin.pemberly.text.Entity': {
+              emberEntityName: 'pemberly/text/entity',
+              isEntity: true,
+              tag: 'span',
+              type: 'Entity',
+              urn: `urn:li:fs_miniProfile:${message.mentionedUserIDs[index]}`,
+            },
+          },
+        }
+      })
+    })()
+
     const payload = {
       dedupeByClientGeneratedToken: false,
       eventCreate: {
@@ -243,7 +270,7 @@ export default class LinkedInAPI {
           'com.linkedin.voyager.messaging.create.MessageCreate': {
             attributedBody: {
               text: message.text ?? '',
-              attributes: [],
+              attributes: mentionedAttributes,
             },
             attachments,
           },
@@ -433,6 +460,16 @@ export default class LinkedInAPI {
       status: results[key].availability,
       lastActiveAt: results[key].lastActiveAt,
     }))
+  }
+
+  getParticipantsReceipt = async (threadID: string): Promise<ParticipantsReceiptResponse['data']['elements']> => {
+    const encodedEndpoint = encodeURIComponent(threadID)
+    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}/participantReceipts`
+
+    const res = await this.fetch<ParticipantsReceiptResponse>({ url })
+    const { elements } = res.data
+
+    return elements || []
   }
 
   sendPresenceChange = async (type: ActivityType): Promise<void> => {
