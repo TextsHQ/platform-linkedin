@@ -219,6 +219,8 @@ export default class LinkedIn implements PlatformAPI {
       },
     }))
 
+    this.onEvent(presenceEvents)
+
     const participantsReceipt = await this.api.getParticipantsReceipt(threadID)
     const receiptEvents = participantsReceipt.map<ServerEvent>(receipt => {
       const { seenAt, eventUrn } = receipt.seenReceipt
@@ -229,14 +231,14 @@ export default class LinkedIn implements PlatformAPI {
 
       return {
         type: ServerEventType.STATE_SYNC,
-        objectIDs: {},
+        objectIDs: { threadID },
         objectName: 'message',
         mutationType: 'update',
         entries: [{ id: messageID, seen: { [participantId]: new Date(seenAt) } }],
       }
     })
 
-    this.onEvent([...presenceEvents, ...receiptEvents])
+    this.onEvent(receiptEvents)
   }
 
   registerForPushNotifications = async (type: keyof NotificationsInfo, token: string) => {
