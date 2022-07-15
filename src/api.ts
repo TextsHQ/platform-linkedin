@@ -218,27 +218,7 @@ export default class LinkedIn implements PlatformAPI {
         lastActive: new Date(presence.lastActiveAt),
       },
     }))
-
     this.onEvent(presenceEvents)
-
-    const participantsReceipt = await this.api.getParticipantsReceipt(threadID)
-    const receiptEvents = participantsReceipt.map<ServerEvent>(receipt => {
-      const { seenAt, eventUrn } = receipt.seenReceipt
-      const messageID = extractSecondEntity(eventUrn)
-
-      const { fromEntity } = receipt
-      const participantId = urnID(fromEntity)
-
-      return {
-        type: ServerEventType.STATE_SYNC,
-        objectIDs: { threadID },
-        objectName: 'message',
-        mutationType: 'update',
-        entries: [{ id: messageID, seen: { [participantId]: new Date(seenAt) } }],
-      }
-    })
-
-    this.onEvent(receiptEvents)
   }
 
   registerForPushNotifications = async (type: keyof NotificationsInfo, token: string) => {
