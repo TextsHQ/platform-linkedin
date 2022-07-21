@@ -194,13 +194,30 @@ export const mapMessageSeenState = (message: Message, seenReceipt: any): Message
 
 const mapTextAttributes = (liTextAttributes: any[]): TextAttributes => {
   const entities = liTextAttributes.map<TextEntity>(liEntity => {
-    switch (liEntity.type.$type) {
-      case 'com.linkedin.pemberly.text.Entity':
+    /**
+     * Type can come in two different forms (it'll depend on LinkedIn's API version).
+     * It can come like:
+     * {
+     *  type: { $type: 'com.linkedin....' }
+     * }
+     * or implicit in the first field of the type object
+     * {
+     *  type: { "com.linkedin....": { ... } }
+     * }
+     */
+    const type = liEntity.type.$type || Object.keys(liEntity.type)?.[0]
+
+    switch (type) {
+      case 'com.linkedin.pemberly.text.Entity': {
+        const urn = liEntity.type.urn || liEntity.type?.[type]?.urn
+        if (!urn) return undefined
+
         return {
           from: liEntity.start,
           to: liEntity.start + liEntity.length,
-          mentionedUser: { id: urnID(liEntity.type.urn) },
+          mentionedUser: { id: urnID(urn) },
         }
+      }
       case 'com.linkedin.pemberly.text.Bold':
         return {
           from: liEntity.start,
@@ -313,5 +330,6 @@ export const mapMessage = (liMessage: any, currentUserID: string): Message => {
 
 export const mapNewMessage = (liMessage: any, currentUserID: string): Message => {
   const senderID = getParticipantID(liMessage.from[LinkedInAPITypes.member].entityUrn)
+
   return mapMessageInner(liMessage, currentUserID, senderID)
 }
