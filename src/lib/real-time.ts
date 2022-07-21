@@ -36,8 +36,10 @@ export default class LinkedInRealTime {
       texts.log('[li] ignoring sent message with token:', originToken)
       return
     }
+
     this.papi.sendMessageResolvers.delete(originToken)
     resolve(messages)
+
     return true
   }
 
@@ -66,6 +68,7 @@ export default class LinkedInRealTime {
         const threadID = eventUrnToThreadID(entityUrn)
 
         const messages = [mapNewMessage(payload.event, this.papi.user.id)]
+
         if (!this.resolveSendMessage(originToken, messages)) {
           return [{
             type: ServerEventType.STATE_SYNC,
