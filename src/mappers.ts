@@ -61,15 +61,15 @@ const mapParticipant = (entity: any): Participant => ({
 const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, currentUserID: string): Thread => {
   const { conversation, messages: liMessages = [] } = thread
 
-  const participantsItems = (conversation['*participants'] as string[]).map(pid => {
+  const participantsItems = (conversation['*participants'] as string[])?.map(pid => {
     const entity = allProfiles[getParticipantID(pid)]
     // if (!entity) texts.log('404 entity', pid, getParticipantID(pid))
     return entity ? mapParticipant(entity) : undefined
-  }).filter(Boolean)
+  }).filter(Boolean) || []
 
   const messages = (liMessages as any[])
-    .map<Message>(liMessage => mapMessage(liMessage, currentUserID))
-    .map(message => mapMessageReceipt(message, conversation.receipts, conversation.groupChat))
+    ?.map<Message>(liMessage => mapMessage(liMessage, currentUserID))
+    .map(message => mapMessageReceipt(message, conversation.receipts, conversation.groupChat)) || []
 
   return {
     _original: JSON.stringify(thread),
