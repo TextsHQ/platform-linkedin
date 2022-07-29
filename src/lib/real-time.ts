@@ -1,4 +1,4 @@
-import { Message, ServerEvent, ServerEventType, texts, UNKNOWN_DATE, UpdateStateSyncEvent } from '@textshq/platform-sdk'
+import { Message, ServerEvent, ServerEventType, texts, UNKNOWN_DATE, UpsertStateSyncEvent, UpdateStateSyncEvent } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
 import { REQUEST_HEADERS, LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
@@ -83,28 +83,33 @@ export default class LinkedInRealTime {
       }
 
       case Topic.messageReactionSummariesTopic: {
-        const threadID = eventUrnToThreadID(payload.eventUrn)
-        const messageID = eventUrnToMessageID(payload.eventUrn)
-
+        const participantID = urnID(payload.actorMiniProfileUrn)
+        const reactionKey = payload.reactionSummary.emoji
+        const objectIDs: UpsertStateSyncEvent['objectIDs'] = {
+          threadID: eventUrnToThreadID(payload.eventUrn),
+          messageID: eventUrnToMessageID(payload.eventUrn),
+        }
         if (payload.reactionAdded) {
           return [{
             type: ServerEventType.STATE_SYNC,
             mutationType: 'upsert',
             objectName: 'message_reaction',
-            objectIDs: {
-              threadID,
-              messageID,
-            },
+            objectIDs,
             entries: [{
-              id: `${urnID(payload.actorMiniProfileUrn)}${payload.reactionSummary?.emoji}`,
-              reactionKey: payload.reactionSummary.emoji,
-              participantID: urnID(payload.actorMiniProfileUrn),
+              id: `${participantID}${reactionKey}`,
+              reactionKey,
+              participantID,
               emoji: true,
             }],
           }]
         }
-        // todo use state sync
-        return [{ type: ServerEventType.THREAD_MESSAGES_REFRESH, threadID }]
+        return [{
+          type: ServerEventType.STATE_SYNC,
+          mutationType: 'delete',
+          objectName: 'message_reaction',
+          objectIDs,
+          entries: [`${participantID}${reactionKey}`],
+        }]
       }
 
       case Topic.conversationsTopic: {
