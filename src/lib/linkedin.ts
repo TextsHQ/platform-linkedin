@@ -23,18 +23,23 @@ export default class LinkedInAPI {
     this.cookieJar = cookieJar
   }
 
-  getCSRFToken = () => {
-    const csrfToken = this.cookieJar
-      .getCookiesSync(LinkedInURLs.HOME)
-      .find(c => c.key === 'JSESSIONID')
-      ?.value
-      .replaceAll('"', '')
+  private getCSRFToken = async () => {
+    let attempts = 3
+    while (--attempts) {
+      const cookies = await this.cookieJar.getCookies(LinkedInURLs.HOME)
+      const csrfToken = cookies
+        .find(c => c.key === 'JSESSIONID')
+        ?.value
+        .replaceAll('"', '')
 
-    if (!csrfToken) throw Error('could not find csrf token')
-    return csrfToken
+      if (csrfToken) return csrfToken
+      // this should make server send a set-cookie header with JSESSIONID
+      await this.httpClient.requestAsString(LinkedInURLs.FEED, { cookieJar: this.cookieJar })
+    }
+    throw new Error('Could not get CSRF token')
   }
 
-  fetchRaw = (url: string, { headers = {}, ...rest }: FetchOptions) => {
+  fetchRaw = async (url: string, { headers = {}, ...rest }: FetchOptions) => {
     if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
 
     const opts: FetchOptions = {
@@ -42,7 +47,7 @@ export default class LinkedInAPI {
       body: rest.body,
       cookieJar: this.cookieJar,
       headers: {
-        'csrf-token': this.getCSRFToken(),
+        'csrf-token': await this.getCSRFToken(),
         ...headers,
       },
     }
@@ -72,13 +77,13 @@ export default class LinkedInAPI {
     return JSON.parse(res.body)
   }
 
-  fetchStream = ({ url, headers = {}, ...rest }: FetchOptions & { url: string }) => {
+  fetchStream = async ({ url, headers = {}, ...rest }: FetchOptions & { url: string }) => {
     if (!this.cookieJar) throw new Error('LinkedIn cookie jar not found')
 
     return texts.fetchStream(url, {
       cookieJar: this.cookieJar,
       headers: {
-        'csrf-token': this.getCSRFToken(),
+        'csrf-token': await this.getCSRFToken(),
         ...REQUEST_HEADERS,
         ...headers,
       },
@@ -477,7 +482,7 @@ export default class LinkedInAPI {
     const form = new FormData()
 
     const value = type === ActivityType.ONLINE ? 'CONNECTIONS' : 'HIDDEN'
-    const token = this.getCSRFToken()
+    const token = await this.getCSRFToken()
 
     form.append('dataKey', 'isPresenceEnabled')
     form.append('#el', '#setting-presence')

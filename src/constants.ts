@@ -12,7 +12,7 @@ export const supportedReactions: Record<string, SupportedReaction> = {
 
 export const REQUEST_HEADERS: Record<string, string> = {
   authority: 'www.linkedin.com',
-  'x-restli-protocol-version': '2.0.0',
+  'x-restLi-protocol-version': '2.0.0',
   'x-li-lang': 'en_US',
   'user-agent': USER_AGENT,
   accept: 'application/vnd.linkedin.normalized+json+2.1',
@@ -28,6 +28,7 @@ export const LinkedInAuthCookieName = 'li_at'
 
 export const LinkedInURLs = {
   HOME: 'https://www.linkedin.com/',
+  FEED: 'https://www.linkedin.com/feed/',
   LOGIN: 'https://www.linkedin.com/login',
   LOGOUT: 'https://www.linkedin.com/logout',
   REALTIME: 'https://realtime.www.linkedin.com/realtime/connect',
