@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
@@ -187,9 +187,9 @@ const mapFeedUpdate = (liFeedUpdate: string): MessageLink => ({
   title: 'Feed Update',
 })
 
-export const mapMessageSeenState = (message: Message, seenReceipt: any): Message => ({
+export const mapMessageSeenState = (message: Message, seenReceipt: Map<string, MessageSeen>): Message => ({
   ...message,
-  seen: seenReceipt[message.id] || message.seen,
+  seen: seenReceipt.get(message.id) || message.seen,
 })
 
 const mapTextAttributes = (liTextAttributes: any[]): TextAttributes => {

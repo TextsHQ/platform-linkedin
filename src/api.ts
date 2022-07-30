@@ -1,11 +1,11 @@
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, MessageSeen } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapThreads } from './mappers'
 import LinkedInAPI from './lib/linkedin'
 import LinkedInRealTime from './lib/real-time'
 import { LinkedInAuthCookieName } from './constants'
-import { extractSecondEntity, urnID } from './util'
+import { urnID } from './util'
 
 export type SendMessageResolveFunction = (value: Message[]) => void
 
@@ -23,7 +23,7 @@ export default class LinkedIn implements PlatformAPI {
   sendMessageResolvers = new Map<string, SendMessageResolveFunction>()
 
   // TODO: implement something with Texts-sdk
-  private seenReceipt = {}
+  private messageSeenMap = new Map<string, MessageSeen>()
 
   onEvent: OnServerEventCallback
 
@@ -60,8 +60,8 @@ export default class LinkedIn implements PlatformAPI {
 
   getCurrentUser = () => mapCurrentUser(this.currentUser)
 
-  updateSeenReceipt = (key: string, value: any) => {
-    this.seenReceipt[key] = value
+  updateSeenReceipt = (key: string, value: MessageSeen) => {
+    this.messageSeenMap.set(key, value)
   }
 
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
@@ -117,7 +117,7 @@ export default class LinkedIn implements PlatformAPI {
     for (const thread of mapped) {
       this.api.conversationsParticipants[thread.id] = thread.participants.items.map(p => p.id)
       for (const message of thread.messages.items) {
-        this.seenReceipt[message.id] = message.seen
+        this.messageSeenMap.set(message.id, message.seen)
       }
     }
 
@@ -137,7 +137,7 @@ export default class LinkedIn implements PlatformAPI {
 
     const items = (messages.events as any[])
       .map<Message>(message => mapMessage(message, currentUserId))
-      .map<Message>(message => mapMessageSeenState(message, this.seenReceipt))
+      .map<Message>(message => mapMessageSeenState(message, this.messageSeenMap))
       .sort((a, b) => a.timestamp.valueOf() - b.timestamp.valueOf())
 
     return {
