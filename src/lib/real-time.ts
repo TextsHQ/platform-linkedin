@@ -195,6 +195,7 @@ export default class LinkedInRealTime {
         const msg = `unhandled linkedin topic: ${topic}`
         texts.log(newEvent)
         console.error(msg)
+        texts.Sentry.captureMessage(msg)
       }
     }
   }
