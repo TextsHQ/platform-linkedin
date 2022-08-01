@@ -1,11 +1,11 @@
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, MessageSeen } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
-import { mapCurrentUser, mapMessage, mapMessageSeenState, mapMiniProfile, mapThreads } from './mappers'
+import { groupEntities, mapCurrentUser, mapMessage, mapMiniProfile, mapThreads, ParticipantSeenMap, ThreadSeenMap } from './mappers'
 import LinkedInAPI from './lib/linkedin'
 import LinkedInRealTime from './lib/real-time'
 import { LinkedInAuthCookieName } from './constants'
-import { urnID } from './util'
+import { eventUrnToMessageID, urnID } from './util'
 
 export type SendMessageResolveFunction = (value: Message[]) => void
 
@@ -22,8 +22,8 @@ export default class LinkedIn implements PlatformAPI {
 
   sendMessageResolvers = new Map<string, SendMessageResolveFunction>()
 
-  // TODO: implement something with Texts-sdk
-  private messageSeenMap = new Map<string, MessageSeen>()
+  // threadID: participantID: [messageID, Date]
+  threadSeenMap: ThreadSeenMap = new Map<string, ParticipantSeenMap>()
 
   onEvent: OnServerEventCallback
 
@@ -37,9 +37,9 @@ export default class LinkedIn implements PlatformAPI {
     await this.api.setLoginState(CookieJar.fromJSON(cookies))
 
     this.currentUser = await this.api.getCurrentUser()
-    this.user = mapCurrentUser(this.currentUser)
-
     if (!this.currentUser) throw new ReAuthError()
+
+    this.user = mapCurrentUser(this.currentUser)
   }
 
   login = async ({ cookieJarJSON }): Promise<LoginResult> => {
@@ -60,8 +60,10 @@ export default class LinkedIn implements PlatformAPI {
 
   getCurrentUser = () => mapCurrentUser(this.currentUser)
 
-  updateSeenReceipt = (key: string, value: MessageSeen) => {
-    this.messageSeenMap.set(key, value)
+  updateThreadSeenMap = (threadID: string, participantID: string, messageID: string, seenAt: string) => {
+    if (!this.threadSeenMap.has(threadID)) this.threadSeenMap.set(threadID, new Map())
+    const pmap = this.threadSeenMap.get(threadID)
+    pmap.set(participantID, [messageID, new Date(seenAt)])
   }
 
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
@@ -89,6 +91,7 @@ export default class LinkedIn implements PlatformAPI {
 
     const { createdAt, conversationUrn } = res
     const id = urnID(conversationUrn)
+    // TODO: don't rely on searchedUsers
     const participants = userIDs.map(userId => this.searchedUsers.find(({ id: searchedUserId }) => searchedUserId === userId))
     const title = participants.map(participant => participant.fullName).join(', ')
 
@@ -110,15 +113,24 @@ export default class LinkedIn implements PlatformAPI {
     const cursors = cursor ? JSON.parse(cursor) : [Date.now(), Date.now()]
     const [inbox, archive] = await this.api.getThreads(cursors, inboxName)
 
-    const inboxThreads = mapThreads(inbox, this.user.id)
-    const archiveThreads = mapThreads(archive, this.user.id)
-    const mapped = [...inboxThreads, ...archiveThreads]
+    const groupedInbox = groupEntities(inbox)
+    const groupedArchive = groupEntities(archive)
 
+    const updateMap = (conversation: any) => {
+      for (const receipt of conversation.receipts) {
+        const threadID = urnID(conversation.entityUrn)
+        const participantID = urnID(receipt.fromEntity)
+        this.updateThreadSeenMap(threadID, participantID, eventUrnToMessageID(receipt.seenReceipt.eventUrn), receipt.seenReceipt.seenAt)
+      }
+    }
+    for (const { conversation } of groupedInbox.conversations) updateMap(conversation)
+    for (const { conversation } of groupedArchive.conversations) updateMap(conversation)
+
+    const inboxThreads = mapThreads(groupedInbox.conversations, groupedInbox.allProfiles, this.user.id, this.threadSeenMap)
+    const archiveThreads = mapThreads(groupedArchive.conversations, groupedArchive.allProfiles, this.user.id, this.threadSeenMap)
+    const mapped = [...inboxThreads, ...archiveThreads]
     for (const thread of mapped) {
       this.api.conversationsParticipants[thread.id] = thread.participants.items.map(p => p.id)
-      for (const message of thread.messages.items) {
-        this.messageSeenMap.set(message.id, message.seen)
-      }
     }
 
     return {
@@ -136,9 +148,8 @@ export default class LinkedIn implements PlatformAPI {
     const currentUserId = this.user.id
 
     const items = (messages.events as any[])
-      .map<Message>(message => mapMessage(message, currentUserId))
-      .map<Message>(message => mapMessageSeenState(message, this.messageSeenMap))
-      .sort((a, b) => a.timestamp.valueOf() - b.timestamp.valueOf())
+      .map<Message>(message => mapMessage(message, currentUserId, this.threadSeenMap.get(threadID)))
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
 
     return {
       items,
@@ -202,8 +213,6 @@ export default class LinkedIn implements PlatformAPI {
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
     if (updates.title) await this.api.renameThread(threadID, updates.title)
     if ('mutedUntil' in updates) await this.api.sendMutePatch(threadID, updates.mutedUntil)
-
-    return true
   }
 
   onThreadSelected = async (threadID: string) => {

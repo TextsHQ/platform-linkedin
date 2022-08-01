@@ -1,0 +1,36 @@
+{
+  "com.linkedin.realtimefrontend.DecoratedEvent": {
+    "leftServerAt": 1659291420957,
+    "payload": {
+      "fromEntity": "urn:li:fs_miniProfile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0",
+      "fromParticipant": {
+        "string": "urn:li:member:877798912"
+      },
+      "seenReceipt": {
+        "seenAt": 1659291420833,
+        "eventUrn": "urn:li:fs_event:(2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==,2-MTY1OTExMjU3MjQxM2I4MDkxOC0wMDEmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==)"
+      }
+    },
+    "topic": "urn:li-realtime:messageSeenReceiptsTopic:urn:li-realtime:myself",
+    "id": "45ef6a07-7329-400d-9415-e58acbd978af",
+    "trackingId": "Ô«ê·ÆÅ:AèC½Ü¾"
+  }
+}
+{
+  "com.linkedin.realtimefrontend.DecoratedEvent": {
+    "leftServerAt": 1659294045722,
+    "payload": {
+      "fromEntity": "urn:li:fs_miniProfile:ACoAAA7bNVUBXo4wls3McYpXWVndS6LXypCdluU",
+      "fromParticipant": {
+        "string": "urn:li:member:249247061"
+      },
+      "seenReceipt": {
+        "seenAt": 1659294045527,
+        "eventUrn": "urn:li:fs_event:(2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==,2-MTY1OTI5NDAzNTc4MWI3MDc2Ny0wMDQmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==)"
+      }
+    },
+    "topic": "urn:li-realtime:messageSeenReceiptsTopic:urn:li-realtime:myself",
+    "id": "c43fece4-8e3a-46e5-9ad0-1003fb2db4f2",
+    "trackingId": "¥9)ÄúÒá6V¡ìç\u00122Ë"
+  }
+}

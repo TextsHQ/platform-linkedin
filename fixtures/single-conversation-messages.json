@@ -1,0 +1,87 @@
+{
+  "conversation": {
+    "associatedMemberLabels": null,
+    "sponsoredConversationMetadata": null,
+    "dashEntityUrn": "urn:li:fsd_conversation:2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==",
+    "notificationStatus": "ACTIVE",
+    "inboxType": null,
+    "totalEventCount": 140,
+    "unreadCount": 0,
+    "lastActivityAt": 1659112572632,
+    "firstMessageUrn": "urn:li:fs_event:(2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==,2-MTYyNzA0Nzc1OTk1MWI3NTQ3Ni0wMDMmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==)",
+    "backendUrn": "urn:li:messagingThread:2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==",
+    "*events": [
+      "urn:li:fs_event:(2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==,2-MTY1OTExMjU3MjQxM2I4MDkxOC0wMDEmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==)"
+    ],
+    "lastReadAt": 1659291420862,
+    "archived": false,
+    "blocked": false,
+    "shortContextText": null,
+    "starred": null,
+    "entityUrn": "urn:li:fs_conversation:2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==",
+    "sdkEntityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0,2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==)",
+    "featureTypes": [
+      "REACTIONS",
+      "CREATE_NEW_GROUP_CHAT",
+      "CREATE_LINKEDIN_VIRTUAL_MEETING"
+    ],
+    "muted": false,
+    "pendingInvitation": null,
+    "contextText": null,
+    "read": true,
+    "groupChat": false,
+    "$type": "com.linkedin.voyager.messaging.Conversation",
+    "receipts": [
+      {
+        "fromParticipant": "urn:li:member:249247061",
+        "fromEntity": "urn:li:fs_miniProfile:ACoAAA7bNVUBXo4wls3McYpXWVndS6LXypCdluU",
+        "seenReceipt": {
+          "seenAt": 1659112572413,
+          "eventUrn": "urn:li:fs_event:(2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==,2-MTY1OTExMjU3MjQxM2I4MDkxOC0wMDEmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==)",
+          "$type": "com.linkedin.voyager.messaging.SeenReceipt"
+        },
+        "$type": "com.linkedin.voyager.messaging.ParticipantReceipts"
+      }
+    ],
+    "*participants": [
+      "urn:li:fs_messagingMember:(2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==,ACoAAA7bNVUBXo4wls3McYpXWVndS6LXypCdluU)"
+    ],
+    "contextImage": null,
+    "viewerCurrentParticipant": true,
+    "withNonConnectedCoworker": null,
+    "name": null,
+    "messageRequestState": null,
+    "withNonConnection": false
+  },
+  "messages": [
+    {
+      "reactionSummaries": [],
+      "dashEntityUrn": "urn:li:fsd_message:2-MTY1OTExMjU3MjQxM2I4MDkxOC0wMDEmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==",
+      "quickReplies": null,
+      "eventContent": {
+        "messageBodyRenderFormat": "DEFAULT",
+        "body": "",
+        "attributedBody": {
+          "text": "1",
+          "$type": "com.linkedin.pemberly.text.AttributedText"
+        },
+        "$type": "com.linkedin.voyager.messaging.event.MessageEvent"
+      },
+      "inlineWarning": null,
+      "*from": "urn:li:fs_messagingMember:(2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==,ACoAAA7bNVUBXo4wls3McYpXWVndS6LXypCdluU)",
+      "originToken": null,
+      "backendUrn": "urn:li:messagingMessage:2-MTY1OTExMjU3MjQxM2I4MDkxOC0wMDEmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==",
+      "obfuscatedMessageWarning": null,
+      "expiresAt": null,
+      "$type": "com.linkedin.voyager.messaging.Event",
+      "createdAt": 1659112572596,
+      "quickReplyRecommendations": null,
+      "inlineWarningDismissCTAText": null,
+      "entityUrn": "urn:li:fs_event:(2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==,2-MTY1OTExMjU3MjQxM2I4MDkxOC0wMDEmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==)",
+      "subtype": "MEMBER_TO_MEMBER",
+      "previousEventInConversation": "urn:li:fs_event:(2-ZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==,2-MTY1OTExMjUyNjk0NmI0Mzc4Ny0wMDEmZTQ4ODk3NzEtMDQ5Yy00YmI4LThkMzYtZmJiMGZmMTEzMzRjXzAxMg==)",
+      "reportSpamCTAText": null,
+      "viewObfuscatedMessageCTAText": null
+    }
+  ]
+}

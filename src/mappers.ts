@@ -5,6 +5,11 @@ import { LinkedInAPITypes } from './constants'
 import { urnID, getFeedUpdateURL, getParticipantID } from './util'
 
 type LIMappedThread = { conversation: any, messages: any[] }
+type LIMessage = any
+
+export type ParticipantSeenMap = Map<string, [string, Date]>
+// threadID: participantID: [messageID, Date]
+export type ThreadSeenMap = Map<string, ParticipantSeenMap>
 
 const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.picture?.rootUrl
   ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment
@@ -23,28 +28,15 @@ export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
   displayText: liCurrentUser?.publicIdentifier,
 })
 
-const mapMessageReceipt = (message: Message, liReceipts: any[], groupChat = false): Message => {
-  if (!liReceipts || !liReceipts?.length) return message
-
-  const messageReceipt = liReceipts.find(receipt => {
-    const { eventUrn } = receipt.seenReceipt
-    return eventUrn.includes(urnID(message.id))
-  })
-
-  const previousSeenState = typeof message.seen === 'object' ? message.seen : {}
-  const newSeenState = messageReceipt
-    ? { [urnID(messageReceipt.fromEntity)]: new Date(messageReceipt.seenReceipt.seenAt) }
-    : {}
-
-  return {
-    ...message,
-    seen: groupChat
-      ? {
-        ...previousSeenState,
-        ...newSeenState,
-      }
-      : Object.keys(newSeenState).length > 0,
+const mapMessageSeen = (messageID: string, seenMap: ParticipantSeenMap): MessageSeen => {
+  if (!seenMap) return
+  const seen: Record<string, Date> = {}
+  for (const [userID, [seenMessageID, seenAt]] of seenMap.entries()) {
+    if (messageID === seenMessageID) {
+      seen[userID] = new Date(seenAt)
+    }
   }
+  return seen
 }
 
 const mapParticipant = (entity: any): Participant => ({
@@ -58,22 +50,22 @@ const mapParticipant = (entity: any): Participant => ({
   },
 })
 
-const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, currentUserID: string): Thread => {
+const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, currentUserID: string, threadSeenMap: ThreadSeenMap): Thread => {
   const { conversation, messages: liMessages = [] } = thread
 
   const participantsItems = (conversation['*participants'] as string[])?.map(pid => {
     const entity = allProfiles[getParticipantID(pid)]
-    // if (!entity) texts.log('404 entity', pid, getParticipantID(pid))
     return entity ? mapParticipant(entity) : undefined
   }).filter(Boolean) || []
 
+  const id = urnID(conversation.entityUrn)
+
   const messages = (liMessages as any[])
-    ?.map<Message>(liMessage => mapMessage(liMessage, currentUserID))
-    .map(message => mapMessageReceipt(message, conversation.receipts, conversation.groupChat)) || []
+    ?.map<Message>(liMessage => mapMessage(liMessage, currentUserID, threadSeenMap.get(id))) || []
 
   return {
     _original: JSON.stringify(thread),
-    id: urnID(conversation.entityUrn),
+    id,
     type: conversation.groupChat ? 'group' : 'single',
     title: conversation.name,
     isUnread: !conversation.read,
@@ -86,10 +78,10 @@ const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, cur
   }
 }
 
-export const mapThreads = (liResponse: any, currentUserID: string): Thread[] => {
+export const groupEntities = (liResponse: any) => {
   const { included = [] } = liResponse || {}
 
-  const allProfiles = {}
+  const allProfiles: Record<string, any> = {}
   const allConversations = []
   const allEvents = []
   for (const item of included) {
@@ -116,8 +108,11 @@ export const mapThreads = (liResponse: any, currentUserID: string): Thread[] => 
       conversations.push({ conversation, messages })
     }
   }
+  return { conversations, allProfiles }
+}
 
-  const threads = conversations.map(thread => mapThread(thread, allProfiles, currentUserID))
+export const mapThreads = (conversations: LIMappedThread[], allProfiles: Record<string, any>, currentUserID: string, threadSeenMap: ThreadSeenMap): Thread[] => {
+  const threads = conversations.map(thread => mapThread(thread, allProfiles, currentUserID, threadSeenMap))
   return orderBy(threads, 'timestamp', 'desc')
 }
 
@@ -187,11 +182,6 @@ const mapFeedUpdate = (liFeedUpdate: string): MessageLink => ({
   title: 'Feed Update',
 })
 
-export const mapMessageSeenState = (message: Message, seenReceipt: Map<string, MessageSeen>): Message => ({
-  ...message,
-  seen: seenReceipt.get(message.id) || message.seen,
-})
-
 const mapTextAttributes = (liTextAttributes: any[]): TextAttributes => {
   const entities = liTextAttributes.map<TextEntity>(liEntity => {
     /**
@@ -251,9 +241,9 @@ const getParticipantChangeText = (liMsg: any) => {
   if (liMsg.subtype !== 'PARTICIPANT_CHANGE') return undefined
 
   const changeEvent = liMsg.eventContent['com.linkedin.voyager.messaging.event.ParticipantChangeEvent']
-  const removedNames = liMsg.eventContent['*removedParticipants']?.map(p => `{{${getParticipantID(p)}}}`)
+  const removedNames = (liMsg.eventContent['*removedParticipants'] as any[])?.map(p => `{{${getParticipantID(p)}}}`)
     || changeEvent?.removedParticipants?.map(extractName)
-  const addedNames = liMsg.eventContent['*addedParticipants']?.map(p => `{{${getParticipantID(p)}}}`)
+  const addedNames = (liMsg.eventContent['*addedParticipants'] as any[])?.map(p => `{{${getParticipantID(p)}}}`)
     || changeEvent?.addedParticipants?.map(extractName)
 
   if (removedNames?.length > 0 && addedNames?.length > 0) {
@@ -276,7 +266,7 @@ const mapMediaCustomAttachment = (liCustomContent: any): MessageAttachment[] => 
   }]
 }
 
-const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string): Message => {
+const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: string, participantSeenMap: ParticipantSeenMap): Message => {
   const { reactionSummaries, subtype } = liMessage
   // liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] is present in real time events
   const eventContent = liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] || liMessage.eventContent
@@ -320,16 +310,16 @@ const mapMessageInner = (liMessage: any, currentUserID: string, senderID: string
     linkedMessage,
     textAttributes,
     isAction,
+    seen: mapMessageSeen(liMessage.dashEntityUrn, participantSeenMap),
   }
 }
 
-export const mapMessage = (liMessage: any, currentUserID: string): Message => {
+export const mapMessage = (liMessage: any, currentUserID: string, participantSeenMap: ParticipantSeenMap): Message => {
   const senderID = getParticipantID(liMessage['*from'])
-  return mapMessageInner(liMessage, currentUserID, senderID)
+  return mapMessageInner(liMessage, currentUserID, senderID, participantSeenMap)
 }
 
-export const mapNewMessage = (liMessage: any, currentUserID: string): Message => {
+export const mapNewMessage = (liMessage: any, currentUserID: string, participantSeenMap: ParticipantSeenMap): Message => {
   const senderID = getParticipantID(liMessage.from[LinkedInAPITypes.member].entityUrn)
-
-  return mapMessageInner(liMessage, currentUserID, senderID)
+  return mapMessageInner(liMessage, currentUserID, senderID, participantSeenMap)
 }

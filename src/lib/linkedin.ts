@@ -93,11 +93,9 @@ export default class LinkedInAPI {
 
   getCurrentUser = async () => {
     const url = LinkedInURLs.API_ME
-
     const response = await this.fetch({ method: 'GET', url })
 
     const miniProfile = response?.included?.find(r => r.$type === LinkedInAPITypes.miniProfile)
-
     return miniProfile
   }
 
@@ -296,7 +294,7 @@ export default class LinkedInAPI {
     return promise
   }
 
-  deleteMessage = async (threadID: string, messageID: string): Promise<boolean> => {
+  deleteMessage = async (threadID: string, messageID: string) => {
     const messageEventId = urnID(messageID)
 
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodeURIComponent(threadID)}/events/${encodeURIComponent(messageEventId)}`
@@ -311,7 +309,7 @@ export default class LinkedInAPI {
     })
     // In case this works this should be an empty response, in case this throws an error it includes a 'data' field
     // with information of the error
-    return !res?.data
+    if (res?.data) throw Error(JSON.stringify(res.data))
   }
 
   createThread = async (profileIds: string[], message?: string) => {

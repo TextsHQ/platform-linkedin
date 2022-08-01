@@ -1,4 +1,4 @@
-import { Message, ServerEvent, ServerEventType, texts, UNKNOWN_DATE, UpsertStateSyncEvent, UpdateStateSyncEvent } from '@textshq/platform-sdk'
+import { Message, ServerEvent, ServerEventType, texts, UpsertStateSyncEvent, UpdateStateSyncEvent, PartialWithID, Thread, MessageID } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
 import { REQUEST_HEADERS, LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
@@ -47,7 +47,7 @@ export default class LinkedInRealTime {
 
   private parseJSON(json: any): ServerEvent[] {
     if (!json) return
-    // texts.log(new Date(), JSON.stringify(json))
+    // texts.log('[li]', new Date(), json?.['com.linkedin.realtimefrontend.DecoratedEvent']?.topic, JSON.stringify(json))
 
     if (json['com.linkedin.realtimefrontend.Heartbeat']) {
       this.lastHeartbeat = new Date()
@@ -67,7 +67,7 @@ export default class LinkedInRealTime {
         const { entityUrn = '', originToken } = payload.event
         const threadID = eventUrnToThreadID(entityUrn)
 
-        const messages = [mapNewMessage(payload.event, this.papi.user.id)]
+        const messages = [mapNewMessage(payload.event, this.papi.user.id, this.papi.threadSeenMap.get(threadID))]
 
         if (!this.resolveSendMessage(originToken, messages)) {
           return [{
@@ -127,17 +127,18 @@ export default class LinkedInRealTime {
         }
         if (!conversation) return
 
-        const firstEvent: UpdateStateSyncEvent = {
+        const partialThread: PartialWithID<Thread> = {
+          id: threadID,
+          isUnread: !conversation.read,
+        }
+        const updateEvent: UpdateStateSyncEvent = {
           type: ServerEventType.STATE_SYNC,
           mutationType: 'update',
           objectName: 'thread',
           objectIDs: {},
-          entries: [{
-            id: threadID,
-            isUnread: !conversation.read,
-          }],
+          entries: [partialThread],
         }
-        const serverEvents: ServerEvent[] = [firstEvent]
+        const serverEvents: ServerEvent[] = [updateEvent]
 
         if (payload.action === 'UPDATE') {
           const participants = (conversation.participants as any[])
@@ -145,15 +146,30 @@ export default class LinkedInRealTime {
               const { miniProfile: eventMiniProfile } = participant[LinkedInAPITypes.member] || {}
               return mapMiniProfile({
                 ...eventMiniProfile,
-                picture: {
-                  ...(eventMiniProfile?.picture?.['com.linkedin.common.VectorImage'] || {}),
-                },
+                picture: { ...(eventMiniProfile?.picture?.['com.linkedin.common.VectorImage'] || {}) },
               })
             })
-          Object.assign(firstEvent.entries[0], {
+          Object.assign(partialThread, {
             isArchived: conversation.archived,
             mutedUntil: conversation.muted ? 'forever' : undefined,
           })
+
+          // const seenMap: Record<MessageID, Record<string, Date>> = {}
+          // for (const receipt of conversation.receipts) {
+          //   const participantID = urnID(receipt.fromEntity)
+          //   const messageID = eventUrnToMessageID(receipt.seenReceipt.eventUrn)
+          //   const { seenAt } = receipt.seenReceipt
+          //   seenMap[messageID] = { ...seenMap[messageID], [participantID]: new Date(seenAt) }
+          //   this.papi.updateThreadSeenMap(threadID, participantID, messageID, seenAt)
+          // }
+          // serverEvents.push({
+          //   type: ServerEventType.STATE_SYNC,
+          //   mutationType: 'update',
+          //   objectName: 'message',
+          //   objectIDs: { threadID },
+          //   entries: Object.entries(seenMap).map(([id, seen]) => ({ id, seen })),
+          // })
+
           // todo delete existing participants
           serverEvents.push({
             type: ServerEventType.STATE_SYNC,
@@ -174,17 +190,14 @@ export default class LinkedInRealTime {
         const threadID = eventUrnToThreadID(eventUrn)
         const messageID = eventUrnToMessageID(eventUrn)
 
-        this.papi.updateSeenReceipt(messageID, { [participantID]: new Date(seenAt) })
+        this.papi.updateThreadSeenMap(threadID, participantID, messageID, seenAt)
 
         return [{
           type: ServerEventType.STATE_SYNC,
-          mutationType: 'update',
-          objectName: 'message',
-          objectIDs: { messageID, threadID },
-          entries: [{
-            id: messageID,
-            seen: { [participantID]: UNKNOWN_DATE },
-          }],
+          mutationType: 'upsert',
+          objectName: 'message_seen',
+          objectIDs: { threadID, messageID },
+          entries: [{ [participantID]: new Date(seenAt) }],
         }]
       }
 
