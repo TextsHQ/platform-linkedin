@@ -45,7 +45,6 @@ const info: PlatformInfo = {
   },
   deletionMode: MessageDeletionMode.DELETE_FOR_EVERYONE,
   attributes: new Set([
-    Attribute.NO_CACHE,
     Attribute.SUPPORTS_MARK_AS_UNREAD,
     Attribute.SUPPORTS_DELETE_THREAD,
     Attribute.SUPPORTS_REQUESTS_INBOX,
