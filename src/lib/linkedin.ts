@@ -565,7 +565,7 @@ export default class LinkedInAPI {
       LEADING_ORDINAL,
       Buffer.from(['pushNotificationEnabled'.length]),
       Buffer.from('pushNotificationEnabled'),
-      TRUE,
+      register ? TRUE : FALSE,
     ])
 
     const res = await this.fetchRaw(`${LinkedInURLs.API_BASE}/voyagerNotificationsDashPushRegistration?action=${register ? 'register' : 'deregister'}`, {
