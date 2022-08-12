@@ -71,8 +71,9 @@ export default class LinkedInAPI {
     }
     if (!res.body?.length) return
     if (res.body[0] === '<') {
-      texts.log(url, res.body)
-      throw Error('got html instead of json')
+      texts.log(res.statusCode, url, res.body)
+      const [, title] = /<title[^>]*>(.*?)<\/title>/.exec(res.body) || []
+      throw Error(`expected json, got html, status code=${res.statusCode}, title=${title}`)
     }
     return JSON.parse(res.body)
   }
