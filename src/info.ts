@@ -49,7 +49,6 @@ const info: PlatformInfo = {
     Attribute.SUPPORTS_DELETE_THREAD,
     Attribute.SUPPORTS_REQUESTS_INBOX,
     Attribute.SUPPORTS_ARCHIVE,
-    Attribute.SUPPORTS_DELETE_THREAD,
     Attribute.SUPPORTS_EDIT_MESSAGE,
     Attribute.SUPPORTS_PRESENCE,
     Attribute.SUBSCRIBE_TO_THREAD_SELECTION,
