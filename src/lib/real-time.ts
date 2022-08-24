@@ -228,7 +228,8 @@ export default class LinkedInRealTime {
       'accept-language': 'en',
       'cache-control': 'no-cache',
       'user-agent': texts.constants.USER_AGENT,
-      'x-li-accept': 'application/vnd.linkedin.normalized+json+2.1',
+      // this changes payload format:
+      // 'x-li-accept': 'application/vnd.linkedin.normalized+json+2.1',
       'x-li-lang': 'en_US',
       'x-li-page-instance': 'urn:li:page:messaging_thread;' + randomUUID(),
       'x-li-realtime-session': randomUUID(),
