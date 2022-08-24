@@ -3,6 +3,7 @@ import { ActivityType, FetchOptions, InboxName, Message, MessageContent, Message
 import { promises as fs } from 'fs'
 import { groupBy } from 'lodash'
 import FormData from 'form-data'
+import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import type { CookieJar } from 'tough-cookie'
 
 import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
@@ -292,7 +293,10 @@ export default class LinkedInAPI {
       searchParams: { action: 'create' },
     })
     if (!res?.data?.value?.createdAt) throw Error(JSON.stringify(res))
-    return promise
+    return Promise.race([
+      promise,
+      setTimeoutAsync(5_000).then(() => true), // workaround to not have send failure if EventSource is disconnected
+    ])
   }
 
   deleteMessage = async (threadID: string, messageID: string) => {
