@@ -1,10 +1,12 @@
-import { Message, ServerEvent, ServerEventType, texts, UpsertStateSyncEvent, UpdateStateSyncEvent, PartialWithID, Thread, MessageID } from '@textshq/platform-sdk'
+import { randomUUID } from 'crypto'
+import { Message, ServerEvent, ServerEventType, texts, UpsertStateSyncEvent, UpdateStateSyncEvent, PartialWithID, Thread } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
-import { REQUEST_HEADERS, LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
+import { LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
 import { mapNewMessage, mapMiniProfile } from '../mappers'
 import { urnID, eventUrnToMessageID, eventUrnToThreadID } from '../util'
 import type PAPI from '../api'
+import { REQUEST_HEADERS } from './linkedin'
 
 const HEARTBEAT_CHECK_INTERVAL_MS = 30 * 1_000 // 30 seconds
 
@@ -24,9 +26,8 @@ export default class LinkedInRealTime {
     }
   }
 
-  constructor(
-    private readonly papi: InstanceType<typeof PAPI>,
-  ) {
+  constructor(private readonly papi: InstanceType<typeof PAPI>) {
+    clearInterval(this.heartbeatCheckerInterval)
     this.heartbeatCheckerInterval = setInterval(this.checkLastHeartbeat, HEARTBEAT_CHECK_INTERVAL_MS)
   }
 
@@ -221,10 +222,23 @@ export default class LinkedInRealTime {
 
   setup = async (): Promise<void> => {
     const headers = {
-      ...REQUEST_HEADERS,
+      'csrf-token': await this.papi.api.getCSRFToken(),
       Cookie: this.papi.api.cookieJar.getCookieStringSync(LinkedInURLs.HOME),
+      accept: 'text/event-stream',
+      'accept-language': 'en',
+      'cache-control': 'no-cache',
+      'user-agent': texts.constants.USER_AGENT,
+      'x-li-accept': 'application/vnd.linkedin.normalized+json+2.1',
+      'x-li-lang': 'en_US',
+      'x-li-page-instance': 'urn:li:page:messaging_thread;' + randomUUID(),
+      'x-li-realtime-session': randomUUID(),
+      'x-li-recipe-accept': 'application/vnd.linkedin.normalized+json+2.1',
+      'x-li-recipe-map': '{"messagingProgressIndicatorTopic":"com.linkedin.voyager.dash.deco.messaging.RealtimeProgressIndicator-1","inAppAlertsTopic":"com.linkedin.voyager.dash.deco.identity.notifications.InAppAlert-47","professionalEventsTopic":"com.linkedin.voyager.dash.deco.events.ProfessionalEventDetailPage-41","topCardLiveVideoTopic":"com.linkedin.voyager.dash.deco.video.TopCardLiveVideo-9"}',
+      'x-li-track': REQUEST_HEADERS['x-li-track'],
+      'x-restli-protocol-version': '2.0.0',
+      Referer: 'https://www.linkedin.com/',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
     }
-    delete headers['accept-encoding']
     this.es?.close()
     this.es = new EventSource(LinkedInURLs.REALTIME, { headers })
     this.es.onopen = () => {

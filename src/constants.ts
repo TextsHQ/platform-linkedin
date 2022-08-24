@@ -1,6 +1,4 @@
-import { SupportedReaction, texts } from '@textshq/platform-sdk'
-
-const { USER_AGENT } = texts.constants
+import type { SupportedReaction } from '@textshq/platform-sdk'
 
 export const supportedReactions: Record<string, SupportedReaction> = {
   '👏': { title: 'Clap', render: '👏' },
@@ -8,20 +6,6 @@ export const supportedReactions: Record<string, SupportedReaction> = {
   '👎': { title: 'Dislike', render: '👎' },
   '😊': { title: 'Smiling', render: '😊' },
   '😞': { title: 'Disappointed', render: '😞' },
-}
-
-export const REQUEST_HEADERS: Record<string, string> = {
-  authority: 'www.linkedin.com',
-  'x-restLi-protocol-version': '2.0.0',
-  'x-li-lang': 'en_US',
-  'user-agent': USER_AGENT,
-  accept: 'application/vnd.linkedin.normalized+json+2.1',
-  'x-li-track': '{"clientVersion":"1.5.*","osName":"web","timezoneOffset":2,"deviceFormFactor":"DESKTOP","mpName":"voyager-web"}',
-  'sec-fetch-site': 'same-origin',
-  'sec-fetch-mode': 'cors',
-  referer: 'https://www.linkedin.com/',
-  'accept-encoding': 'gzip, deflate, br',
-  'accept-language': 'en',
 }
 
 export const LinkedInAuthCookieName = 'li_at'

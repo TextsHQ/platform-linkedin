@@ -6,10 +6,37 @@ import FormData from 'form-data'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import type { CookieJar } from 'tough-cookie'
 
-import { REQUEST_HEADERS, LinkedInURLs, LinkedInAPITypes } from '../constants'
+import { LinkedInURLs, LinkedInAPITypes } from '../constants'
 import { urnID } from '../util'
 import type { SendMessageResolveFunction } from '../api'
 import type { ParticipantsReceiptResponse } from './linkedin.types'
+
+const timezoneOffset = 0
+const timezone = 'Europe/London'
+
+export const REQUEST_HEADERS: Record<string, string> = {
+  'x-restLi-protocol-version': '2.0.0',
+  'x-li-lang': 'en_US',
+  'user-agent': texts.constants.USER_AGENT,
+  accept: 'application/vnd.linkedin.normalized+json+2.1',
+  'x-li-track': JSON.stringify({
+    clientVersion: '1.10.9166',
+    mpVersion: '1.10.9166',
+    osName: 'web',
+    timezoneOffset,
+    timezone,
+    deviceFormFactor: 'DESKTOP',
+    mpName: 'voyager-web',
+    // displayDensity: 2,
+    // displayWidth: 3456,
+    // displayHeight: 2234,
+  }),
+  'sec-fetch-site': 'same-origin',
+  'sec-fetch-mode': 'cors',
+  referer: 'https://www.linkedin.com/',
+  'accept-encoding': 'gzip, deflate, br',
+  'accept-language': 'en',
+}
 
 export default class LinkedInAPI {
   cookieJar: CookieJar
@@ -24,7 +51,7 @@ export default class LinkedInAPI {
     this.cookieJar = cookieJar
   }
 
-  private getCSRFToken = async () => {
+  getCSRFToken = async () => {
     let attempts = 3
     while (--attempts) {
       const cookies = await this.cookieJar.getCookies(LinkedInURLs.HOME)
@@ -591,8 +618,8 @@ export default class LinkedInAPI {
           deviceType: 'android',
           appId: 'com.linkedin.android',
           deviceId: crypto.randomUUID(),
-          timezoneOffset: 0,
-          timezone: 'Europe/London',
+          timezoneOffset,
+          timezone,
           storeId: 'us_googleplay',
           isAdTrackingLimited: false,
           mpName: 'voyager-android',
