@@ -224,6 +224,7 @@ export default class LinkedInRealTime {
       ...REQUEST_HEADERS,
       Cookie: this.papi.api.cookieJar.getCookieStringSync(LinkedInURLs.HOME),
     }
+    delete headers['accept-encoding']
     this.es?.close()
     this.es = new EventSource(LinkedInURLs.REALTIME, { headers })
     this.es.onopen = () => {
