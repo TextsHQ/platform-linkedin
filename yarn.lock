@@ -744,13 +744,11 @@ __metadata:
   dependencies:
     "@textshq/eslint-config": "https://github.com/TextsHQ/eslint-config"
     "@textshq/platform-sdk": "https://github.com/TextsHQ/platform-sdk#main"
-    "@types/bluebird": ^3.5.36
     "@types/eslint": ^7.2.6
     "@types/eventsource": ^1.1.5
     "@types/lodash": ^4.14.168
     "@types/node": ^17.0.36
     "@types/tough-cookie": ^4.0.0
-    bluebird: ^3.7.2
     eslint: ^7.18.0
     eventsource: ^1.0.7
     jest: ^26.6.0
@@ -815,13 +813,6 @@ __metadata:
   dependencies:
     "@babel/types": ^7.3.0
   checksum: 4e86b3d0ee9fe19bd7e1b523b71ed7cbef0f0fe37158970ef1e6c22da218fef05f79e79b07f2c10dc9bbe3ea9fb7e69dfce9761aff16fb10e891d14cac6d66d4
-  languageName: node
-  linkType: hard
-
-"@types/bluebird@npm:^3.5.36":
-  version: 3.5.36
-  resolution: "@types/bluebird@npm:3.5.36"
-  checksum: efe7484e1f6c3443c083f052efb7688b461a9f43899b1891c10b1faf92e4932d686265d10c3e02b8c8fe0c8c371774e6a55ff6eec5e79525390a1ddeee7eb41b
   languageName: node
   linkType: hard
 
@@ -1603,13 +1594,6 @@ __metadata:
   dependencies:
     tweetnacl: ^0.14.3
   checksum: 4edfc9fe7d07019609ccf797a2af28351736e9d012c8402a07120c4453a3b789a15f2ee1530dc49eee8f7eb9379331a8dd4b3766042b9e502f74a68e7f662291
-  languageName: node
-  linkType: hard
-
-"bluebird@npm:^3.7.2":
-  version: 3.7.2
-  resolution: "bluebird@npm:3.7.2"
-  checksum: 869417503c722e7dc54ca46715f70e15f4d9c602a423a02c825570862d12935be59ed9c7ba34a9b31f186c017c23cac6b54e35446f8353059c101da73eac22ef
   languageName: node
   linkType: hard
 
