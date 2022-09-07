@@ -37,6 +37,7 @@ const info: PlatformInfo = {
       audio: 20 * 1024 * 1024,
       files: 20 * 1024 * 1024,
     },
+    gifMimeType: 'image/gif',
   },
   notifications: {
     android: {
