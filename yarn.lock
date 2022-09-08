@@ -734,7 +734,7 @@ __metadata:
   peerDependencies:
     eslint: ">=7"
     typescript: ">=4"
-  checksum: 35a0963715d9982590dac693a3e2249bb5ebc39da3159d1af803b70e3de319acb91fb239e9d4a704dbbc7d2e5b490be4f0390c2adab90987119d3301c4fec3a1
+  checksum: 743ed20dbdec002eb63ed591736a1f1b5694a013d4b9d345c47379ecfe1e839743ceac008f72baf7788b54f043b4467e8e20d653900d08f9de53e81caf5b92b1
   languageName: node
   linkType: hard
 
@@ -764,7 +764,7 @@ __metadata:
   resolution: "@textshq/platform-sdk@https://github.com/TextsHQ/platform-sdk.git#commit=efbe156b9b5408eef035d353455bc06399342b89"
   dependencies:
     qrcode.react: ^3.1.0
-  checksum: 1c53dfa067bbfe88432d2b58a10a13b2b3a485f3ccaa90da1dbcb57ee0c4ca3762934c65118a64185ba52ea27817f7e2143aea3973167afd51d4e07f55e23f94
+  checksum: a413f201c63e8be07897453b5c3feba5ad4e68ffa1b9f7c344bfabad7131f56c6c5b33e5e4be129f8254f4fb16989dd8e806d5c4303d6ea462da8ff3a8e2b10c
   languageName: node
   linkType: hard
 
