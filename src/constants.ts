@@ -29,7 +29,7 @@ export const LinkedInAPITypes = {
   event: 'com.linkedin.voyager.messaging.Event',
 }
 
-export enum Topic {
+export const enum Topic {
   conversationsTopic = 'urn:li-realtime:conversationsTopic:urn:li-realtime:myself',
   messageSeenReceiptsTopic = 'urn:li-realtime:messageSeenReceiptsTopic:urn:li-realtime:myself',
   messagesTopic = 'urn:li-realtime:messagesTopic:urn:li-realtime:myself',

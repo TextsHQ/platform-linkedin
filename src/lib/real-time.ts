@@ -203,6 +203,8 @@ export default class LinkedInRealTime {
       }
 
       case Topic.tabBadgeUpdateTopic: // ignore
+      case Topic.replySuggestionTopicV2: // ignore
+        texts.log('ignored', JSON.stringify(newEvent, null, 2))
         break
 
       case Topic.typingIndicatorsTopic: {
@@ -216,13 +218,13 @@ export default class LinkedInRealTime {
           activityType: ActivityType.TYPING,
           threadID,
           participantID,
-          durationMs: 6000,
+          durationMs: 6_000,
         }]
       }
 
       default: {
         const msg = `unhandled linkedin topic: ${topic}`
-        texts.log(newEvent)
+        texts.log(JSON.stringify(newEvent, null, 2))
         console.error(msg)
         texts.Sentry.captureMessage(msg)
       }
