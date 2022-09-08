@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { Message, ServerEvent, ServerEventType, texts, UpsertStateSyncEvent, UpdateStateSyncEvent, PartialWithID, Thread } from '@textshq/platform-sdk'
+import { Message, ServerEvent, ServerEventType, texts, UpsertStateSyncEvent, UpdateStateSyncEvent, PartialWithID, Thread, ActivityType } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
 
 import { LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
@@ -204,6 +204,21 @@ export default class LinkedInRealTime {
 
       case Topic.tabBadgeUpdateTopic: // ignore
         break
+
+      case Topic.typingIndicatorsTopic: {
+        const { conversation, fromEntity } = payload
+
+        const participantID = urnID(fromEntity)
+        const threadID = urnID(conversation)
+
+        return [{
+          type: ServerEventType.USER_ACTIVITY,
+          activityType: ActivityType.TYPING,
+          threadID,
+          participantID,
+          durationMs: 6000,
+        }]
+      }
 
       default: {
         const msg = `unhandled linkedin topic: ${topic}`
