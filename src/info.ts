@@ -17,7 +17,7 @@ const info: PlatformInfo = {
   version: '0.0.1',
   displayName: 'LinkedIn',
   icon,
-  typingDurationMs: 3000,
+  typingDurationMs: 6_000,
   reactions: {
     supported: supportedReactions,
     canReactWithAllEmojis: true,

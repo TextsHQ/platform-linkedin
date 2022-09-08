@@ -5,8 +5,8 @@ import EventSource from 'eventsource'
 import { LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
 import { mapNewMessage, mapMiniProfile } from '../mappers'
 import { urnID, eventUrnToMessageID, eventUrnToThreadID } from '../util'
-import type PAPI from '../api'
 import { REQUEST_HEADERS } from './linkedin'
+import type PAPI from '../api'
 
 const HEARTBEAT_CHECK_INTERVAL_MS = 30 * 1_000 // 30 seconds
 
