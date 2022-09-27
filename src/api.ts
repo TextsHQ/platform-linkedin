@@ -1,4 +1,4 @@
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, MessageSeen } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, GetAssetOptions, AssetInfo, NotificationsInfo } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import { groupEntities, mapCurrentUser, mapMessage, mapMiniProfile, mapThreads, ParticipantSeenMap, ThreadSeenMap } from './mappers'
@@ -200,10 +200,23 @@ export default class LinkedIn implements PlatformAPI {
     await this.api.toggleArchiveThread(threadID, archived)
   }
 
-  getAsset = async (_, type: string, uri: string) => {
+  getAsset = async (opts: GetAssetOptions, type: string, urlHex: string) => {
     if (type !== 'proxy') return
-    const url = Buffer.from(uri, 'hex').toString()
-    return this.api.fetchStream({ url })
+    const url = Buffer.from(urlHex, 'hex').toString()
+    const headers = opts?.range ? { Range: opts.range ? `bytes=${opts.range.start ?? ''}-${opts.range.end ?? ''}` : undefined } : {}
+    return this.api.fetchStream({ url, headers })
+  }
+
+  getAssetInfo = async (opts: GetAssetOptions, type: string, urlHex: string): Promise<AssetInfo> => {
+    if (type !== 'proxy') return
+    const url = Buffer.from(urlHex, 'hex').toString()
+    const headers = { Range: 'bytes=0-1' }
+    const res = await this.api.fetchRaw(url, { method: 'GET', headers })
+    console.log(opts, url, res.headers, +res.headers['content-range'].split('/', 2).pop())
+    return {
+      contentLength: +res.headers['content-range'].split('/', 2).pop(),
+      contentType: res.headers['content-type'],
+    }
   }
 
   addParticipant = (threadID: string, participantID: string) => this.api.changeParticipants(threadID, participantID, 'add')
