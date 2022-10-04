@@ -1,9 +1,10 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen, UNKNOWN_DATE } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
-import type { GraphQLMessage, MessagesGraphQLResponse } from './lib/types'
 import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity } from './util'
+
+import type { GraphQLMessage } from './lib/types'
 
 type LIMappedThread = { conversation: any, messages: any[] }
 type LIMessage = any
@@ -416,7 +417,7 @@ export const mapGraphQLMessage = (
     attachments,
     seen,
     /** We don't have editedAt with the newest graphql type */
-    editedTimestamp: message.messageBodyRenderFormat === 'EDITED' ? new Date() : undefined,
+    editedTimestamp: message.messageBodyRenderFormat === 'EDITED' ? UNKNOWN_DATE : undefined,
     isDeleted: message.messageBodyRenderFormat === 'RECALLED',
   }
 }
