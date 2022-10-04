@@ -1,7 +1,7 @@
 import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, User, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, MessageSeen } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
-import { groupEntities, mapCurrentUser, mapMessage, mapMiniProfile, mapThreads, ParticipantSeenMap, ThreadSeenMap } from './mappers'
+import { groupEntities, mapCurrentUser, mapMiniProfile, mapThreads, ParticipantSeenMap, ThreadSeenMap } from './mappers'
 import LinkedInAPI from './lib/linkedin'
 import LinkedInRealTime from './lib/real-time'
 import { LinkedInAuthCookieName } from './constants'
@@ -144,7 +144,12 @@ export default class LinkedIn implements PlatformAPI {
     const { cursor } = pagination ?? {}
     const createdBefore = +cursor || Date.now()
 
-    const { messages: items, prevCursor } = await this.api.getMessages(threadID, this.user?.id, createdBefore)
+    const { messages: items, prevCursor } = await this.api.getMessages({
+      threadID,
+      currentUserID: this.user?.id,
+      createdBefore,
+      threadParticipantsSeen: this.threadSeenMap
+    })
 
     return {
       items,

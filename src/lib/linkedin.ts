@@ -4,13 +4,14 @@ import crypto from 'crypto'
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes } from '../constants'
+import { urnID, encodeLinkedinUriComponent } from '../util'
 import { mapGraphQLMessage } from '../mappers'
 import { promises as fs } from 'fs'
-import { urnID, encodeLinkedinUriComponent } from '../util'
 
-import type { SendMessageResolveFunction } from '../api'
+import type { MessagesByAnchorTimestamp, MessagesGraphQLResponse } from './types'
 import type { ParticipantsReceiptResponse } from './types/linkedin.types'
-import type { MessagesByAnchorTimestamp, MessagesByConversation, MessagesGraphQLResponse } from './types'
+import type { SendMessageResolveFunction } from '../api'
+import type { ThreadSeenMap } from '../mappers'
 import type { CookieJar } from 'tough-cookie'
 
 const timezoneOffset = 0
@@ -131,16 +132,19 @@ export default class LinkedInAPI {
     return miniProfile
   }
 
-  getMessages = async (threadID: string, currentUserID: string, createdBefore: number): Promise<{ messages: Message[], prevCursor: string | undefined }> => {
+  getMessages = async ({
+    threadID,
+    currentUserID,
+    createdBefore,
+    threadParticipantsSeen = new Map(),
+  }: {
+    threadID: string,
+    currentUserID: string,
+    createdBefore: number,
+    threadParticipantsSeen?: ThreadSeenMap
+  }): Promise<{ messages: Message[], prevCursor: string | undefined }> => {
     const messageConversationUrn = `(urn:li:fsd_profile:${currentUserID},${threadID})`
     const conversationUrn = `:li:msg_conversation:${messageConversationUrn}`
-
-    // const isCursorOnlyNumber = /^[0-9]+$/.test(createdBefore)
-    // const shouldUseByTimestampRecipe = !createdBefore || isCursorOnlyNumber
-
-    // const pagination = shouldUseByTimestampRecipe
-    //   ? `countBefore:20,countAfter:0,deliveredAt:${Date.now()}`
-    //   : `count:20,prevCursor:${encodeLinkedinUriComponent(previousCursor)}`
     const pagination = `countBefore:20,countAfter:0,deliveredAt:${createdBefore}`
 
     const queryParams = {
@@ -163,7 +167,7 @@ export default class LinkedInAPI {
     const messages = responseBody?.elements || []
 
     return {
-      messages: messages.map(message => mapGraphQLMessage(message, currentUserID)),
+      messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen)),
       prevCursor: responseBody?.metadata.prevCursor || undefined
     }
   }
