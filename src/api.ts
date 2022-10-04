@@ -144,16 +144,11 @@ export default class LinkedIn implements PlatformAPI {
     const { cursor } = pagination ?? {}
     const createdBefore = +cursor || Date.now()
 
-    const messages = await this.api.getMessages(threadID, createdBefore)
-    const currentUserId = this.user.id
-
-    const items = (messages.events as any[])
-      .map<Message>(message => mapMessage(message, currentUserId, this.threadSeenMap.get(threadID)))
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+    const { messages: items, prevCursor } = await this.api.getMessages(threadID, this.user?.id, createdBefore)
 
     return {
       items,
-      hasMore: items.length > 0,
+      hasMore: !!items.length || !!prevCursor,
     }
   }
 

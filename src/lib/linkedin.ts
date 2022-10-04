@@ -1,15 +1,18 @@
-import crypto from 'crypto'
-import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
-import { promises as fs } from 'fs'
-import { groupBy } from 'lodash'
 import FormData from 'form-data'
-import { setTimeout as setTimeoutAsync } from 'timers/promises'
-import type { CookieJar } from 'tough-cookie'
+import crypto from 'crypto'
 
-import { LinkedInURLs, LinkedInAPITypes } from '../constants'
+import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
+import { setTimeout as setTimeoutAsync } from 'timers/promises'
+import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes } from '../constants'
+import { encodeLinkedinUriComponent } from './utils'
+import { mapGraphQLMessage } from '../mappers'
+import { promises as fs } from 'fs'
 import { urnID } from '../util'
+
 import type { SendMessageResolveFunction } from '../api'
-import type { ParticipantsReceiptResponse } from './linkedin.types'
+import type { ParticipantsReceiptResponse } from './types/linkedin.types'
+import type { MessagesByAnchorTimestamp, MessagesByConversation, MessagesGraphQLResponse } from './types'
+import type { CookieJar } from 'tough-cookie'
 
 const timezoneOffset = 0
 const timezone = 'Europe/London'
@@ -90,6 +93,7 @@ export default class LinkedInAPI {
       headers: {
         ...REQUEST_HEADERS,
         ...json ? { 'content-type': 'application/json' } : {},
+        ...(headers || {}),
       },
     }
 
@@ -128,20 +132,40 @@ export default class LinkedInAPI {
     return miniProfile
   }
 
-  getMessages = async (threadID: string, createdBefore: number) => {
-    const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
-    const queryParams = { keyVersion: 'LEGACY_INBOX', createdBefore }
+  getMessages = async (threadID: string, currentUserID: string, createdBefore: number): Promise<{ messages: Message[], prevCursor: string | undefined }> => {
+    const messageConversationUrn = `(urn:li:fsd_profile:${currentUserID},${threadID})`
+    const conversationUrn = `:li:msg_conversation:${messageConversationUrn}`
 
-    const response = await this.fetch({ url, method: 'GET', searchParams: queryParams })
-    const { included = [] } = response
-    const grouped = groupBy(included, '$type')
+    // const isCursorOnlyNumber = /^[0-9]+$/.test(createdBefore)
+    // const shouldUseByTimestampRecipe = !createdBefore || isCursorOnlyNumber
 
-    const { miniProfile: miniProfileType, member: memberType, event: eventType } = LinkedInAPITypes
+    // const pagination = shouldUseByTimestampRecipe
+    //   ? `countBefore:20,countAfter:0,deliveredAt:${Date.now()}`
+    //   : `count:20,prevCursor:${encodeLinkedinUriComponent(previousCursor)}`
+    const pagination = `countBefore:20,countAfter:0,deliveredAt:${createdBefore}`
+
+    const queryParams = {
+      variables: `(conversationUrn:urn${encodeLinkedinUriComponent(conversationUrn)},${pagination})`,
+      queryId: GraphQLRecipes.messages.getMessagesByAnchorTimestamp,
+    }
+
+    const url = `${LinkedInURLs.API_MESSAGING_GRAPHQL}?queryId=${queryParams.queryId}&variables=${queryParams.variables}`
+
+    const { data: response } = await this.fetch<MessagesGraphQLResponse>({
+      url,
+      method: 'GET',
+      headers: {
+        'dnt': '1',
+        'accept': 'application/graphql',
+      }
+    })
+
+    const responseBody = (response as MessagesByAnchorTimestamp).messengerMessagesByAnchorTimestamp
+    const messages = responseBody?.elements || []
 
     return {
-      members: grouped[memberType] || [],
-      entities: grouped[miniProfileType] || [],
-      events: grouped[eventType] || [],
+      messages: messages.map(message => mapGraphQLMessage(message, currentUserID)),
+      prevCursor: responseBody?.metadata.prevCursor || undefined
     }
   }
 
