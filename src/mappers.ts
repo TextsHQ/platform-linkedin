@@ -364,16 +364,43 @@ const mapGraphQLReaction = (
 })
 
 const mapGraphQLAttributes = (attributes: GraphQLMessage['body']['attributes']): TextAttributes => {
-  return [] as TextAttributes
+  const entities = attributes.map(attribute => ({
+      from: attribute.start,
+      to: attribute.start + attribute.length,
+      bold: !!attribute.attributeKind.bold,
+      italic: !!attribute.attributeKind.italic,
+      underline: !!attribute.attributeKind.underline,
+      mentionedUser: !!attribute.attributeKind.entity
+        ? { id: urnID(attribute.attributeKind.entity.urn) }
+        : undefined
+  } as TextEntity))
+
+  return { entities }
 }
 
-export const mapGraphQLMessage = (message: GraphQLMessage, currentUserID: string): Message => {
+export const mapGraphQLMessage = (
+  message: GraphQLMessage,
+  currentUserID: string,
+  threadSeenMap: ThreadSeenMap
+): Message => {
   const textAttributes = mapGraphQLAttributes(message.body.attributes || [])
   const senderID = urnID(message.sender.hostIdentityUrn)
   const reactions = (message.reactionSummaries || []).map(reaction => mapGraphQLReaction(reaction, { currentUserID, participantID: senderID }))
 
   const isAction = message.body?._type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent'
   const attachments = mapAttachments(message.renderContent)
+
+  const conversationId = extractSecondEntity(message.conversation.entityUrn)
+  const participantSeenMap = threadSeenMap.get(conversationId)
+  /**
+   * @FIXME
+   *  This needs to be fixed once we migrate seen response to graphql.
+   *  We are getting seen status from conversation's endpoint instead of graphql, so we convert
+   *  message id to "old" message entityUrn (adding 'fsd_message' prefix).
+   */
+  const messageUrn = urnID(message.backendUrn)
+  const oldMessageEntityUrn = `urn:li:fsd_message:${messageUrn}`
+  const seen = participantSeenMap ? mapMessageSeen(oldMessageEntityUrn, participantSeenMap) : undefined
 
   return {
     _original: JSON.stringify(message),
@@ -387,6 +414,7 @@ export const mapGraphQLMessage = (message: GraphQLMessage, currentUserID: string
     isAction,
     reactions,
     attachments,
+    seen,
     /** We don't have editedAt with the newest graphql type */
     editedTimestamp: message.messageBodyRenderFormat === 'EDITED' ? new Date() : undefined,
     isDeleted: message.messageBodyRenderFormat === 'RECALLED',
