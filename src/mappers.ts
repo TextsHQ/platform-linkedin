@@ -2,7 +2,8 @@ import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Messa
 import { orderBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
-import { urnID, getFeedUpdateURL, getParticipantID } from './util'
+import type { GraphQLMessage, MessagesGraphQLResponse } from './lib/types'
+import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity } from './util'
 
 type LIMappedThread = { conversation: any, messages: any[] }
 type LIMessage = any
@@ -170,8 +171,9 @@ const mapMediaAudio = (liMediaAttachment: any): MessageAttachment => ({
   isVoiceNote: true,
 })
 
-const mapMediaAttachments = (liAttachments: any): MessageAttachment[] => {
+const mapMediaAttachments = (liAttachments: any[], extras: { seen?: ParticipantSeenMap, currentUserID?: string } = {}): MessageAttachment[] => {
   if (!liAttachments?.length) return []
+
   const audios = liAttachments.filter(({ mediaType }) => mediaType === 'AUDIO')
 
   return [...audios?.map(mapMediaAudio)]
@@ -284,7 +286,7 @@ const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: 
 
   const attachments = [
     ...((liAttachments as any[])?.map(liAttachment => mapAttachment(liAttachment)).filter(Boolean) || []),
-    ...(mapMediaAttachments(mediaAttachments) || []),
+    ...(mapMediaAttachments(mediaAttachments, { seen: participantSeenMap, currentUserID }) || []),
     ...(mapMediaCustomAttachment(customContent) || []),
   ]
 
@@ -295,7 +297,7 @@ const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: 
 
   return {
     _original: JSON.stringify(liMessage),
-    id: liMessage.dashEntityUrn,
+    id: liMessage.backendUrn || liMessage.dashEntityUrn,
     cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody?.text || customContent?.body || participantChangeText,
@@ -323,3 +325,71 @@ export const mapNewMessage = (liMessage: any, currentUserID: string, participant
   const senderID = getParticipantID(liMessage.from[LinkedInAPITypes.member].entityUrn)
   return mapMessageInner(liMessage, currentUserID, senderID, participantSeenMap)
 }
+
+const mapVideo = (video: GraphQLMessage['renderContent'][number]['video']): MessageAttachment => ({
+  id: video.entityUrn,
+  type: MessageAttachmentType.VIDEO,
+  // @FIXME: don't use only first element - check for multiple progressive streams sources
+  srcURL: `asset://$accountID/proxy/${Buffer.from(video.progressiveStreams?.[0]?.streamingLocations?.[0]?.url).toString('hex')}`,
+  size: {
+    width: video.progressiveStreams?.[0]?.width,
+    height: video.progressiveStreams?.[0]?.height,
+  }
+})
+
+const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage']): MessageAttachment => ({
+  id: image.digitalmediaAsset,
+  type: MessageAttachmentType.IMG,
+  srcURL: `asset://$accountID/proxy/${Buffer.from(image.rootUrl).toString('hex')}`,
+})
+
+const mapAttachments = (content: GraphQLMessage['renderContent']): MessageAttachment[] => {
+  const images = content.filter(x => !!x.vectorImage)
+  const videos = content.filter(x => !!x.video)
+
+  return [
+    ...images.map((image) => mapImage(image.vectorImage)),
+    ...videos.map((video) => mapVideo(video.video)),
+  ]
+}
+
+const mapGraphQLReaction = (
+  reaction: GraphQLMessage['reactionSummaries'][number],
+  { currentUserID, participantID }: { currentUserID: string, participantID: string }
+): MessageReaction => ({
+  id: String(`${reaction._type}-${reaction.firstReactedAt}`),
+  reactionKey: reaction?.emoji,
+  participantID: reaction?.viewerReacted ? currentUserID : participantID,
+  emoji: true,
+})
+
+const mapGraphQLAttributes = (attributes: GraphQLMessage['body']['attributes']): TextAttributes => {
+  return [] as TextAttributes
+}
+
+export const mapGraphQLMessage = (message: GraphQLMessage, currentUserID: string): Message => {
+  const textAttributes = mapGraphQLAttributes(message.body.attributes || [])
+  const senderID = urnID(message.sender.hostIdentityUrn)
+  const reactions = (message.reactionSummaries || []).map(reaction => mapGraphQLReaction(reaction, { currentUserID, participantID: senderID }))
+
+  const isAction = message.body?._type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent'
+  const attachments = mapAttachments(message.renderContent)
+
+  return {
+    _original: JSON.stringify(message),
+    id: message.backendUrn,
+    cursor: String(message.deliveredAt),
+    timestamp: new Date(message.deliveredAt),
+    text: message?.body.text || 'This is a message',
+    isSender: senderID === currentUserID,
+    textAttributes,
+    senderID,
+    isAction,
+    reactions,
+    attachments,
+    /** We don't have editedAt with the newest graphql type */
+    editedTimestamp: message.messageBodyRenderFormat === 'EDITED' ? new Date() : undefined,
+    isDeleted: message.messageBodyRenderFormat === 'RECALLED',
+  }
+}
+
