@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen, UNKNOWN_DATE } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Attachment, AttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen, UNKNOWN_DATE } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
@@ -138,15 +138,15 @@ const mapForwardedMessage = (liForwardedMessage: any): MessagePreview => {
   }
 }
 
-const mapAttachment = (liAttachment: any): MessageAttachment => {
+const mapAttachment = (liAttachment: any): Attachment => {
   const { name, reference: ref, mediaType, id, byteSize } = liAttachment
   const reference = typeof ref === 'string' ? ref : ref?.string
 
   const type = (() => {
-    if (mediaType.startsWith('image')) return MessageAttachmentType.IMG
-    if (mediaType.startsWith('video')) return MessageAttachmentType.VIDEO
-    if (mediaType.startsWith('audio')) return MessageAttachmentType.AUDIO
-    return MessageAttachmentType.UNKNOWN
+    if (mediaType.startsWith('image')) return AttachmentType.IMG
+    if (mediaType.startsWith('video')) return AttachmentType.VIDEO
+    if (mediaType.startsWith('audio')) return AttachmentType.AUDIO
+    return AttachmentType.UNKNOWN
   })()
 
   if (typeof reference !== 'string') {
@@ -165,14 +165,14 @@ const mapAttachment = (liAttachment: any): MessageAttachment => {
   }
 }
 
-const mapMediaAudio = (liMediaAttachment: any): MessageAttachment => ({
+const mapMediaAudio = (liMediaAttachment: any): Attachment => ({
   id: liMediaAttachment?.audioMetadata?.urn,
   srcURL: `asset://$accountID/proxy/${Buffer.from(liMediaAttachment?.audioMetadata?.url).toString('hex')}`,
-  type: MessageAttachmentType.AUDIO,
+  type: AttachmentType.AUDIO,
   isVoiceNote: true,
 })
 
-const mapMediaAttachments = (liAttachments: any[], extras: { seen?: ParticipantSeenMap, currentUserID?: string } = {}): MessageAttachment[] => {
+const mapMediaAttachments = (liAttachments: any[], extras: { seen?: ParticipantSeenMap, currentUserID?: string } = {}): Attachment[] => {
   if (!liAttachments?.length) return []
 
   const audios = liAttachments.filter(({ mediaType }) => mediaType === 'AUDIO')
@@ -256,7 +256,7 @@ const getParticipantChangeText = (liMsg: any) => {
   if (addedNames?.length > 0) return `{{sender}} added ${addedNames}`
 }
 
-const mapMediaCustomAttachment = (liCustomContent: any): MessageAttachment[] => {
+const mapMediaCustomAttachment = (liCustomContent: any): Attachment[] => {
   if (liCustomContent?.mediaType !== 'TENOR_GIF') return []
 
   const { media: { gif }, id } = liCustomContent
@@ -265,7 +265,7 @@ const mapMediaCustomAttachment = (liCustomContent: any): MessageAttachment[] => 
     id: `${id}`,
     isGif: true,
     srcURL: gif.url,
-    type: MessageAttachmentType.IMG,
+    type: AttachmentType.IMG,
   }]
 }
 
@@ -327,9 +327,9 @@ export const mapNewMessage = (liMessage: any, currentUserID: string, participant
   return mapMessageInner(liMessage, currentUserID, senderID, participantSeenMap)
 }
 
-const mapVideo = (video: GraphQLMessage['renderContent'][number]['video']): MessageAttachment => ({
+const mapVideo = (video: GraphQLMessage['renderContent'][number]['video']): Attachment => ({
   id: video.entityUrn,
-  type: MessageAttachmentType.VIDEO,
+  type: AttachmentType.VIDEO,
   // @FIXME: don't use only first element - check for multiple progressive streams sources
   srcURL: `asset://$accountID/proxy/${Buffer.from(video.progressiveStreams?.[0]?.streamingLocations?.[0]?.url).toString('hex')}`,
   size: {
@@ -338,13 +338,13 @@ const mapVideo = (video: GraphQLMessage['renderContent'][number]['video']): Mess
   }
 })
 
-const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage']): MessageAttachment => ({
+const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage']): Attachment => ({
   id: image.digitalmediaAsset,
-  type: MessageAttachmentType.IMG,
+  type: AttachmentType.IMG,
   srcURL: `asset://$accountID/proxy/${Buffer.from(image.rootUrl).toString('hex')}`,
 })
 
-const mapAttachments = (content: GraphQLMessage['renderContent']): MessageAttachment[] => {
+const mapAttachments = (content: GraphQLMessage['renderContent']): Attachment[] => {
   const images = content.filter(x => !!x.vectorImage)
   const videos = content.filter(x => !!x.video)
 
