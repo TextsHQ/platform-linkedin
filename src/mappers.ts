@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, MessageAttachment, MessageAttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Attachment, AttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
@@ -136,15 +136,15 @@ const mapForwardedMessage = (liForwardedMessage: any): MessagePreview => {
   }
 }
 
-const mapAttachment = (liAttachment: any): MessageAttachment => {
+const mapAttachment = (liAttachment: any): Attachment => {
   const { name, reference: ref, mediaType, id, byteSize } = liAttachment
   const reference = typeof ref === 'string' ? ref : ref?.string
 
   const type = (() => {
-    if (mediaType.startsWith('image')) return MessageAttachmentType.IMG
-    if (mediaType.startsWith('video')) return MessageAttachmentType.VIDEO
-    if (mediaType.startsWith('audio')) return MessageAttachmentType.AUDIO
-    return MessageAttachmentType.UNKNOWN
+    if (mediaType.startsWith('image')) return AttachmentType.IMG
+    if (mediaType.startsWith('video')) return AttachmentType.VIDEO
+    if (mediaType.startsWith('audio')) return AttachmentType.AUDIO
+    return AttachmentType.UNKNOWN
   })()
 
   if (typeof reference !== 'string') {
@@ -163,14 +163,14 @@ const mapAttachment = (liAttachment: any): MessageAttachment => {
   }
 }
 
-const mapMediaAudio = (liMediaAttachment: any): MessageAttachment => ({
+const mapMediaAudio = (liMediaAttachment: any): Attachment => ({
   id: liMediaAttachment?.audioMetadata?.urn,
   srcURL: `asset://$accountID/proxy/${Buffer.from(liMediaAttachment?.audioMetadata?.url).toString('hex')}`,
-  type: MessageAttachmentType.AUDIO,
+  type: AttachmentType.AUDIO,
   isVoiceNote: true,
 })
 
-const mapMediaAttachments = (liAttachments: any): MessageAttachment[] => {
+const mapMediaAttachments = (liAttachments: any): Attachment[] => {
   if (!liAttachments?.length) return []
   const audios = liAttachments.filter(({ mediaType }) => mediaType === 'AUDIO')
 
@@ -253,7 +253,7 @@ const getParticipantChangeText = (liMsg: any) => {
   if (addedNames?.length > 0) return `{{sender}} added ${addedNames}`
 }
 
-const mapMediaCustomAttachment = (liCustomContent: any): MessageAttachment[] => {
+const mapMediaCustomAttachment = (liCustomContent: any): Attachment[] => {
   if (liCustomContent?.mediaType !== 'TENOR_GIF') return []
 
   const { media: { gif }, id } = liCustomContent
@@ -262,7 +262,7 @@ const mapMediaCustomAttachment = (liCustomContent: any): MessageAttachment[] => 
     id: `${id}`,
     isGif: true,
     srcURL: gif.url,
-    type: MessageAttachmentType.IMG,
+    type: AttachmentType.IMG,
   }]
 }
 
