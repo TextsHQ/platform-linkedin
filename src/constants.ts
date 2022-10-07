@@ -19,7 +19,15 @@ export const LinkedInURLs = {
   API_BASE: 'https://www.linkedin.com/voyager/api',
   API_MESSAGING: 'https://www.linkedin.com/voyager/api/messaging',
   API_CONVERSATIONS: 'https://www.linkedin.com/voyager/api/messaging/conversations',
+  API_MESSAGING_GRAPHQL: 'https://www.linkedin.com/voyager/api/voyagerMessagingGraphQL/graphql',
   API_ME: 'https://www.linkedin.com/voyager/api/me',
+}
+
+export const GraphQLRecipes = {
+  messages: {
+    getMessagesByAnchorTimestamp: 'messengerMessages.41f713c7de5635f9e81d2b0dfc65df1b',
+    getWithCursor: 'messengerMessages.377636847892a71d7e915107d5b4abc1'
+  }
 }
 
 export const LinkedInAPITypes = {

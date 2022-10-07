@@ -1,8 +1,10 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Attachment, AttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Attachment, AttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen, UNKNOWN_DATE } from '@textshq/platform-sdk'
 import { orderBy } from 'lodash'
 
 import { LinkedInAPITypes } from './constants'
-import { urnID, getFeedUpdateURL, getParticipantID } from './util'
+import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity } from './util'
+
+import type { GraphQLMessage } from './lib/types'
 
 type LIMappedThread = { conversation: any, messages: any[] }
 type LIMessage = any
@@ -170,8 +172,9 @@ const mapMediaAudio = (liMediaAttachment: any): Attachment => ({
   isVoiceNote: true,
 })
 
-const mapMediaAttachments = (liAttachments: any): Attachment[] => {
+const mapMediaAttachments = (liAttachments: any[], extras: { seen?: ParticipantSeenMap, currentUserID?: string } = {}): Attachment[] => {
   if (!liAttachments?.length) return []
+
   const audios = liAttachments.filter(({ mediaType }) => mediaType === 'AUDIO')
 
   return [...audios?.map(mapMediaAudio)]
@@ -284,7 +287,7 @@ const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: 
 
   const attachments = [
     ...((liAttachments as any[])?.map(liAttachment => mapAttachment(liAttachment)).filter(Boolean) || []),
-    ...(mapMediaAttachments(mediaAttachments) || []),
+    ...(mapMediaAttachments(mediaAttachments, { seen: participantSeenMap, currentUserID }) || []),
     ...(mapMediaCustomAttachment(customContent) || []),
   ]
 
@@ -295,7 +298,7 @@ const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: 
 
   return {
     _original: JSON.stringify(liMessage),
-    id: liMessage.dashEntityUrn,
+    id: liMessage.backendUrn || liMessage.dashEntityUrn,
     cursor: String(liMessage.createdAt),
     timestamp: new Date(liMessage.createdAt),
     text: attributedBody?.text || customContent?.body || participantChangeText,
@@ -323,3 +326,99 @@ export const mapNewMessage = (liMessage: any, currentUserID: string, participant
   const senderID = getParticipantID(liMessage.from[LinkedInAPITypes.member].entityUrn)
   return mapMessageInner(liMessage, currentUserID, senderID, participantSeenMap)
 }
+
+const mapVideo = (video: GraphQLMessage['renderContent'][number]['video']): Attachment => ({
+  id: video.entityUrn,
+  type: AttachmentType.VIDEO,
+  // @FIXME: don't use only first element - check for multiple progressive streams sources
+  srcURL: `asset://$accountID/proxy/${Buffer.from(video.progressiveStreams?.[0]?.streamingLocations?.[0]?.url).toString('hex')}`,
+  size: {
+    width: video.progressiveStreams?.[0]?.width,
+    height: video.progressiveStreams?.[0]?.height,
+  }
+})
+
+const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage']): Attachment => ({
+  id: image.digitalmediaAsset,
+  type: AttachmentType.IMG,
+  srcURL: `asset://$accountID/proxy/${Buffer.from(image.rootUrl).toString('hex')}`,
+})
+
+const mapAttachments = (content: GraphQLMessage['renderContent']): Attachment[] => {
+  const images = content.filter(x => !!x.vectorImage)
+  const videos = content.filter(x => !!x.video)
+
+  return [
+    ...images.map((image) => mapImage(image.vectorImage)),
+    ...videos.map((video) => mapVideo(video.video)),
+  ]
+}
+
+const mapGraphQLReaction = (
+  reaction: GraphQLMessage['reactionSummaries'][number],
+  { currentUserID, participantID }: { currentUserID: string, participantID: string }
+): MessageReaction => ({
+  id: String(`${reaction._type}-${reaction.firstReactedAt}`),
+  reactionKey: reaction?.emoji,
+  participantID: reaction?.viewerReacted ? currentUserID : participantID,
+  emoji: true,
+})
+
+const mapGraphQLAttributes = (attributes: GraphQLMessage['body']['attributes']): TextAttributes => {
+  const entities = attributes.map(attribute => ({
+      from: attribute.start,
+      to: attribute.start + attribute.length,
+      bold: !!attribute.attributeKind.bold,
+      italic: !!attribute.attributeKind.italic,
+      underline: !!attribute.attributeKind.underline,
+      mentionedUser: !!attribute.attributeKind.entity
+        ? { id: urnID(attribute.attributeKind.entity.urn) }
+        : undefined
+  } as TextEntity))
+
+  return { entities }
+}
+
+export const mapGraphQLMessage = (
+  message: GraphQLMessage,
+  currentUserID: string,
+  threadSeenMap: ThreadSeenMap
+): Message => {
+  const textAttributes = mapGraphQLAttributes(message.body.attributes || [])
+  const senderID = urnID(message.sender.hostIdentityUrn)
+  const reactions = (message.reactionSummaries || []).map(reaction => mapGraphQLReaction(reaction, { currentUserID, participantID: senderID }))
+
+  const isAction = message.body?._type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent'
+  const attachments = mapAttachments(message.renderContent)
+
+  const conversationId = extractSecondEntity(message.conversation.entityUrn)
+  const participantSeenMap = threadSeenMap.get(conversationId)
+  /**
+   * @FIXME
+   *  This needs to be fixed once we migrate seen response to graphql.
+   *  We are getting seen status from conversation's endpoint instead of graphql, so we convert
+   *  message id to "old" message entityUrn (adding 'fsd_message' prefix).
+   */
+  const messageUrn = urnID(message.backendUrn)
+  const oldMessageEntityUrn = `urn:li:fsd_message:${messageUrn}`
+  const seen = participantSeenMap ? mapMessageSeen(oldMessageEntityUrn, participantSeenMap) : undefined
+
+  return {
+    _original: JSON.stringify(message),
+    id: message.backendUrn,
+    cursor: String(message.deliveredAt),
+    timestamp: new Date(message.deliveredAt),
+    text: message?.body.text || 'This is a message',
+    isSender: senderID === currentUserID,
+    textAttributes,
+    senderID,
+    isAction,
+    reactions,
+    attachments,
+    seen,
+    /** We don't have editedAt with the newest graphql type */
+    editedTimestamp: message.messageBodyRenderFormat === 'EDITED' ? UNKNOWN_DATE : undefined,
+    isDeleted: message.messageBodyRenderFormat === 'RECALLED',
+  }
+}
+
