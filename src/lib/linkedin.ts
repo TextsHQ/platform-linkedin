@@ -49,7 +49,7 @@ export default class LinkedInAPI {
   // key is threadID, values are participantIDs
   conversationsParticipants: Record<string, string[]> = {}
 
-  setLoginState = async (cookieJar: CookieJar) => {
+  setLoginState = (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError()
     this.cookieJar = cookieJar
   }

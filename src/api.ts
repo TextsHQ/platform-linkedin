@@ -10,11 +10,7 @@ import { eventUrnToMessageID, urnID } from './util'
 export type SendMessageResolveFunction = (value: Message[]) => void
 
 export default class LinkedIn implements PlatformAPI {
-  private currentUser = null
-
   user: CurrentUser
-
-  private cookies: any
 
   private searchedUsers: User[]
 
@@ -29,36 +25,31 @@ export default class LinkedIn implements PlatformAPI {
 
   readonly api = new LinkedInAPI()
 
+  private afterAuth = async (cookies: any) => {
+    this.api.setLoginState(CookieJar.fromJSON(cookies))
+    const currentUser = await this.api.getCurrentUser()
+    if (!currentUser) throw new ReAuthError()
+    this.user = mapCurrentUser(currentUser)
+  }
+
   init = async (serialized: { cookies: any }) => {
     const { cookies } = serialized || {}
     if (!cookies) return
-    this.cookies = cookies
 
-    await this.api.setLoginState(CookieJar.fromJSON(cookies))
-
-    this.currentUser = await this.api.getCurrentUser()
-    if (!this.currentUser) throw new ReAuthError()
-
-    this.user = mapCurrentUser(this.currentUser)
+    await this.afterAuth(cookies)
   }
 
   login = async ({ cookieJarJSON }): Promise<LoginResult> => {
     if (!cookieJarJSON?.cookies?.some(({ key }) => key === LinkedInAuthCookieName)) return { type: 'error', errorMessage: 'No authentication cookie was found' }
-
-    await this.api.setLoginState(CookieJar.fromJSON(cookieJarJSON))
-
-    this.currentUser = await this.api.getCurrentUser()
-    this.user = mapCurrentUser(this.currentUser)
-    this.cookies = cookieJarJSON
-
+    await this.afterAuth(cookieJarJSON)
     return { type: 'success' }
   }
 
-  serializeSession = () => ({ cookies: this.cookies })
+  serializeSession = () => ({ cookies: this.api.cookieJar.toJSON() })
 
   logout = () => this.api.logout()
 
-  getCurrentUser = () => mapCurrentUser(this.currentUser)
+  getCurrentUser = () => this.user
 
   updateThreadSeenMap = (threadID: string, participantID: string, messageID: string, seenAt: string) => {
     if (!this.threadSeenMap.has(threadID)) this.threadSeenMap.set(threadID, new Map())
