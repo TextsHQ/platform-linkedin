@@ -5,6 +5,8 @@ import { LinkedInAPITypes } from './constants'
 import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity } from './util'
 
 import type { GraphQLMessage } from './lib/types'
+import type { GraphQLConversation } from './lib/types/conversations'
+import type { ConversationParticipant } from './lib/types/users'
 
 type LIMappedThread = { conversation: any, messages: any[] }
 type LIMessage = any
@@ -291,7 +293,7 @@ const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: 
     ...(mapMediaCustomAttachment(customContent) || []),
   ]
 
-  const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' || subtype === 'PARTICIPANT_CHANGE'
+  const isAction = customContent?.$type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' || subtype === 'PARTICIPANT_CHANGE' || subtype === 'CONVERSATION_UPDATE'
 
   const links = eventContent['*feedUpdate'] ? [mapFeedUpdate(eventContent['*feedUpdate'])] : []
   const participantChangeText = getParticipantChangeText(liMessage)
@@ -388,7 +390,8 @@ export const mapGraphQLMessage = (
   const senderID = urnID(message.sender.hostIdentityUrn)
   const reactions = (message.reactionSummaries || []).map(reaction => mapGraphQLReaction(reaction, { currentUserID, participantID: senderID }))
 
-  const isAction = message.body?._type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent'
+  const isAction = message.body?._type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' 
+    || message.messageBodyRenderFormat === 'SYSTEM'
   const attachments = mapAttachments(message.renderContent)
 
   const conversationId = extractSecondEntity(message.conversation.entityUrn)
@@ -422,3 +425,32 @@ export const mapGraphQLMessage = (
   }
 }
 
+export const mapConversationParticipant = (participant: ConversationParticipant): Participant => {
+  const { profilePicture } = participant.participantType?.member
+  const [smallerPhoto] = profilePicture?.artifacts || []
+
+  return {
+    id: urnID(participant.hostIdentityUrn),
+    username: participant.participantType?.member.firstName.text,
+    fullName: `${participant.participantType?.member.firstName.text} ${participant.participantType?.member.lastName.text}`,
+    imgURL: profilePicture ? `${profilePicture.rootUrl}${smallerPhoto.fileIdentifyingUrlPathSegment}` : undefined,
+  }
+}
+
+export const mapGraphQLConversation = (conversation: GraphQLConversation, currentUserId: string): Thread => {
+  const conversationId = extractSecondEntity(conversation.entityUrn)
+  const participantsNotCurrentUser = conversation.conversationParticipants.filter(participant => participant.participantType?.member?.distance !== 'SELF')
+  const title = participantsNotCurrentUser.map(mapConversationParticipant).map(({ fullName }) => fullName).join(', ')
+
+  return {
+    _original: JSON.stringify(conversation),
+    id: conversationId,
+    type: !!conversation.groupChat ? 'group' : 'single',
+    title: conversation.title || title,
+    timestamp: new Date(conversation.lastActivityAt),
+    isReadOnly: false,
+    isUnread: !conversation.read,
+    messages: { items: conversation.messages.elements.map(message => mapGraphQLMessage(message, currentUserId, new Map())), hasMore: true },
+    participants: { items: conversation.conversationParticipants.map(mapConversationParticipant), hasMore: false },
+  }
+}
