@@ -1,4 +1,6 @@
+import type { Thumbnail } from './attachments';
 import type { GraphQLResponse, GraphQLNode, PaginatedMetadata } from './graphql';
+import type { ConversationParticipant } from './users';
 
 export type MessagesGraphQLResponse = GraphQLResponse<MessagesByConversation | MessagesByAnchorTimestamp>
 
@@ -15,21 +17,6 @@ type ConversationMessages = GraphQLNode<{
   elements: GraphQLMessage[]
 }>
 
-// type MessagesBySyncToken = GraphQLNode<{
-//   'messengerMessagesBySyncToken': MessengerMessagesBySyncToken
-// }>
-
-// type MessengerMessagesBySyncToken = GraphQLNode<{
-//   metadata: MessagesBySyncTokenMetadata
-//   elements: GraphQLMessage[]
-// }>
-
-// type MessagesBySyncTokenMetadata = GraphQLNode<{
-//   deletedUrns: any[]
-//   newSyncToken: string
-//   shouldClearCache: boolean
-// }>
-
 export type GraphQLMessage = GraphQLNode<{
   reactionSummaries: Reaction[]
   subject: any
@@ -40,7 +27,7 @@ export type GraphQLMessage = GraphQLNode<{
   deliveredAt: number
   renderContentFallbackText: any
   entityUrn: string
-  sender: Sender
+  sender: ConversationParticipant
   backendConversationUrn: string
   messageBodyRenderFormat: string
   renderContent: RenderContent[]
@@ -83,58 +70,6 @@ type Entity = GraphQLNode<{
   urn: string
 }>
 
-type Sender = GraphQLNode<{
-  hostIdentityUrn: string
-  entityUrn: string
-  participantType: ParticipantType
-  backendUrn: string
-}>
-
-type ParticipantType = GraphQLNode<{
-  member: Member
-  custom: any
-  organization: any
-}>
-
-type Member = GraphQLNode<{
-  profileUrl: string
-  firstName: FirstName
-  lastName: LastName
-  profilePicture: ProfilePicture
-  distance: string
-  pronoun: any
-  headline: Headline
-}>
-
-type FirstName = GraphQLNode<{
-  attributes: any[]
-  text: string
-}>
-
-type LastName = GraphQLNode<{
-  attributes: any[]
-  text: string
-}>
-
-type ProfilePicture = GraphQLNode<{
-  digitalmediaAsset: any
-  attribution: any
-  focalPoint: any
-  artifacts: Artifact[]
-  rootUrl: string
-}>
-
-type Artifact = GraphQLNode<{
-  width: number
-  fileIdentifyingUrlPathSegment: string
-  height: number
-}>
-
-type Headline = GraphQLNode<{
-  attributes: any[]
-  text: string
-}>
-
 type RenderContent = GraphQLNode<{
   videoMeeting: any
   awayMessage: any
@@ -164,14 +99,6 @@ type Video = GraphQLNode<{
   provider: string
   nextMedia: any
   trackingId: string
-}>
-
-type Thumbnail = GraphQLNode<{
-  digitalmediaAsset: any
-  attribution: any
-  focalPoint: any
-  artifacts: Artifact[]
-  rootUrl: string
 }>
 
 type ProgressiveStream = GraphQLNode<{
