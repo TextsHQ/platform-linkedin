@@ -16,6 +16,7 @@ export const LinkedInURLs = {
   LOGIN: 'https://www.linkedin.com/login',
   LOGOUT: 'https://www.linkedin.com/logout',
   REALTIME: 'https://realtime.www.linkedin.com/realtime/connect',
+  FEED_ACTIVITY: 'https://www.linkedin.com/feed/update',
   API_BASE: 'https://www.linkedin.com/voyager/api',
   API_MESSAGING: 'https://www.linkedin.com/voyager/api/messaging',
   API_CONVERSATIONS: 'https://www.linkedin.com/voyager/api/messaging/conversations',
