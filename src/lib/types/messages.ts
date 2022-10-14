@@ -80,8 +80,13 @@ type RenderContent = GraphQLNode<{
   video?: Video
   audio: any
   forwardedMessageContent: any
-  hostUrnData: any
+  hostUrnData: HostUrnData
   vectorImage?: VectorImage
+}>
+
+export type HostUrnData = GraphQLNode<{
+  type: "FEED_UPDATE" | string,
+  hostUrn: string
 }>
 
 type Video = GraphQLNode<{
