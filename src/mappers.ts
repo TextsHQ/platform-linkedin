@@ -411,7 +411,7 @@ export const mapGraphQLMessage = (
     id: message.backendUrn,
     cursor: String(message.deliveredAt),
     timestamp: new Date(message.deliveredAt),
-    text: message?.body.text || 'This is a message',
+    text: message?.body.text || '',
     isSender: senderID === currentUserID,
     textAttributes,
     senderID,
