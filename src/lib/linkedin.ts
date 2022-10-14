@@ -1,13 +1,14 @@
 import FormData from 'form-data'
 import crypto from 'crypto'
 
-import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts } from '@textshq/platform-sdk'
+import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts, Thread } from '@textshq/platform-sdk'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
-import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes } from '../constants'
+import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
 import { urnID, encodeLinkedinUriComponent } from '../util'
-import { mapGraphQLMessage } from '../mappers'
+import { mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
 import { promises as fs } from 'fs'
 
+import type { ConversationByIdGraphQLResponse, GraphQLConversation, NewConversationResponse } from './types/conversations'
 import type { MessagesByAnchorTimestamp, MessagesGraphQLResponse } from './types'
 import type { ParticipantsReceiptResponse } from './types/linkedin.types'
 import type { SendMessageResolveFunction } from '../api'
@@ -157,10 +158,7 @@ export default class LinkedInAPI {
     const { data: response } = await this.fetch<MessagesGraphQLResponse>({
       url,
       method: 'GET',
-      headers: {
-        'dnt': '1',
-        'accept': 'application/graphql',
-      }
+      headers: GraphQLHeaders,
     })
 
     const responseBody = (response as MessagesByAnchorTimestamp).messengerMessagesByAnchorTimestamp
@@ -371,7 +369,25 @@ export default class LinkedInAPI {
     if (res?.data) throw Error(JSON.stringify(res.data))
   }
 
-  createThread = async (profileIds: string[], message?: string) => {
+  getConversationById = async (conversationId: string, currentUserId: string): Promise<GraphQLConversation> => {
+    const conversationUrn = `:li:msg_conversation:(urn:li:fsd_profile:${currentUserId},${conversationId})`
+
+    const queryParams = {
+      variables: `(messengerConversationsId:urn${encodeLinkedinUriComponent(conversationUrn)},count:20)`,
+      queryId: GraphQLRecipes.conversations.getById,
+    }
+    const url = `${LinkedInURLs.API_MESSAGING_GRAPHQL}?queryId=${queryParams.queryId}&variables=${queryParams.variables}`
+
+    const response = await this.fetch<ConversationByIdGraphQLResponse>({
+      url,
+      method: 'GET',
+      headers: GraphQLHeaders,
+    })
+
+    return response.data.messengerConversationsById
+  }
+
+  createThread = async (profileIds: string[], message?: string, currentUserId?: string): Promise<Thread> => {
     const url = LinkedInURLs.API_CONVERSATIONS
     const queryParams = { action: 'create' }
 
@@ -393,14 +409,17 @@ export default class LinkedInAPI {
       },
     }
 
-    const response = await this.fetch({
+    const response = await this.fetch<NewConversationResponse>({
       url,
       method: 'POST',
       json: payload,
       searchParams: queryParams,
     })
 
-    return response?.data?.value
+    const conversationId = urnID(response.data.value.conversationUrn)
+    const conversation = await this.getConversationById(conversationId, currentUserId)
+
+    return mapGraphQLConversation(conversation, currentUserId)
   }
 
   deleteThread = async (threadID: string): Promise<void> => {

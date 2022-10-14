@@ -77,25 +77,10 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   createThread = async (userIDs: string[], _: string, message: string): Promise<Thread> => {
-    const res = await this.api.createThread(userIDs, message)
+    const res = await this.api.createThread(userIDs, message, this.user?.id)
     if (!res) return
 
-    const { createdAt, conversationUrn } = res
-    const id = urnID(conversationUrn)
-    // TODO: don't rely on searchedUsers
-    const participants = userIDs.map(userId => this.searchedUsers.find(({ id: searchedUserId }) => searchedUserId === userId))
-    const title = participants.map(participant => participant.fullName).join(', ')
-
-    return {
-      id,
-      title,
-      type: userIDs.length > 1 ? 'group' : 'single',
-      participants: { items: participants, hasMore: false },
-      messages: { items: [], hasMore: false },
-      timestamp: new Date(createdAt),
-      isUnread: false,
-      isReadOnly: false,
-    }
+    return res
   }
 
   getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {

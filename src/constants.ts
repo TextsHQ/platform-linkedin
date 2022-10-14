@@ -16,6 +16,7 @@ export const LinkedInURLs = {
   LOGIN: 'https://www.linkedin.com/login',
   LOGOUT: 'https://www.linkedin.com/logout',
   REALTIME: 'https://realtime.www.linkedin.com/realtime/connect',
+  FEED_ACTIVITY: 'https://www.linkedin.com/feed/update',
   API_BASE: 'https://www.linkedin.com/voyager/api',
   API_MESSAGING: 'https://www.linkedin.com/voyager/api/messaging',
   API_CONVERSATIONS: 'https://www.linkedin.com/voyager/api/messaging/conversations',
@@ -27,7 +28,15 @@ export const GraphQLRecipes = {
   messages: {
     getMessagesByAnchorTimestamp: 'messengerMessages.41f713c7de5635f9e81d2b0dfc65df1b',
     getWithCursor: 'messengerMessages.377636847892a71d7e915107d5b4abc1'
+  },
+  conversations: {
+    getById: 'messengerConversations.766c30b60a40d2035453432f30aa03ce',
   }
+}
+
+export const GraphQLHeaders = {
+  'dnt': '1',
+  'accept': 'application/graphql',
 }
 
 export const LinkedInAPITypes = {
