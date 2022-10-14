@@ -445,7 +445,7 @@ export const mapGraphQLConversation = (conversation: GraphQLConversation, curren
   return {
     _original: JSON.stringify(conversation),
     id: conversationId,
-    type: !!conversation.groupChat ? 'group' : 'single',
+    type: conversation.groupChat ? 'group' : 'single',
     title: conversation.title || title,
     timestamp: new Date(conversation.lastActivityAt),
     isReadOnly: false,
