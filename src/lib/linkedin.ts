@@ -9,11 +9,12 @@ import { mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
 import { promises as fs } from 'fs'
 
 import type { ConversationByIdGraphQLResponse, GraphQLConversation, NewConversationResponse } from './types/conversations'
-import type { MessagesByAnchorTimestamp, MessagesGraphQLResponse } from './types'
+import type { MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji } from './types'
 import type { ParticipantsReceiptResponse } from './types/linkedin.types'
 import type { SendMessageResolveFunction } from '../api'
 import type { ThreadSeenMap } from '../mappers'
 import type { CookieJar } from 'tough-cookie'
+import type { ConversationParticipant } from './types/users'
 
 const timezoneOffset = 0
 const timezone = 'Europe/London'
@@ -133,6 +134,22 @@ export default class LinkedInAPI {
     return miniProfile
   }
 
+  getMessageReactionParticipants = async ({entityUrn, emoji }: { entityUrn: string, emoji: string }): Promise<ConversationParticipant[]> => {
+    const queryParams = {
+      variables: `(messageUrn:${encodeLinkedinUriComponent(entityUrn)},emoji:${encodeURIComponent(emoji)})`,
+      queryId: GraphQLRecipes.messages.getReactionParticipantsByMessageAndEmoji,
+    }
+
+    const url = `${LinkedInURLs.API_MESSAGING_GRAPHQL}?queryId=${queryParams.queryId}&variables=${queryParams.variables}`
+    const { data: response } = await this.fetch<ReactionsByMessageAndEmoji>({
+      url,
+      method: 'GET',
+      headers: GraphQLHeaders,
+    })
+
+    return response.messengerMessagingParticipantsByMessageAndEmoji.elements
+  }
+
   getMessages = async ({
     threadID,
     currentUserID,
@@ -163,6 +180,30 @@ export default class LinkedInAPI {
 
     const responseBody = (response as MessagesByAnchorTimestamp).messengerMessagesByAnchorTimestamp
     const messages = responseBody?.elements || []
+
+    /**
+     * @TODO Make this requests in parallel and optimize them.
+     */
+    for (const message of messages) {
+      if (message.reactionSummaries?.length > 0) {
+        message.reactions = []
+
+        for (const reaction of message.reactionSummaries) {
+          const reactionParticipants = await this.getMessageReactionParticipants({
+            entityUrn: message.entityUrn,
+            emoji: reaction.emoji
+          })
+
+          message.reactions = [
+            ...message.reactions,
+            ...reactionParticipants.map(participant => ({
+              ...reaction,
+              participant,
+            }))
+          ]
+        }
+      }
+    }
 
     return {
       messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen)),
