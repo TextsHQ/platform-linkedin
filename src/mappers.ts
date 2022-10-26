@@ -4,7 +4,7 @@ import { orderBy } from 'lodash'
 import { LinkedInAPITypes, LinkedInURLs } from './constants'
 import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity, extractFirstEntity } from './util'
 
-import type { GraphQLMessage, HostUrnData } from './lib/types'
+import type { GraphQLMessage, HostUrnData, Reaction, RichReaction } from './lib/types'
 import type { GraphQLConversation } from './lib/types/conversations'
 import type { ConversationParticipant } from './lib/types/users'
 
@@ -356,15 +356,27 @@ const mapAttachments = (content: GraphQLMessage['renderContent']): Attachment[] 
   ]
 }
 
+const isRichReaction = (reaction: Reaction | RichReaction): reaction is RichReaction => !!(reaction as RichReaction).participant
+
 const mapGraphQLReaction = (
-  reaction: GraphQLMessage['reactionSummaries'][number],
+  reaction: Reaction | RichReaction,
   { currentUserID, participantID }: { currentUserID: string, participantID: string }
-): MessageReaction => ({
-  id: String(`${reaction._type}-${reaction.firstReactedAt}`),
-  reactionKey: reaction?.emoji,
-  participantID: reaction?.viewerReacted ? currentUserID : participantID,
-  emoji: true,
-})
+): MessageReaction => {
+  if (!reaction) return null
+
+  let finalParticipantID: string = reaction.viewerReacted ? currentUserID : participantID
+
+  if (isRichReaction(reaction)) {
+    finalParticipantID = urnID(reaction.participant.hostIdentityUrn)
+  }
+
+  return {
+    id: String(`${reaction._type}-${reaction.firstReactedAt}`),
+    reactionKey: reaction?.emoji,
+    emoji: true,
+    participantID: finalParticipantID,
+  }
+}
 
 const mapGraphQLAttributes = (attributes: GraphQLMessage['body']['attributes']): TextAttributes => {
   const entities = attributes.map(attribute => ({
@@ -407,7 +419,7 @@ export const mapGraphQLMessage = (
   threadSeenMap: ThreadSeenMap
 ): Message => {
   const senderID = urnID(message.sender.hostIdentityUrn)
-  const reactions = (message.reactionSummaries || []).map(reaction => mapGraphQLReaction(reaction, { currentUserID, participantID: senderID }))
+  const reactions = (message.reactions || message.reactionSummaries || []).map(reaction => mapGraphQLReaction(reaction, { currentUserID, participantID: senderID }))
 
   const isAction = message.body?._type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' 
     || message.messageBodyRenderFormat === 'SYSTEM'
