@@ -147,7 +147,7 @@ export default class LinkedInAPI {
       headers: GraphQLHeaders,
     })
 
-    return response.messengerMessagingParticipantsByMessageAndEmoji.elements
+    return response?.messengerMessagingParticipantsByMessageAndEmoji?.elements
   }
 
   getMessages = async ({
@@ -179,16 +179,11 @@ export default class LinkedInAPI {
     })
 
     const responseBody = (response as MessagesByAnchorTimestamp).messengerMessagesByAnchorTimestamp
-    const messages = responseBody?.elements || []
-
-    /**
-     * @TODO Make this requests in parallel and optimize them.
-     */
-    for (const message of messages) {
+    const messagesPromises = (responseBody?.elements || []).map(async (message) => {
       if (message.reactionSummaries?.length > 0) {
         message.reactions = []
 
-        for (const reaction of message.reactionSummaries) {
+        await Promise.all(message.reactionSummaries.map(async (reaction) => {
           const reactionParticipants = await this.getMessageReactionParticipants({
             entityUrn: message.entityUrn,
             emoji: reaction.emoji
@@ -201,9 +196,13 @@ export default class LinkedInAPI {
               participant,
             }))
           ]
-        }
+        }))
       }
-    }
+
+      return message
+    })
+
+    const messages = await Promise.all(messagesPromises)
 
     return {
       messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen)),
