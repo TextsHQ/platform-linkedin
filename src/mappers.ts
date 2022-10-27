@@ -371,7 +371,7 @@ const mapGraphQLReaction = (
   }
 
   return {
-    id: String(`${reaction._type}-${reaction.firstReactedAt}`),
+    id: String(`${finalParticipantID}${reaction?.emoji}`),
     reactionKey: reaction?.emoji,
     emoji: true,
     participantID: finalParticipantID,
