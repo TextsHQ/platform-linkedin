@@ -364,7 +364,7 @@ const mapGraphQLReaction = (
 ): MessageReaction => {
   if (!reaction) return null
 
-  let finalParticipantID: string = reaction.viewerReacted ? currentUserID : participantID
+  let finalParticipantID = reaction.viewerReacted ? currentUserID : participantID
 
   if (isRichReaction(reaction)) {
     finalParticipantID = urnID(reaction.participant.hostIdentityUrn)
