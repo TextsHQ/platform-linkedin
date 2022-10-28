@@ -9,7 +9,7 @@ import { mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
 import { promises as fs } from 'fs'
 
 import type { ConversationByIdGraphQLResponse, GraphQLConversation, NewConversationResponse } from './types/conversations'
-import type { MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji } from './types'
+import type { ExtendedGraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji } from './types'
 import type { ParticipantsReceiptResponse } from './types/linkedin.types'
 import type { SendMessageResolveFunction } from '../api'
 import type { ThreadSeenMap } from '../mappers'
@@ -179,7 +179,7 @@ export default class LinkedInAPI {
     })
 
     const responseBody = (response as MessagesByAnchorTimestamp).messengerMessagesByAnchorTimestamp
-    const messagesPromises = (responseBody?.elements || []).map(async (message) => {
+    const messagesPromises = (responseBody?.elements || []).map(async (message: ExtendedGraphQLMessage) => {
       if (message.reactionSummaries?.length > 0) {
         message.reactions = []
 

@@ -4,7 +4,7 @@ import { orderBy } from 'lodash'
 import { LinkedInAPITypes, LinkedInURLs } from './constants'
 import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity, extractFirstEntity } from './util'
 
-import type { GraphQLMessage, HostUrnData, Reaction, RichReaction } from './lib/types'
+import { ExtendedGraphQLMessage, GraphQLMessage, HostUrnData, isExtendedGraphQLMessage, Reaction, RichReaction } from './lib/types'
 import type { GraphQLConversation } from './lib/types/conversations'
 import type { ConversationParticipant } from './lib/types/users'
 
@@ -414,12 +414,13 @@ const mapHostUrnData = (urn: HostUrnData): { text: string, attributes: TextAttri
 }
 
 export const mapGraphQLMessage = (
-  message: GraphQLMessage,
+  message: GraphQLMessage | ExtendedGraphQLMessage,
   currentUserID: string,
   threadSeenMap: ThreadSeenMap
 ): Message => {
   const senderID = urnID(message.sender.hostIdentityUrn)
-  const reactions = (message.reactions || message.reactionSummaries || []).map(reaction => mapGraphQLReaction(reaction, { currentUserID, participantID: senderID }))
+  const reactionsToMap = isExtendedGraphQLMessage(message) ? message.reactions : message.reactionSummaries
+  const reactions = (reactionsToMap || []).map(reaction => mapGraphQLReaction(reaction, { currentUserID, participantID: senderID }))
 
   const isAction = message.body?._type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' 
     || message.messageBodyRenderFormat === 'SYSTEM'
