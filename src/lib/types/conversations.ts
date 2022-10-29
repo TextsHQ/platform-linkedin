@@ -1,6 +1,6 @@
-import type { GraphQLNode, GraphQLResponse } from "./graphql"
-import type { GraphQLMessage } from "./messages"
-import type { ConversationParticipant } from "./users"
+import type { GraphQLNode, GraphQLResponse } from './graphql'
+import type { GraphQLMessage } from './messages'
+import type { ConversationParticipant } from './users'
 
 export type NewConversationResponse = {
   data: {
@@ -24,7 +24,7 @@ type ConversationById = GraphQLNode<{
 }>
 
 export type GraphQLConversation = GraphQLNode<{
-  disabledFeatures: GraphQLNode<{ disabledFeature: string; reasonText: any }>[]
+  disabledFeatures: GraphQLNode<{ disabledFeature: string, reasonText: any }>[]
   notificationStatus: string
   creator: ConversationParticipant
   read: boolean

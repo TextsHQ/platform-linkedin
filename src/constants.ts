@@ -32,12 +32,12 @@ export const GraphQLRecipes = {
   },
   conversations: {
     getById: 'messengerConversations.766c30b60a40d2035453432f30aa03ce',
-  }
+  },
 }
 
 export const GraphQLHeaders = {
-  'dnt': '1',
-  'accept': 'application/graphql',
+  dnt: '1',
+  accept: 'application/graphql',
 }
 
 export const LinkedInAPITypes = {

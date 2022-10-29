@@ -1,6 +1,6 @@
 export type GraphQLResponse<Payload = unknown> = {
   data: GraphQLNode<Payload>
-};
+}
 
 export type GraphQLNode<T = unknown> = {
   _recipeType: string

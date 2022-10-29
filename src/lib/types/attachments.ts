@@ -1,4 +1,4 @@
-import type { GraphQLNode } from "./graphql"
+import type { GraphQLNode } from './graphql'
 
 export type Artifact = GraphQLNode<{
   width: number
