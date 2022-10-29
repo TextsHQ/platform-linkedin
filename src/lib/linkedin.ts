@@ -134,7 +134,7 @@ export default class LinkedInAPI {
     return miniProfile
   }
 
-  getMessageReactionParticipants = async ({entityUrn, emoji }: { entityUrn: string, emoji: string }): Promise<ConversationParticipant[]> => {
+  getMessageReactionParticipants = async ({ entityUrn, emoji }: { entityUrn: string, emoji: string }): Promise<ConversationParticipant[]> => {
     const queryParams = {
       variables: `(messageUrn:${encodeLinkedinUriComponent(entityUrn)},emoji:${encodeURIComponent(emoji)})`,
       queryId: GraphQLRecipes.messages.getReactionParticipantsByMessageAndEmoji,
@@ -183,10 +183,10 @@ export default class LinkedInAPI {
       if (message.reactionSummaries?.length > 0) {
         message.reactions = []
 
-        await Promise.all(message.reactionSummaries.map(async (reaction) => {
+        await Promise.all(message.reactionSummaries.map(async reaction => {
           const reactionParticipants = await this.getMessageReactionParticipants({
             entityUrn: message.entityUrn,
-            emoji: reaction.emoji
+            emoji: reaction.emoji,
           })
 
           message.reactions = [
@@ -194,7 +194,7 @@ export default class LinkedInAPI {
             ...reactionParticipants.map(participant => ({
               ...reaction,
               participant,
-            }))
+            })),
           ]
         }))
       }

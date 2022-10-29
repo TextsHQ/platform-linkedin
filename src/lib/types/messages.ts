@@ -48,9 +48,7 @@ export type GraphQLMessage = GraphQLNode<{
 
 export type ExtendedGraphQLMessage = GraphQLMessage & { reactions?: RichReaction[] }
 
-export const isExtendedGraphQLMessage = (a: ExtendedGraphQLMessage | GraphQLMessage): a is ExtendedGraphQLMessage => {
-  return !!(a as ExtendedGraphQLMessage).reactions
-}
+export const isExtendedGraphQLMessage = (a: ExtendedGraphQLMessage | GraphQLMessage): a is ExtendedGraphQLMessage => !!(a as ExtendedGraphQLMessage).reactions
 
 export type Reaction = GraphQLNode<{
   count: number
