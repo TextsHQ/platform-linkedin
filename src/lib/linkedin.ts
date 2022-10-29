@@ -3,17 +3,17 @@ import crypto from 'crypto'
 
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts, Thread } from '@textshq/platform-sdk'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
+import { promises as fs } from 'fs'
+import type { CookieJar } from 'tough-cookie'
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
 import { urnID, encodeLinkedinUriComponent } from '../util'
 import { mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
-import { promises as fs } from 'fs'
 
 import type { ConversationByIdGraphQLResponse, GraphQLConversation, NewConversationResponse } from './types/conversations'
 import type { MessagesByAnchorTimestamp, MessagesGraphQLResponse } from './types'
 import type { ParticipantsReceiptResponse } from './types/linkedin.types'
 import type { SendMessageResolveFunction } from '../api'
 import type { ThreadSeenMap } from '../mappers'
-import type { CookieJar } from 'tough-cookie'
 
 const timezoneOffset = 0
 const timezone = 'Europe/London'
@@ -139,9 +139,9 @@ export default class LinkedInAPI {
     createdBefore,
     threadParticipantsSeen = new Map(),
   }: {
-    threadID: string,
-    currentUserID: string,
-    createdBefore: number,
+    threadID: string
+    currentUserID: string
+    createdBefore: number
     threadParticipantsSeen?: ThreadSeenMap
   }): Promise<{ messages: Message[], prevCursor: string | undefined }> => {
     const messageConversationUrn = `(urn:li:fsd_profile:${currentUserID},${threadID})`
@@ -166,7 +166,7 @@ export default class LinkedInAPI {
 
     return {
       messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen)),
-      prevCursor: responseBody?.metadata.prevCursor || undefined
+      prevCursor: responseBody?.metadata.prevCursor || undefined,
     }
   }
 
@@ -209,7 +209,7 @@ export default class LinkedInAPI {
     return included?.find(({ $type, entityUrn }) => $type === 'com.linkedin.voyager.dash.identity.profile.Profile' && urnID(entityUrn) === publicId)
   }
 
-  markThreadRead = async (threadID: string, read: boolean = true) => {
+  markThreadRead = async (threadID: string, read = true) => {
     const encodedEndpoint = encodeURIComponent(`${threadID}`)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
     const payload = { patch: { $set: { read } } }
@@ -217,7 +217,7 @@ export default class LinkedInAPI {
     await this.fetch({ method: 'POST', url, json: payload })
   }
 
-  toggleArchiveThread = async (threadID: string, archived: boolean = true) => {
+  toggleArchiveThread = async (threadID: string, archived = true) => {
     const encodedEndpoint = encodeURIComponent(`${threadID}`)
     const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
     const payload = { patch: { $set: { archived } } }

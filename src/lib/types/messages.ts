@@ -1,6 +1,6 @@
-import type { Thumbnail } from './attachments';
-import type { GraphQLResponse, GraphQLNode, PaginatedMetadata } from './graphql';
-import type { ConversationParticipant } from './users';
+import type { Thumbnail } from './attachments'
+import type { GraphQLResponse, GraphQLNode, PaginatedMetadata } from './graphql'
+import type { ConversationParticipant } from './users'
 
 export type MessagesGraphQLResponse = GraphQLResponse<MessagesByConversation | MessagesByAnchorTimestamp>
 
@@ -85,7 +85,7 @@ type RenderContent = GraphQLNode<{
 }>
 
 export type HostUrnData = GraphQLNode<{
-  type: "FEED_UPDATE" | string,
+  type: 'FEED_UPDATE' | string
   hostUrn: string
 }>
 

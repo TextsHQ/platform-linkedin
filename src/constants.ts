@@ -27,16 +27,16 @@ export const LinkedInURLs = {
 export const GraphQLRecipes = {
   messages: {
     getMessagesByAnchorTimestamp: 'messengerMessages.41f713c7de5635f9e81d2b0dfc65df1b',
-    getWithCursor: 'messengerMessages.377636847892a71d7e915107d5b4abc1'
+    getWithCursor: 'messengerMessages.377636847892a71d7e915107d5b4abc1',
   },
   conversations: {
     getById: 'messengerConversations.766c30b60a40d2035453432f30aa03ce',
-  }
+  },
 }
 
 export const GraphQLHeaders = {
-  'dnt': '1',
-  'accept': 'application/graphql',
+  dnt: '1',
+  accept: 'application/graphql',
 }
 
 export const LinkedInAPITypes = {

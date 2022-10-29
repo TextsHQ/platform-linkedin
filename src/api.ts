@@ -124,7 +124,7 @@ export default class LinkedIn implements PlatformAPI {
       threadID,
       currentUserID: this.user?.id,
       createdBefore,
-      threadParticipantsSeen: this.threadSeenMap
+      threadParticipantsSeen: this.threadSeenMap,
     })
 
     return {
