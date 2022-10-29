@@ -191,7 +191,7 @@ export default class LinkedInAPI {
 
           message.reactions = [
             ...message.reactions,
-            ...reactionParticipants.map(participant => ({
+            ...(reactionParticipants ?? []).map(participant => ({
               ...reaction,
               participant,
             })),
