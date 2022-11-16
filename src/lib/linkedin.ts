@@ -51,9 +51,6 @@ export default class LinkedInAPI {
   // key is threadID, values are participantIDs
   conversationsParticipants: Record<string, string[]> = {}
 
-  // Key is messageID, values reactions with participant
-  reactionsMap: Map<string, RichReaction[]> = new Map()
-
   setLoginState = (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError()
     this.cookieJar = cookieJar
@@ -182,6 +179,8 @@ export default class LinkedInAPI {
     })
 
     const responseBody = (response as MessagesByAnchorTimestamp).messengerMessagesByAnchorTimestamp
+    // Key is messageID, values reactions with participant
+    const reactionsMap: Map<string, RichReaction[]> = new Map()
 
     const messagesPromises = (responseBody?.elements || []).map(async (message: GraphQLMessage) => {
       if (message.reactionSummaries?.length > 0) {
@@ -191,8 +190,8 @@ export default class LinkedInAPI {
             emoji: reaction.emoji,
           })
 
-          this.reactionsMap.set(message.backendUrn, [
-            ...(this.reactionsMap.get(message.entityUrn) || []),
+          reactionsMap.set(message.backendUrn, [
+            ...(reactionsMap.get(message.entityUrn) || []),
             ...reactionParticipants.map(participant => ({
               ...reaction,
               participant,
@@ -207,7 +206,7 @@ export default class LinkedInAPI {
     const messages = await Promise.all(messagesPromises)
 
     return {
-      messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen, this.reactionsMap)),
+      messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen, reactionsMap)),
       prevCursor: responseBody?.metadata.prevCursor || undefined,
     }
   }
