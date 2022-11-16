@@ -467,7 +467,7 @@ export const mapGraphQLMessage = (
 }
 
 export const mapConversationParticipant = (participant: ConversationParticipant): Participant => {
-  const { profilePicture } = participant.participantType?.member
+  const { profilePicture } = participant.participantType?.member || {}
   const [smallerPhoto] = profilePicture?.artifacts || []
 
   return {
