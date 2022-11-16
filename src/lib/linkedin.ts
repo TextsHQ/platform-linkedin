@@ -5,12 +5,12 @@ import { ActivityType, FetchOptions, InboxName, Message, MessageContent, Message
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
 import type { CookieJar } from 'tough-cookie'
-
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
 import { urnID, encodeLinkedinUriComponent } from '../util'
 import { mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
+
 import type { ConversationByIdGraphQLResponse, GraphQLConversation, NewConversationResponse } from './types/conversations'
-import type { ExtendedGraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji } from './types'
+import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
 import type { ParticipantsReceiptResponse } from './types/linkedin.types'
 import type { SendMessageResolveFunction } from '../api'
 import type { ThreadSeenMap } from '../mappers'
@@ -50,6 +50,9 @@ export default class LinkedInAPI {
 
   // key is threadID, values are participantIDs
   conversationsParticipants: Record<string, string[]> = {}
+
+  // Key is messageID, values reactions with participant
+  reactionsMap: Map<string, RichReaction[]> = new Map()
 
   setLoginState = (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError()
@@ -179,23 +182,22 @@ export default class LinkedInAPI {
     })
 
     const responseBody = (response as MessagesByAnchorTimestamp).messengerMessagesByAnchorTimestamp
-    const messagesPromises = (responseBody?.elements || []).map(async (message: ExtendedGraphQLMessage) => {
-      if (message.reactionSummaries?.length > 0) {
-        message.reactions = []
 
+    const messagesPromises = (responseBody?.elements || []).map(async (message: GraphQLMessage) => {
+      if (message.reactionSummaries?.length > 0) {
         await Promise.all(message.reactionSummaries.map(async reaction => {
           const reactionParticipants = await this.getMessageReactionParticipants({
             entityUrn: message.entityUrn,
             emoji: reaction.emoji,
           })
 
-          message.reactions = [
-            ...message.reactions,
-            ...(reactionParticipants ?? []).map(participant => ({
+          this.reactionsMap.set(message.backendUrn, [
+            ...(this.reactionsMap.get(message.entityUrn) || []),
+            ...reactionParticipants.map(participant => ({
               ...reaction,
               participant,
             })),
-          ]
+          ])
         }))
       }
 
@@ -205,7 +207,7 @@ export default class LinkedInAPI {
     const messages = await Promise.all(messagesPromises)
 
     return {
-      messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen)),
+      messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen, this.reactionsMap)),
       prevCursor: responseBody?.metadata.prevCursor || undefined,
     }
   }
