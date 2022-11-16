@@ -16,6 +16,7 @@ export type ParticipantSeenMap = Map<string, [string, Date]>
 export type ThreadSeenMap = Map<string, ParticipantSeenMap>
 
 const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.picture?.rootUrl
+  // eslint-disable-next-line no-unsafe-optional-chaining
   ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment
   : undefined)
 
@@ -338,7 +339,7 @@ const mapVideo = (video: GraphQLMessage['renderContent'][number]['video']): Atta
   size: {
     width: video.progressiveStreams?.[0]?.width,
     height: video.progressiveStreams?.[0]?.height,
-  }
+  },
 })
 
 const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage']): Attachment => ({
@@ -352,8 +353,8 @@ const mapAttachments = (content: GraphQLMessage['renderContent']): Attachment[] 
   const videos = content.filter(x => !!x.video)
 
   return [
-    ...images.map((image) => mapImage(image.vectorImage)),
-    ...videos.map((video) => mapVideo(video.video)),
+    ...images.map(image => mapImage(image.vectorImage)),
+    ...videos.map(video => mapVideo(video.video)),
   ]
 }
 
@@ -361,7 +362,7 @@ const isRichReaction = (reaction: Reaction | RichReaction): reaction is RichReac
 
 const mapGraphQLReaction = (
   reaction: Reaction | RichReaction,
-  { currentUserID, participantID }: { currentUserID: string, participantID: string }
+  { currentUserID, participantID }: { currentUserID: string, participantID: string },
 ): MessageReaction => {
   if (!reaction) return null
 
@@ -381,14 +382,14 @@ const mapGraphQLReaction = (
 
 const mapGraphQLAttributes = (attributes: GraphQLMessage['body']['attributes']): TextAttributes => {
   const entities = attributes.map(attribute => ({
-      from: attribute.start,
-      to: attribute.start + attribute.length,
-      bold: !!attribute.attributeKind.bold,
-      italic: !!attribute.attributeKind.italic,
-      underline: !!attribute.attributeKind.underline,
-      mentionedUser: !!attribute.attributeKind.entity
-        ? { id: urnID(attribute.attributeKind.entity.urn) }
-        : undefined
+    from: attribute.start,
+    to: attribute.start + attribute.length,
+    bold: !!attribute.attributeKind.bold,
+    italic: !!attribute.attributeKind.italic,
+    underline: !!attribute.attributeKind.underline,
+    mentionedUser: attribute.attributeKind.entity
+      ? { id: urnID(attribute.attributeKind.entity.urn) }
+      : undefined,
   } as TextEntity))
 
   return { entities }
@@ -406,8 +407,8 @@ const mapHostUrnData = (urn: HostUrnData): { text: string, attributes: TextAttri
           from: 0,
           to: url.length,
           link: url,
-        }]
-      }
+        }],
+      },
     }
   }
 
@@ -424,7 +425,7 @@ export const mapGraphQLMessage = (
   const reactionsToMap = reactionsMap.get(message.backendUrn) || message.reactionSummaries || []
   const reactions = (reactionsToMap || []).map(reaction => mapGraphQLReaction(reaction, { currentUserID, participantID: senderID }))
 
-  const isAction = message.body?._type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent' 
+  const isAction = message.body?._type === 'com.linkedin.voyager.messaging.event.message.ConversationNameUpdateContent'
     || message.messageBodyRenderFormat === 'SYSTEM'
   const attachments = mapAttachments(message.renderContent)
 
@@ -442,8 +443,8 @@ export const mapGraphQLMessage = (
 
   const bodyTextAttributes = mapGraphQLAttributes(message.body.attributes || [])
 
-  const firstHostUrnData = message.renderContent.find((x) => x.hostUrnData)?.hostUrnData
-  const hostUrnData =  firstHostUrnData ? mapHostUrnData(firstHostUrnData) : { text: undefined, attributes: undefined }
+  const firstHostUrnData = message.renderContent.find(x => x.hostUrnData)?.hostUrnData
+  const hostUrnData = firstHostUrnData ? mapHostUrnData(firstHostUrnData) : { text: undefined, attributes: undefined }
   const textAttributes = { ...bodyTextAttributes, ...(hostUrnData.attributes || {}) }
 
   return {
