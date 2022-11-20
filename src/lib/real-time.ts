@@ -1,11 +1,13 @@
-import { randomUUID } from 'crypto'
-import { Message, ServerEvent, ServerEventType, texts, UpsertStateSyncEvent, UpdateStateSyncEvent, PartialWithID, Thread, ActivityType } from '@textshq/platform-sdk'
 import EventSource from 'eventsource'
+
+import { Message, ServerEvent, ServerEventType, texts, UpsertStateSyncEvent, UpdateStateSyncEvent, PartialWithID, Thread, ActivityType } from '@textshq/platform-sdk'
+import { randomUUID } from 'crypto'
 
 import { LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
 import { mapNewMessage, mapMiniProfile } from '../mappers'
 import { urnID, eventUrnToMessageID, eventUrnToThreadID } from '../util'
 import { REQUEST_HEADERS } from './linkedin'
+
 import type PAPI from '../api'
 
 const HEARTBEAT_CHECK_INTERVAL_MS = 30 * 1_000 // 30 seconds
