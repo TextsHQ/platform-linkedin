@@ -121,12 +121,16 @@ export const mapThreads = (conversations: LIMappedThread[], allProfiles: Record<
   return orderBy(threads, 'timestamp', 'desc')
 }
 
-export const mapReactions = (liReactionSummaries: any, { currentUserID, participantId }): MessageReaction => ({
-  id: String(liReactionSummaries?.firstReactedAt),
-  reactionKey: liReactionSummaries?.emoji,
-  participantID: liReactionSummaries?.viewerReacted ? currentUserID : participantId,
-  emoji: true,
-})
+export const mapReactions = (liReactionSummaries: any, { currentUserID, participantId }): MessageReaction => {
+  const participantID = liReactionSummaries?.viewerReacted ? currentUserID : participantId
+
+  return {
+    id: String(`${participantID}${liReactionSummaries?.emoji}`),
+    reactionKey: liReactionSummaries?.emoji,
+    participantID,
+    emoji: true,
+  }
+}
 
 const mapForwardedMessage = (liForwardedMessage: any): MessagePreview => {
   const { originalCreatedAt, forwardedBody } = liForwardedMessage
