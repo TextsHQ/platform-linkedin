@@ -1,17 +1,18 @@
 import FormData from 'form-data'
 import crypto from 'crypto'
 
+import type { CookieJar } from 'tough-cookie'
+
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts, Thread } from '@textshq/platform-sdk'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
-import type { CookieJar } from 'tough-cookie'
+
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
-import { urnID, encodeLinkedinUriComponent } from '../util'
 import { mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
+import { urnID, encodeLinkedinUriComponent } from '../util'
 
 import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
 import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
-import type { ParticipantsReceiptResponse } from './types/linkedin.types'
 import type { SendMessageResolveFunction } from '../api'
 import type { ThreadSeenMap } from '../mappers'
 import type { ConversationParticipant } from './types/users'
@@ -230,8 +231,6 @@ export default class LinkedInAPI {
 
     const queryParams = {
       queryId: GraphQLRecipes.conversations.getByCategory,
-      // (category:INBOX,count:20,mailboxUrn:urn:li:fsd_profile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM,lastUpdatedBefore:1660604440611)
-      // (category:INBOX,count:20,mailboxUrn:urn%3Ali%3Afsd_profile%3AACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM,lastUpdatedBefore:1660604440611)
       variables: (category: string, cursor: number) => `(category:${category},count:20,${mailboxVariable},lastUpdatedBefore:${cursor})`,
     }
 
@@ -269,8 +268,6 @@ export default class LinkedInAPI {
 
     const queryParams = {
       queryId: GraphQLRecipes.conversations.getSeenReceipts,
-      // (conversationUrn:urn:li:msg_conversation:(urn:li:fsd_profile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM,2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==))
-      // (conversationUrn:urn%3Ali%3Amsg_conversation%3A%28urn%3Ali%3Afsd_profile%3AACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM%2C2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg%3D%3D%29)
       variables: `(conversationUrn:urn${encodeLinkedinUriComponent(conversationUrn)})`,
     }
 
@@ -282,25 +279,6 @@ export default class LinkedInAPI {
     })
 
     return response.messengerSeenReceiptsByConversation.elements || []
-  }
-
-  getProfile = async (publicId: string): Promise<any> => {
-    const url = `${LinkedInURLs.API_BASE}/identity/dash/profiles`
-    const queryParams = {
-      q: 'memberIdentity',
-      memberIdentity: publicId,
-      decorationId: 'com.linkedin.voyager.dash.deco.identity.profile.FullProfileWithEntities-35',
-    }
-
-    const res = await this.fetch({
-      method: 'GET',
-      url,
-      searchParams: queryParams,
-    })
-    if (!res) return
-
-    const { included } = res
-    return included?.find(({ $type, entityUrn }) => $type === 'com.linkedin.voyager.dash.identity.profile.Profile' && urnID(entityUrn) === publicId)
   }
 
   markThreadRead = async (threadID: string, read = true) => {
@@ -635,16 +613,6 @@ export default class LinkedInAPI {
       status: results[key].availability,
       lastActiveAt: results[key].lastActiveAt,
     }))
-  }
-
-  getParticipantsReceipt = async (threadID: string): Promise<ParticipantsReceiptResponse['data']['elements']> => {
-    const encodedEndpoint = encodeURIComponent(threadID)
-    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}/participantReceipts`
-
-    const res = await this.fetch<ParticipantsReceiptResponse>({ url })
-    const { elements } = res.data
-
-    return elements || []
   }
 
   sendPresenceChange = async (type: ActivityType): Promise<void> => {

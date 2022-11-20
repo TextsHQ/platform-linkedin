@@ -245,11 +245,6 @@ const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: 
   }
 }
 
-export const mapMessage = (liMessage: any, currentUserID: string, participantSeenMap: ParticipantSeenMap): Message => {
-  const senderID = getParticipantID(liMessage['*from'])
-  return mapMessageInner(liMessage, currentUserID, senderID, participantSeenMap)
-}
-
 export const mapNewMessage = (liMessage: any, currentUserID: string, participantSeenMap: ParticipantSeenMap): Message => {
   const senderID = getParticipantID(liMessage.from[LinkedInAPITypes.member].entityUrn)
   return mapMessageInner(liMessage, currentUserID, senderID, participantSeenMap)
