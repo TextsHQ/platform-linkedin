@@ -366,11 +366,9 @@ const mapGraphQLReaction = (
 ): MessageReaction => {
   if (!reaction) return null
 
-  let finalParticipantID = reaction.viewerReacted ? currentUserID : participantID
-
-  if (isRichReaction(reaction)) {
-    finalParticipantID = urnID(reaction.participant.hostIdentityUrn)
-  }
+  const finalParticipantID = isRichReaction(reaction)
+    ? urnID(reaction.participant.hostIdentityUrn)
+    : (reaction.viewerReacted ? currentUserID : participantID)
 
   return {
     id: String(`${finalParticipantID}${reaction?.emoji}`),
