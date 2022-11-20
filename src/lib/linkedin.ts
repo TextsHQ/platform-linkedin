@@ -184,7 +184,7 @@ export default class LinkedInAPI {
 
     const messagesPromises = (responseBody?.elements || []).map(async (message: GraphQLMessage) => {
       if (message.reactionSummaries?.length > 0) {
-        await Promise.all(message.reactionSummaries.map(async reaction => {
+        await Promise.all((message.reactionSummaries || []).map(async reaction => {
           const reactionParticipants = await this.getMessageReactionParticipants({
             entityUrn: message.entityUrn,
             emoji: reaction.emoji,
@@ -192,7 +192,7 @@ export default class LinkedInAPI {
 
           reactionsMap.set(message.backendUrn, [
             ...(reactionsMap.get(message.entityUrn) || []),
-            ...reactionParticipants.map(participant => ({
+            ...(reactionParticipants || []).map(participant => ({
               ...reaction,
               participant,
             })),
