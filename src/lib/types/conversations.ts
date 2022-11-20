@@ -1,4 +1,4 @@
-import type { GraphQLNode, GraphQLResponse } from './graphql'
+import type { GraphQLNode, GraphQLResponse, PaginatedMetadata } from './graphql'
 import type { GraphQLMessage } from './messages'
 import type { ConversationParticipant } from './users'
 
@@ -19,12 +19,36 @@ export type NewConversationResponse = {
 
 export type ConversationByIdGraphQLResponse = GraphQLResponse<ConversationById>
 
+export type ConversationsByCategoryGraphQLResponse = GraphQLResponse<GraphQLNode<{
+  'messengerConversationsByCategory': {
+    elements: GraphQLConversation[]
+    metadata: PaginatedMetadata
+  }
+}>>
+
+export type SeenReceiptGraphQLResponse = GraphQLResponse<GraphQLNode<{
+  'messengerSeenReceiptsByConversation': {
+    elements: SeenReceipt[]
+  }
+}>>
+
+export type SeenReceipt = GraphQLNode<{
+  seenAt: number
+  message: GraphQLNode<{ entityUrn: string }>
+  seenByParticipant: ConversationParticipant
+}>
+
 type ConversationById = GraphQLNode<{
   messengerConversationsById: GraphQLConversation
 }>
 
+type DisabledFeature = {
+  disabledFeature: string
+  reasonText: string
+}
+
 export type GraphQLConversation = GraphQLNode<{
-  disabledFeatures: GraphQLNode<{ disabledFeature: string, reasonText: any }>[]
+  disabledFeatures: GraphQLNode<DisabledFeature>[]
   notificationStatus: string
   creator: ConversationParticipant
   read: boolean
@@ -33,19 +57,19 @@ export type GraphQLConversation = GraphQLNode<{
   conversationParticipants: ConversationParticipant[]
   unreadCount: number
   lastActivityAt: number
-  contentMetadata: any
+  contentMetadata: unknown
   _recipeType: string
-  title: any
+  title: string | null
   backendUrn: string
   conversationUrl: string
-  shortHeadlineText: any
-  headlineText: any
+  shortHeadlineText: string | null
+  headlineText: string | null
   createdAt: number
-  lastReadAt: any
-  hostConversationActions: any[]
+  lastReadAt: number
+  hostConversationActions: unknown[]
   entityUrn: string
   messages: GraphQLNode<{ elements: GraphQLMessage[] }>
   categories: string[]
-  conversationTypeText: any
-  state: any
+  conversationTypeText: string | null
+  state: string | null
 }>
