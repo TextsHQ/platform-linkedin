@@ -32,6 +32,8 @@ export const GraphQLRecipes = {
   },
   conversations: {
     getById: 'messengerConversations.766c30b60a40d2035453432f30aa03ce',
+    getByCategory: 'messengerConversations.14df23fcfbc2bacf529fc58e63a4ab5e',
+    getSeenReceipts: 'messengerSeenReceipts.f0584c34fe9377608527e1507a1204a2',
   },
 }
 
