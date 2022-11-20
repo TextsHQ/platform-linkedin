@@ -9,7 +9,7 @@ import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '
 import { urnID, encodeLinkedinUriComponent } from '../util'
 import { mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
 
-import type { ConversationByIdGraphQLResponse, GraphQLConversation, NewConversationResponse } from './types/conversations'
+import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
 import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
 import type { ParticipantsReceiptResponse } from './types/linkedin.types'
 import type { SendMessageResolveFunction } from '../api'
@@ -211,24 +211,77 @@ export default class LinkedInAPI {
     }
   }
 
-  getThreads = async (cursors: [number, number], inboxType: InboxName = InboxName.NORMAL) => {
-    const [inbox, archive] = await Promise.all([
-      this.fetch({
-        method: 'GET',
-        url: LinkedInURLs.API_CONVERSATIONS,
-        searchParams: {
-          createdBefore: cursors[0],
-          ...(inboxType === InboxName.REQUESTS ? { q: 'systemLabel', type: 'MESSAGE_REQUEST_PENDING' } : {}),
-        },
-      }),
-      this.fetch({
-        method: 'GET',
-        // we're not using searchParams here to ensure () is not URL-encoded
-        url: `${LinkedInURLs.API_CONVERSATIONS}?folders=List(ARCHIVED)&createdBefore=${cursors[1]}&q=search`,
-      }),
+  getThreads = async ({
+    cursors,
+    inboxType = InboxName.NORMAL,
+    currentUserID,
+    threadSeenMap = new Map(),
+  }: {
+    cursors: [number, number]
+    inboxType: InboxName
+    currentUserID: string
+    threadSeenMap: ThreadSeenMap
+  }): Promise<{
+    inbox: { threads: Thread[], cursor: number }
+    archive: { threads: Thread[], cursor: number }
+  }> => {
+    const currentUserVariable = `urn:li:fsd_profile:${currentUserID}`
+    const mailboxVariable = `mailboxUrn:${encodeLinkedinUriComponent(currentUserVariable)}`
+
+    const queryParams = {
+      queryId: GraphQLRecipes.conversations.getByCategory,
+      // (category:INBOX,count:20,mailboxUrn:urn:li:fsd_profile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM,lastUpdatedBefore:1660604440611)
+      // (category:INBOX,count:20,mailboxUrn:urn%3Ali%3Afsd_profile%3AACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM,lastUpdatedBefore:1660604440611)
+      variables: (category: string, cursor: number) => `(category:${category},count:20,${mailboxVariable},lastUpdatedBefore:${cursor})`,
+    }
+
+    const inboxUrl = `${LinkedInURLs.API_MESSAGING_GRAPHQL}?queryId=${queryParams.queryId}&variables=${queryParams.variables(inboxType === InboxName.REQUESTS ? 'MESSAGE_REQUEST_PENDING' : 'INBOX', cursors[0])}`
+    const archiveUrl = `${LinkedInURLs.API_MESSAGING_GRAPHQL}?queryId=${queryParams.queryId}&variables=${queryParams.variables('ARCHIVE', cursors[1])}`
+
+    const commonParams = { method: 'GET' as 'GET', headers: GraphQLHeaders }
+
+    const [inboxResponse, archiveResponse] = await Promise.all([
+      cursors[0] ? this.fetch<ConversationsByCategoryGraphQLResponse>({ ...commonParams, url: inboxUrl }) : null,
+      cursors[1] ? this.fetch<ConversationsByCategoryGraphQLResponse>({ ...commonParams, url: archiveUrl }) : null,
     ])
 
-    return [inbox, archive]
+    const inboxElements = inboxResponse?.data?.messengerConversationsByCategory?.elements
+    const inboxThreads = (inboxElements || []).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
+
+    const archiveElements = archiveResponse?.data?.messengerConversationsByCategory?.elements
+    const archiveThreads = (archiveElements || []).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
+
+    return {
+      inbox: {
+        threads: inboxThreads,
+        cursor: inboxThreads?.[inboxThreads.length - 1]?.timestamp.getTime(),
+      },
+      archive: {
+        threads: archiveThreads,
+        cursor: archiveThreads?.[archiveThreads.length - 1]?.timestamp.getTime(),
+      },
+    }
+  }
+
+  getSeenReceipts = async ({ threadID, currentUserID }: { threadID: string, currentUserID: string }): Promise<SeenReceipt[]> => {
+    const messageConversationUrn = `(urn:li:fsd_profile:${currentUserID},${threadID})`
+    const conversationUrn = `:li:msg_conversation:${messageConversationUrn}`
+
+    const queryParams = {
+      queryId: GraphQLRecipes.conversations.getSeenReceipts,
+      // (conversationUrn:urn:li:msg_conversation:(urn:li:fsd_profile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM,2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==))
+      // (conversationUrn:urn%3Ali%3Amsg_conversation%3A%28urn%3Ali%3Afsd_profile%3AACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM%2C2-ZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg%3D%3D%29)
+      variables: `(conversationUrn:urn${encodeLinkedinUriComponent(conversationUrn)})`,
+    }
+
+    const url = `${LinkedInURLs.API_MESSAGING_GRAPHQL}?queryId=${queryParams.queryId}&variables=${queryParams.variables}`
+    const { data: response } = await this.fetch<SeenReceiptGraphQLResponse>({
+      url,
+      method: 'GET',
+      headers: GraphQLHeaders,
+    })
+
+    return response.messengerSeenReceiptsByConversation.elements || []
   }
 
   getProfile = async (publicId: string): Promise<any> => {
