@@ -1,5 +1,4 @@
 import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Attachment, AttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen, UNKNOWN_DATE } from '@textshq/platform-sdk'
-import { orderBy } from 'lodash'
 
 import { LinkedInAPITypes, LinkedInURLs } from './constants'
 import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity, extractFirstEntity } from './util'
@@ -9,7 +8,6 @@ import type { GraphQLConversation } from './lib/types/conversations'
 import type { ConversationParticipant } from './lib/types/users'
 import type { Thumbnail } from './lib/types/attachments'
 
-type LIMappedThread = { conversation: any, messages: any[] }
 type LIMessage = any
 
 export type ParticipantSeenMap = Map<string, [string, Date]>
@@ -45,83 +43,6 @@ const mapMessageSeen = (messageID: string, seenMap: ParticipantSeenMap): Message
   }
 
   return seen
-}
-
-const mapParticipant = (entity: any): Participant => ({
-  id: urnID(entity.entityUrn),
-  username: entity?.publicIdentifier,
-  fullName: [entity?.firstName, entity?.lastName].filter(Boolean).join(' '),
-  imgURL: mapPicture(entity),
-  social: {
-    coverImgURL: entity?.backgroundImage ? mapPicture({ picture: entity?.backgroundImage }) : undefined,
-    bio: { text: entity?.occupation },
-  },
-})
-
-const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, currentUserID: string, threadSeenMap: ThreadSeenMap): Thread => {
-  const { conversation, messages: liMessages = [] } = thread
-
-  const participantsItems = (conversation['*participants'] as string[])?.map(pid => {
-    const entity = allProfiles[getParticipantID(pid)]
-    return entity ? mapParticipant(entity) : undefined
-  }).filter(Boolean) || []
-
-  const id = urnID(conversation.entityUrn)
-
-  const messages = (liMessages as any[])
-    ?.map<Message>(liMessage => mapMessage(liMessage, currentUserID, threadSeenMap.get(id))) || []
-
-  return {
-    _original: JSON.stringify(thread),
-    id,
-    type: conversation.groupChat ? 'group' : 'single',
-    title: conversation.name,
-    isUnread: !conversation.read,
-    timestamp: new Date(conversation.lastActivityAt),
-    isReadOnly: false,
-    mutedUntil: conversation.muted ? 'forever' : undefined,
-    messages: { items: messages, hasMore: true },
-    participants: { items: participantsItems, hasMore: false },
-    isArchived: conversation.archived || undefined,
-  }
-}
-
-export const groupEntities = (liResponse: any) => {
-  const { included = [] } = liResponse || {}
-
-  const allProfiles: Record<string, any> = {}
-  const allConversations = []
-  const allEvents = []
-  for (const item of included) {
-    switch (item.$type) {
-      case LinkedInAPITypes.miniProfile:
-        allProfiles[urnID(item.entityUrn)] = item
-        break
-      case LinkedInAPITypes.conversation:
-        allConversations.push(item)
-        break
-      case LinkedInAPITypes.event:
-        allEvents.push(item)
-        break
-      case LinkedInAPITypes.member: // ignore
-        break
-    }
-  }
-
-  const conversations: LIMappedThread[] = []
-  for (const conversation of allConversations) {
-    if (conversation.entityUrn && !conversation['*participants']?.[0]?.endsWith(',UNKNOWN)')) { // UNKNOWN filters inmail
-      const threadID = urnID(conversation.entityUrn)
-      const messages = allEvents.filter(e => e.entityUrn.includes(threadID))
-      conversations.push({ conversation, messages })
-    }
-  }
-  return { conversations, allProfiles }
-}
-
-export const mapThreads = (conversations: LIMappedThread[], allProfiles: Record<string, any>, currentUserID: string, threadSeenMap: ThreadSeenMap): Thread[] => {
-  const threads = conversations.map(thread => mapThread(thread, allProfiles, currentUserID, threadSeenMap))
-  return orderBy(threads, 'timestamp', 'desc')
 }
 
 export const mapReactions = (liReactionSummaries: any, { currentUserID, participantId }): MessageReaction => ({
