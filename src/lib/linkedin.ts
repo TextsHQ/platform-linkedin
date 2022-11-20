@@ -10,10 +10,11 @@ import { urnID, encodeLinkedinUriComponent } from '../util'
 import { mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
 
 import type { ConversationByIdGraphQLResponse, GraphQLConversation, NewConversationResponse } from './types/conversations'
-import type { MessagesByAnchorTimestamp, MessagesGraphQLResponse } from './types'
+import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
 import type { ParticipantsReceiptResponse } from './types/linkedin.types'
 import type { SendMessageResolveFunction } from '../api'
 import type { ThreadSeenMap } from '../mappers'
+import type { ConversationParticipant } from './types/users'
 
 const timezoneOffset = 0
 const timezone = 'Europe/London'
@@ -133,6 +134,22 @@ export default class LinkedInAPI {
     return miniProfile
   }
 
+  getMessageReactionParticipants = async ({ entityUrn, emoji }: { entityUrn: string, emoji: string }): Promise<ConversationParticipant[]> => {
+    const queryParams = {
+      variables: `(messageUrn:${encodeLinkedinUriComponent(entityUrn)},emoji:${encodeURIComponent(emoji)})`,
+      queryId: GraphQLRecipes.messages.getReactionParticipantsByMessageAndEmoji,
+    }
+
+    const url = `${LinkedInURLs.API_MESSAGING_GRAPHQL}?queryId=${queryParams.queryId}&variables=${queryParams.variables}`
+    const { data: response } = await this.fetch<ReactionsByMessageAndEmoji>({
+      url,
+      method: 'GET',
+      headers: GraphQLHeaders,
+    })
+
+    return response?.messengerMessagingParticipantsByMessageAndEmoji?.elements
+  }
+
   getMessages = async ({
     threadID,
     currentUserID,
@@ -162,10 +179,34 @@ export default class LinkedInAPI {
     })
 
     const responseBody = (response as MessagesByAnchorTimestamp).messengerMessagesByAnchorTimestamp
-    const messages = responseBody?.elements || []
+    // Key is messageID, values reactions with participant
+    const reactionsMap: Map<string, RichReaction[]> = new Map()
+
+    const messagesPromises = (responseBody?.elements || []).map(async (message: GraphQLMessage) => {
+      if (message.reactionSummaries?.length > 0) {
+        await Promise.all((message.reactionSummaries || []).map(async reaction => {
+          const reactionParticipants = await this.getMessageReactionParticipants({
+            entityUrn: message.entityUrn,
+            emoji: reaction.emoji,
+          })
+
+          reactionsMap.set(message.backendUrn, [
+            ...(reactionsMap.get(message.entityUrn) || []),
+            ...(reactionParticipants || []).map(participant => ({
+              ...reaction,
+              participant,
+            })),
+          ])
+        }))
+      }
+
+      return message
+    })
+
+    const messages = await Promise.all(messagesPromises)
 
     return {
-      messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen)),
+      messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen, reactionsMap)),
       prevCursor: responseBody?.metadata.prevCursor || undefined,
     }
   }

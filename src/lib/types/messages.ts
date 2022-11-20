@@ -12,10 +12,22 @@ export type MessagesByAnchorTimestamp = GraphQLNode<{
   'messengerMessagesByAnchorTimestamp': ConversationMessages
 }>
 
+export type ReactionsByMessageAndEmoji = GraphQLResponse<GraphQLNode<{
+  'messengerMessagingParticipantsByMessageAndEmoji': MessageReactions
+}>>
+
+type MessageReactions = GraphQLNode<{
+  elements: ConversationParticipant[]
+}>
+
 type ConversationMessages = GraphQLNode<{
   metadata: PaginatedMetadata
   elements: GraphQLMessage[]
 }>
+
+export type RichReaction = Reaction & {
+  participant: ConversationParticipant
+}
 
 export type GraphQLMessage = GraphQLNode<{
   reactionSummaries: Reaction[]
@@ -33,6 +45,10 @@ export type GraphQLMessage = GraphQLNode<{
   renderContent: RenderContent[]
   conversation: Conversation
 }>
+
+export type ExtendedGraphQLMessage = GraphQLMessage & { reactions?: RichReaction[] }
+
+export const isExtendedGraphQLMessage = (a: ExtendedGraphQLMessage | GraphQLMessage): a is ExtendedGraphQLMessage => !!(a as ExtendedGraphQLMessage).reactions
 
 export type Reaction = GraphQLNode<{
   count: number
