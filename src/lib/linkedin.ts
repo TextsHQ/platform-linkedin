@@ -3,13 +3,13 @@ import crypto from 'crypto'
 
 import type { CookieJar } from 'tough-cookie'
 
-import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts, Thread } from '@textshq/platform-sdk'
+import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, ServerEvent, ServerEventType, texts, Thread } from '@textshq/platform-sdk'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
 
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
-import { mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
-import { urnID, encodeLinkedinUriComponent } from '../util'
+import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
+import { urnID, encodeLinkedinUriComponent, extractSecondEntity } from '../util'
 
 import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
 import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
@@ -245,9 +245,32 @@ export default class LinkedInAPI {
     ])
 
     const inboxElements = inboxResponse?.data?.messengerConversationsByCategory?.elements
-    const inboxThreads = (inboxElements || []).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
-
     const archiveElements = archiveResponse?.data?.messengerConversationsByCategory?.elements
+
+    const allElements = [...(inboxElements || []), ...(archiveElements || [])]
+
+    const seenReceiptPromises = (allElements).map(async thread => {
+      const threadID = extractSecondEntity(thread.entityUrn)
+
+      const seenReceipts = await this.getSeenReceipts({
+        threadID,
+        currentUserID,
+      })
+
+      for (const seenReceipt of seenReceipts) {
+        threadSeenMap.set(threadID, threadSeenMap.get(threadID) || new Map())
+
+        const participant = mapConversationParticipant(seenReceipt.seenByParticipant)
+        const messageUrn = extractSecondEntity(seenReceipt.message.entityUrn)
+        const messageID = `urn:li:messagingMessage:${messageUrn}`
+
+        threadSeenMap.get(threadID).set(participant.id, [messageID, new Date(seenReceipt.seenAt)])
+      }
+    })
+
+    await Promise.all(seenReceiptPromises)
+
+    const inboxThreads = (inboxElements || []).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
     const archiveThreads = (archiveElements || []).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
 
     return {
@@ -278,7 +301,7 @@ export default class LinkedInAPI {
       headers: GraphQLHeaders,
     })
 
-    return response.messengerSeenReceiptsByConversation.elements || []
+    return response?.messengerSeenReceiptsByConversation?.elements || []
   }
 
   markThreadRead = async (threadID: string, read = true) => {
