@@ -2,7 +2,7 @@ import { PlatformInfo, MessageDeletionMode, Attribute } from '@textshq/platform-
 
 import { supportedReactions, LinkedInURLs, LinkedInAuthCookieName } from './constants'
 
-const { LOGIN: loginURL } = LinkedInURLs
+const { LOGIN } = LinkedInURLs
 
 const icon = (
   `<svg width="1em" height="1em" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -25,7 +25,7 @@ const info: PlatformInfo = {
   },
   loginMode: 'browser',
   browserLogin: {
-    loginURL,
+    url: LOGIN,
     authCookieName: LinkedInAuthCookieName,
   },
   attachments: {
