@@ -356,7 +356,7 @@ const mapAudio = (audio: GraphQLMessage['renderContent'][number]['audio']): Atta
 
 const mapFile = (file: GraphQLMessage['renderContent'][number]['file']): Attachment => ({
   id: file.assetUrn,
-  fileName: file.url,
+  fileName: file.name,
   type: mapMediaType(file.mediaType),
   mimeType: file.mediaType,
   fileSize: file.byteSize,
