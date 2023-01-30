@@ -178,7 +178,7 @@ const mapMediaAudio = (liMediaAttachment: any): Attachment => ({
   id: liMediaAttachment?.audioMetadata?.urn,
   srcURL: `asset://$accountID/proxy/${Buffer.from(liMediaAttachment?.audioMetadata?.url).toString('hex')}`,
   type: AttachmentType.AUDIO,
-  isVoiceNote: true, // @TODO: any other way to send audio
+  isVoiceNote: true,
 })
 
 const mapMediaAttachments = (liAttachments: any[], extras: { seen?: ParticipantSeenMap, currentUserID?: string } = {}): Attachment[] => {
@@ -352,6 +352,7 @@ const mapAudio = (audio: GraphQLMessage['renderContent'][number]['audio']): Atta
   id: audio.url,
   type: AttachmentType.AUDIO,
   srcURL: `asset://$accountID/proxy/${Buffer.from(audio.url).toString('hex')}`,
+  isVoiceNote: true, // @TODO: not sure if there is any other way to send audio
 })
 
 const mapFile = (file: GraphQLMessage['renderContent'][number]['file']): Attachment => ({
