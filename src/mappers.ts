@@ -20,6 +20,13 @@ const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.p
   ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment
   : undefined)
 
+const mapMediaType = (mediaType: string): AttachmentType => {
+  if (mediaType.startsWith('image')) return AttachmentType.IMG
+  if (mediaType.startsWith('video')) return AttachmentType.VIDEO
+  if (mediaType.startsWith('audio')) return AttachmentType.AUDIO
+  return AttachmentType.UNKNOWN
+}
+
 export const mapMiniProfile = (liMiniProfile: any): User =>
   (liMiniProfile ? {
     id: urnID(liMiniProfile.entityUrn),
@@ -149,12 +156,7 @@ const mapAttachment = (liAttachment: any): Attachment => {
   const { name, reference: ref, mediaType, id, byteSize } = liAttachment
   const reference = typeof ref === 'string' ? ref : ref?.string
 
-  const type = (() => {
-    if (mediaType.startsWith('image')) return AttachmentType.IMG
-    if (mediaType.startsWith('video')) return AttachmentType.VIDEO
-    if (mediaType.startsWith('audio')) return AttachmentType.AUDIO
-    return AttachmentType.UNKNOWN
-  })()
+  const type = mapMediaType(mediaType)
 
   if (typeof reference !== 'string') {
     texts.log("linkedin: reference isn't string", JSON.stringify(liAttachment, null, 2))
@@ -176,7 +178,7 @@ const mapMediaAudio = (liMediaAttachment: any): Attachment => ({
   id: liMediaAttachment?.audioMetadata?.urn,
   srcURL: `asset://$accountID/proxy/${Buffer.from(liMediaAttachment?.audioMetadata?.url).toString('hex')}`,
   type: AttachmentType.AUDIO,
-  isVoiceNote: true,
+  isVoiceNote: true, // @TODO: any other way to send audio
 })
 
 const mapMediaAttachments = (liAttachments: any[], extras: { seen?: ParticipantSeenMap, currentUserID?: string } = {}): Attachment[] => {
@@ -346,6 +348,21 @@ const mapVideo = (video: GraphQLMessage['renderContent'][number]['video']): Atta
   },
 })
 
+const mapAudio = (audio: GraphQLMessage['renderContent'][number]['audio']): Attachment => ({
+  id: audio.url,
+  type: AttachmentType.AUDIO,
+  srcURL: `asset://$accountID/proxy/${Buffer.from(audio.url).toString('hex')}`,
+})
+
+const mapFile = (file: GraphQLMessage['renderContent'][number]['file']): Attachment => ({
+  id: file.assetUrn,
+  fileName: file.url,
+  type: mapMediaType(file.mediaType),
+  mimeType: file.mediaType,
+  fileSize: file.byteSize,
+  srcURL: 'asset://$accountID/proxy/' + Buffer.from(file.url).toString('hex'),
+})
+
 const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage']): Attachment => ({
   id: image.digitalmediaAsset,
   type: AttachmentType.IMG,
@@ -355,10 +372,14 @@ const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage'])
 const mapAttachments = (content: GraphQLMessage['renderContent']): Attachment[] => {
   const images = content.filter(x => !!x.vectorImage)
   const videos = content.filter(x => !!x.video)
+  const audios = content.filter(x => !!x.audio)
+  const files = content.filter(x => !!x.file)
 
   return [
     ...images.map(image => mapImage(image.vectorImage)),
     ...videos.map(video => mapVideo(video.video)),
+    ...audios.map(audio => mapAudio(audio.audio)),
+    ...files.map(file => mapFile(file.file)),
   ]
 }
 
