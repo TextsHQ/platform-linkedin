@@ -90,11 +90,11 @@ type RenderContent = GraphQLNode<{
   videoMeeting: any
   awayMessage: any
   conversationAdsMessageContent: any
-  file: any
+  file?: File
   externalMedia: any
   messageAdRenderContent: any
   video?: Video
-  audio: any
+  audio?: Audio
   forwardedMessageContent: any
   hostUrnData: HostUrnData
   vectorImage?: VectorImage
@@ -120,6 +120,19 @@ type Video = GraphQLNode<{
   provider: string
   nextMedia: any
   trackingId: string
+}>
+
+type Audio = GraphQLNode<{
+  duration: number
+  url: string
+}>
+
+type File = GraphQLNode<{
+  assetUrn: string
+  byteSize: number
+  name: string
+  mediaType: string
+  url: string
 }>
 
 type ProgressiveStream = GraphQLNode<{
