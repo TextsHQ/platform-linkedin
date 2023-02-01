@@ -179,7 +179,7 @@ export default class LinkedInAPI {
       headers: GraphQLHeaders,
     })
 
-    const responseBody = (response as MessagesByAnchorTimestamp).messengerMessagesByAnchorTimestamp
+    const responseBody = (response as MessagesByAnchorTimestamp)?.messengerMessagesByAnchorTimestamp
     // Key is messageID, values reactions with participant
     const reactionsMap: Map<string, RichReaction[]> = new Map()
 
