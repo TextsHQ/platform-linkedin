@@ -3,9 +3,9 @@ import EventSource from 'eventsource'
 import { Message, ServerEvent, ServerEventType, texts, UpsertStateSyncEvent, UpdateStateSyncEvent, PartialWithID, Thread, ActivityType } from '@textshq/platform-sdk'
 import { randomUUID } from 'crypto'
 
-import { LinkedInURLs, Topic, LinkedInAPITypes } from '../constants'
+import { LinkedInURLs, Topic, LinkedInAPITypes, entitiesPrefix } from '../constants'
 import { mapNewMessage, mapMiniProfile } from '../mappers'
-import { urnID, eventUrnToMessageID, eventUrnToThreadID } from '../util'
+import { urnID, eventUrnToMessageID, eventUrnToThreadID, extractSecondEntity } from '../util'
 import { REQUEST_HEADERS } from './linkedin'
 
 import type PAPI from '../api'
@@ -90,8 +90,10 @@ export default class LinkedInRealTime {
         const reactionKey = payload.reactionSummary.emoji
         const objectIDs: UpsertStateSyncEvent['objectIDs'] = {
           threadID: eventUrnToThreadID(payload.eventUrn),
-          messageID: eventUrnToMessageID(payload.eventUrn),
+          // @example urn:li:messagingMessage:<MessageID>
+          messageID: `${entitiesPrefix.messages.graphql}:${extractSecondEntity(payload.eventUrn)}`,
         }
+
         if (payload.reactionAdded) {
           return [{
             type: ServerEventType.STATE_SYNC,
