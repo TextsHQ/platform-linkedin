@@ -64,3 +64,9 @@ export const enum Topic {
   messagingProgressIndicatorTopic = 'urn:li-realtime:messagingProgressIndicatorTopic:urn:li-realtime:myself',
   messagingDataSyncTopic = 'urn:li-realtime:messagingDataSyncTopic:urn:li-realtime:myself,',
 }
+
+export const entitiesPrefix = {
+  messages: {
+    graphql: 'urn:li:messagingMessage',
+  },
+}
