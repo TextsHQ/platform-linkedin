@@ -1,5 +1,4 @@
 import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Attachment, AttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen, UNKNOWN_DATE } from '@textshq/platform-sdk'
-import { orderBy } from 'lodash'
 
 import { LinkedInAPITypes, LinkedInURLs } from './constants'
 import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity, extractFirstEntity } from './util'
@@ -7,8 +6,8 @@ import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity, extract
 import type { GraphQLMessage, HostUrnData, Reaction, RichReaction } from './lib/types'
 import type { GraphQLConversation } from './lib/types/conversations'
 import type { ConversationParticipant } from './lib/types/users'
+import type { Thumbnail } from './lib/types/attachments'
 
-type LIMappedThread = { conversation: any, messages: any[] }
 type LIMessage = any
 
 export type ParticipantSeenMap = Map<string, [string, Date]>
@@ -42,90 +41,15 @@ export const mapCurrentUser = (liCurrentUser: any): CurrentUser => ({
 
 const mapMessageSeen = (messageID: string, seenMap: ParticipantSeenMap): MessageSeen => {
   if (!seenMap) return
+
   const seen: Record<string, Date> = {}
   for (const [userID, [seenMessageID, seenAt]] of seenMap.entries()) {
-    if (messageID === seenMessageID) {
+    if (urnID(messageID) === urnID(seenMessageID)) {
       seen[userID] = new Date(seenAt)
     }
   }
+
   return seen
-}
-
-const mapParticipant = (entity: any): Participant => ({
-  id: urnID(entity.entityUrn),
-  username: entity?.publicIdentifier,
-  fullName: [entity?.firstName, entity?.lastName].filter(Boolean).join(' '),
-  imgURL: mapPicture(entity),
-  social: {
-    coverImgURL: entity?.backgroundImage ? mapPicture({ picture: entity?.backgroundImage }) : undefined,
-    bio: { text: entity?.occupation },
-  },
-})
-
-const mapThread = (thread: LIMappedThread, allProfiles: Record<string, any>, currentUserID: string, threadSeenMap: ThreadSeenMap): Thread => {
-  const { conversation, messages: liMessages = [] } = thread
-
-  const participantsItems = (conversation['*participants'] as string[])?.map(pid => {
-    const entity = allProfiles[getParticipantID(pid)]
-    return entity ? mapParticipant(entity) : undefined
-  }).filter(Boolean) || []
-
-  const id = urnID(conversation.entityUrn)
-
-  const messages = (liMessages as any[])
-    ?.map<Message>(liMessage => mapMessage(liMessage, currentUserID, threadSeenMap.get(id))) || []
-
-  return {
-    _original: JSON.stringify(thread),
-    id,
-    type: conversation.groupChat ? 'group' : 'single',
-    title: conversation.name,
-    isUnread: !conversation.read,
-    timestamp: new Date(conversation.lastActivityAt),
-    isReadOnly: false,
-    mutedUntil: conversation.muted ? 'forever' : undefined,
-    messages: { items: messages, hasMore: true },
-    participants: { items: participantsItems, hasMore: false },
-    isArchived: conversation.archived || undefined,
-  }
-}
-
-export const groupEntities = (liResponse: any) => {
-  const { included = [] } = liResponse || {}
-
-  const allProfiles: Record<string, any> = {}
-  const allConversations = []
-  const allEvents = []
-  for (const item of included) {
-    switch (item.$type) {
-      case LinkedInAPITypes.miniProfile:
-        allProfiles[urnID(item.entityUrn)] = item
-        break
-      case LinkedInAPITypes.conversation:
-        allConversations.push(item)
-        break
-      case LinkedInAPITypes.event:
-        allEvents.push(item)
-        break
-      case LinkedInAPITypes.member: // ignore
-        break
-    }
-  }
-
-  const conversations: LIMappedThread[] = []
-  for (const conversation of allConversations) {
-    if (conversation.entityUrn && !conversation['*participants']?.[0]?.endsWith(',UNKNOWN)')) { // UNKNOWN filters inmail
-      const threadID = urnID(conversation.entityUrn)
-      const messages = allEvents.filter(e => e.entityUrn.includes(threadID))
-      conversations.push({ conversation, messages })
-    }
-  }
-  return { conversations, allProfiles }
-}
-
-export const mapThreads = (conversations: LIMappedThread[], allProfiles: Record<string, any>, currentUserID: string, threadSeenMap: ThreadSeenMap): Thread[] => {
-  const threads = conversations.map(thread => mapThread(thread, allProfiles, currentUserID, threadSeenMap))
-  return orderBy(threads, 'timestamp', 'desc')
 }
 
 export const mapReactions = (liReactionSummaries: any, { currentUserID, participantId }): MessageReaction => {
@@ -327,11 +251,6 @@ const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: 
   }
 }
 
-export const mapMessage = (liMessage: any, currentUserID: string, participantSeenMap: ParticipantSeenMap): Message => {
-  const senderID = getParticipantID(liMessage['*from'])
-  return mapMessageInner(liMessage, currentUserID, senderID, participantSeenMap)
-}
-
 export const mapNewMessage = (liMessage: any, currentUserID: string, participantSeenMap: ParticipantSeenMap): Message => {
   const senderID = getParticipantID(liMessage.from[LinkedInAPITypes.member].entityUrn)
   return mapMessageInner(liMessage, currentUserID, senderID, participantSeenMap)
@@ -370,17 +289,30 @@ const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage'])
   srcURL: `asset://$accountID/proxy/${Buffer.from(image.rootUrl).toString('hex')}`,
 })
 
+const mapExternalMediaProxyImage = (media: GraphQLMessage['renderContent'][number]['externalMedia']): Attachment => ({
+  id: media.entityUrn,
+  type: AttachmentType.IMG,
+  srcURL: `asset://$accountID/proxy/${Buffer.from(media.media.url).toString('hex')}`,
+})
+
 const mapAttachments = (content: GraphQLMessage['renderContent']): Attachment[] => {
   const images = content.filter(x => !!x.vectorImage)
   const videos = content.filter(x => !!x.video)
   const audios = content.filter(x => !!x.audio)
   const files = content.filter(x => !!x.file)
+  const externalMediaProxyImages = content.filter(x => !!x.externalMedia && x.externalMedia.media._type === 'com.linkedin.messenger.ExternalProxyImage')
+
+  // unsupported types:
+  // `externalMedia` (except `ExternalProxyImage`)
+  // `videoMeeting`, `awayMessage`, `conversationAdsMessageContent`,
+  // `messageAdRenderContent`, `forwardedMessageContent`, `hostUrnData`
 
   return [
     ...images.map(image => mapImage(image.vectorImage)),
     ...videos.map(video => mapVideo(video.video)),
     ...audios.map(audio => mapAudio(audio.audio)),
     ...files.map(file => mapFile(file.file)),
+    ...externalMediaProxyImages.map(media => mapExternalMediaProxyImage(media.externalMedia)),
   ]
 }
 
@@ -490,32 +422,91 @@ export const mapGraphQLMessage = (
   }
 }
 
+const getThumbnailUrl = (thumbnail: Thumbnail): string => {
+  if (!thumbnail) return undefined
+
+  const baseUrl = thumbnail.rootUrl || ''
+  const [smallestArtifact] = thumbnail.artifacts || []
+
+  return `${baseUrl}${smallestArtifact.fileIdentifyingUrlPathSegment}`
+}
+
 export const mapConversationParticipant = (participant: ConversationParticipant): Participant => {
-  const { profilePicture } = participant.participantType?.member || {}
-  const [smallerPhoto] = profilePicture?.artifacts || []
+  if (!participant) return null
+
+  const hasMember = participant.participantType.member
+
+  if (!hasMember && participant.participantType.organization) {
+    const { organization } = participant.participantType
+
+    return {
+      id: urnID(participant.hostIdentityUrn),
+      username: organization.name.text,
+      fullName: `${organization.name.text} ${organization.tagline?.text}`,
+      imgURL: getThumbnailUrl(organization.logo),
+    }
+  }
+
+  if (!hasMember && participant.participantType.custom) {
+    const { custom } = participant.participantType
+
+    return {
+      id: urnID(participant.hostIdentityUrn),
+      username: custom.name.text,
+      fullName: custom.name.text,
+      imgURL: getThumbnailUrl(custom.image),
+    }
+  }
 
   return {
     id: urnID(participant.hostIdentityUrn),
-    username: participant.participantType?.member.firstName.text,
-    fullName: `${participant.participantType?.member.firstName.text} ${participant.participantType?.member.lastName.text}`,
-    imgURL: profilePicture ? `${profilePicture.rootUrl}${smallerPhoto.fileIdentifyingUrlPathSegment}` : undefined,
+    username: participant.participantType?.member?.firstName?.text,
+    fullName: `${participant.participantType?.member?.firstName?.text} ${participant.participantType?.member?.lastName?.text}`,
+    imgURL: getThumbnailUrl(participant.participantType?.member?.profilePicture),
   }
 }
 
-export const mapGraphQLConversation = (conversation: GraphQLConversation, currentUserId: string): Thread => {
+export const mapGraphQLConversation = (conversation: GraphQLConversation, currentUserId: string, threadSeenMap = new Map()): Thread => {
   const conversationId = extractSecondEntity(conversation.entityUrn)
-  const participantsNotCurrentUser = conversation.conversationParticipants.filter(participant => participant.participantType?.member?.distance !== 'SELF')
-  const title = participantsNotCurrentUser.map(mapConversationParticipant).map(({ fullName }) => fullName).join(', ')
+  const isArchived = conversation.categories?.some(category => category === 'ARCHIVE')
+  const isReadOnly = (conversation.disabledFeatures || []).some(feature => feature.disabledFeature === 'REPLY')
+  const isGroupChat = !!conversation.groupChat
+
+  const participantsNotCurrentUser = conversation.conversationParticipants.filter(participant => {
+    if (participant.participantType?.member) {
+      return participant.participantType.member.distance !== 'SELF'
+    }
+
+    return true
+  })
+
+  const participants = participantsNotCurrentUser.map(mapConversationParticipant)
+
+  const title = (() => {
+    if (isGroupChat) {
+      const namesTitle = participantsNotCurrentUser.map(mapConversationParticipant).map(({ fullName }) => fullName).join(', ')
+      return conversation.title || namesTitle
+    }
+
+    if (!participants.length) return 'LinkedIn User'
+
+    return undefined
+  })()
 
   return {
     _original: JSON.stringify(conversation),
     id: conversationId,
-    type: conversation.groupChat ? 'group' : 'single',
-    title: conversation.groupChat ? conversation.title || title : undefined,
-    timestamp: new Date(conversation.lastActivityAt),
-    isReadOnly: false,
+    type: isGroupChat ? 'group' : 'single',
+    title,
     isUnread: !conversation.read,
-    messages: { items: conversation.messages.elements.map(message => mapGraphQLMessage(message, currentUserId, new Map())), hasMore: true },
-    participants: { items: conversation.conversationParticipants.map(mapConversationParticipant), hasMore: false },
+    timestamp: new Date(conversation.lastActivityAt),
+    isReadOnly,
+    mutedUntil: conversation.notificationStatus === 'MUTED' ? 'forever' : undefined,
+    isArchived,
+    messages: {
+      items: conversation.messages.elements.map(message => mapGraphQLMessage(message, currentUserId, threadSeenMap)),
+      hasMore: true,
+    },
+    participants: { items: participants, hasMore: false },
   }
 }

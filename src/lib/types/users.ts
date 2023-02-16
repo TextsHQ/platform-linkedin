@@ -1,4 +1,4 @@
-import type { Artifact } from './attachments'
+import type { Thumbnail } from './attachments'
 import type { GraphQLNode } from './graphql'
 
 export type ConversationParticipant = GraphQLNode<{
@@ -10,15 +10,31 @@ export type ConversationParticipant = GraphQLNode<{
 
 type ParticipantType = GraphQLNode<{
   member: Member
-  custom: any
-  organization: any
+  custom: Custom
+  organization: Organization
+}>
+
+type Name = GraphQLNode<{ attributes: unknown, text: string }>
+
+type Organization = GraphQLNode<{
+  /** TODO: define more types */
+  pageType: 'COMPANY' | string
+  name: Name
+  tagline: Name | null
+  logo: Thumbnail
+}>
+
+type Custom = GraphQLNode<{
+  name: Name
+  image: Thumbnail
+  rootUrl: never
 }>
 
 type Member = GraphQLNode<{
   profileUrl: string
   firstName: FirstName
   lastName: LastName
-  profilePicture: ProfilePicture
+  profilePicture: Thumbnail
   distance: string
   pronoun: any
   headline: Headline
@@ -32,14 +48,6 @@ type FirstName = GraphQLNode<{
 type LastName = GraphQLNode<{
   attributes: any[]
   text: string
-}>
-
-type ProfilePicture = GraphQLNode<{
-  digitalmediaAsset: any
-  attribution: any
-  focalPoint: any
-  artifacts: Artifact[]
-  rootUrl: string
 }>
 
 type Headline = GraphQLNode<{
