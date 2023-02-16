@@ -289,17 +289,30 @@ const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage'])
   srcURL: `asset://$accountID/proxy/${Buffer.from(image.rootUrl).toString('hex')}`,
 })
 
+const mapExternalMediaProxyImage = (media: GraphQLMessage['renderContent'][number]['externalMedia']): Attachment => ({
+  id: media.entityUrn,
+  type: AttachmentType.IMG,
+  srcURL: `asset://$accountID/proxy/${Buffer.from(media.media.url).toString('hex')}`,
+})
+
 const mapAttachments = (content: GraphQLMessage['renderContent']): Attachment[] => {
   const images = content.filter(x => !!x.vectorImage)
   const videos = content.filter(x => !!x.video)
   const audios = content.filter(x => !!x.audio)
   const files = content.filter(x => !!x.file)
+  const externalMediaProxyImages = content.filter(x => !!x.externalMedia && x.externalMedia.media._type === 'com.linkedin.messenger.ExternalProxyImage')
+
+  // unsupported types:
+  // `externalMedia` (except `ExternalProxyImage`)
+  // `videoMeeting`, `awayMessage`, `conversationAdsMessageContent`,
+  // `messageAdRenderContent`, `forwardedMessageContent`, `hostUrnData`
 
   return [
     ...images.map(image => mapImage(image.vectorImage)),
     ...videos.map(video => mapVideo(video.video)),
     ...audios.map(audio => mapAudio(audio.audio)),
     ...files.map(file => mapFile(file.file)),
+    ...externalMediaProxyImages.map(media => mapExternalMediaProxyImage(media.externalMedia)),
   ]
 }
 

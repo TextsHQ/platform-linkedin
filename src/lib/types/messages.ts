@@ -91,7 +91,7 @@ type RenderContent = GraphQLNode<{
   awayMessage: any
   conversationAdsMessageContent: any
   file?: File
-  externalMedia: any
+  externalMedia: ExternalMedia
   messageAdRenderContent: any
   video?: Video
   audio?: Audio
@@ -103,6 +103,19 @@ type RenderContent = GraphQLNode<{
 export type HostUrnData = GraphQLNode<{
   type: 'FEED_UPDATE' | string
   hostUrn: string
+}>
+
+type Media = GraphQLNode<{
+  originalHeight: number
+  originalWidth: number
+  url: string
+}>
+
+type ExternalMedia = GraphQLNode<{
+  media: Media
+  title: string
+  entityUrn: string
+  previewMedia: Media
 }>
 
 type Video = GraphQLNode<{
