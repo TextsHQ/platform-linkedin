@@ -1,12 +1,11 @@
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, InboxName, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import LinkedInRealTime from './lib/real-time'
 import LinkedInAPI from './lib/linkedin'
 
-import { mapConversationParticipant, mapCurrentUser, mapMiniProfile, ParticipantSeenMap, ThreadSeenMap } from './mappers'
+import { mapCurrentUser, mapMiniProfile, ParticipantSeenMap, ThreadSeenMap } from './mappers'
 import { LinkedInAuthCookieName } from './constants'
-import { extractSecondEntity } from './util'
 
 export type SendMessageResolveFunction = (value: Message[]) => void
 
@@ -38,7 +37,7 @@ export default class LinkedIn implements PlatformAPI {
     await this.afterAuth(cookies)
   }
 
-  login = async ({ cookieJarJSON }): Promise<LoginResult> => {
+  login = async ({ cookieJarJSON }: LoginCreds): Promise<LoginResult> => {
     if (!cookieJarJSON?.cookies?.some(({ key }) => key === LinkedInAuthCookieName)) return { type: 'error', errorMessage: 'No authentication cookie was found' }
     await this.afterAuth(cookieJarJSON)
     return { type: 'success' }
@@ -83,7 +82,7 @@ export default class LinkedIn implements PlatformAPI {
     return res
   }
 
-  getThreads = async (inboxName: InboxName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
+  getThreads = async (inboxName: ThreadFolderName, pagination?: PaginationArg): Promise<Paginated<Thread>> => {
     const { cursor } = pagination ?? {}
 
     const cursors = cursor ? JSON.parse(cursor) : [Date.now(), Date.now()]

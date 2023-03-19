@@ -3,7 +3,7 @@ import crypto from 'crypto'
 
 import type { CookieJar } from 'tough-cookie'
 
-import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, ServerEvent, ServerEventType, texts, Thread } from '@textshq/platform-sdk'
+import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts, Thread, ThreadFolderName } from '@textshq/platform-sdk'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
 
@@ -219,7 +219,7 @@ export default class LinkedInAPI {
     threadSeenMap = new Map(),
   }: {
     cursors: [number, number]
-    inboxType: InboxName
+    inboxType: ThreadFolderName
     currentUserID: string
     threadSeenMap: ThreadSeenMap
   }): Promise<{
