@@ -50,10 +50,10 @@ export default class LinkedInAPI {
   private httpClient = texts.createHttpClient()
 
   // key is threadID, values are participantIDs
-  conversationsParticipants: Record<string, string[]> = {}
+  private conversationsParticipants: Record<string, string[]> = {}
 
   setLoginState = (cookieJar: CookieJar) => {
-    if (!cookieJar) throw TypeError()
+    if (!cookieJar) throw TypeError('invalid cookieJar')
     this.cookieJar = cookieJar
   }
 
