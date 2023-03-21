@@ -183,8 +183,10 @@ export default class LinkedIn implements PlatformAPI {
   onThreadSelected = async (threadID: string): Promise<void> => {
     if (!threadID) return
 
-    const updateParticipantsPresence = async () => {
-      const participantsPresence = await this.api.getUserPresence(threadID)
+    const getParticipantsPresence = async () => {
+      const participants = this.api.conversationParticipantsMap[threadID]
+      if (!participants) return []
+      const participantsPresence = await this.api.getUserPresence(participants)
       if (!participantsPresence) return []
 
       return participantsPresence.map<ServerEvent>(presence => ({
@@ -197,11 +199,8 @@ export default class LinkedIn implements PlatformAPI {
       }))
     }
 
-    const [presenceEvents] = await Promise.all([
-      updateParticipantsPresence(),
-    ])
-
-    this.onEvent([...presenceEvents])
+    const presenceEvents = await getParticipantsPresence()
+    if (presenceEvents.length) this.onEvent(presenceEvents)
   }
 
   registerForPushNotifications = async (type: keyof NotificationsInfo, token: string) => {

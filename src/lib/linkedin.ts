@@ -50,7 +50,7 @@ export default class LinkedInAPI {
   private httpClient = texts.createHttpClient()
 
   // key is threadID, values are participantIDs
-  private conversationsParticipants: Record<string, string[]> = {}
+  readonly conversationParticipantsMap: Record<string, string[]> = {}
 
   setLoginState = (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError('invalid cookieJar')
@@ -249,22 +249,21 @@ export default class LinkedInAPI {
 
     const allElements = [...(inboxElements || []), ...(archiveElements || [])]
 
-    const seenReceiptPromises = (allElements).map(async thread => {
+    const seenReceiptPromises = allElements.map(async thread => {
       const threadID = extractSecondEntity(thread.entityUrn)
 
-      const seenReceipts = await this.getSeenReceipts({
-        threadID,
-        currentUserID,
-      })
+      const seenReceipts = await this.getSeenReceipts({ threadID, currentUserID })
 
-      for (const seenReceipt of seenReceipts) {
-        threadSeenMap.set(threadID, threadSeenMap.get(threadID) || new Map())
+      if (seenReceipts) {
+        for (const seenReceipt of seenReceipts) {
+          if (!threadSeenMap.has(threadID)) threadSeenMap.set(threadID, new Map())
 
-        const participant = mapConversationParticipant(seenReceipt.seenByParticipant)
-        const messageUrn = extractSecondEntity(seenReceipt.message.entityUrn)
-        const messageID = `urn:li:messagingMessage:${messageUrn}`
+          const participant = mapConversationParticipant(seenReceipt.seenByParticipant)
+          const messageUrn = extractSecondEntity(seenReceipt.message.entityUrn)
+          const messageID = `urn:li:messagingMessage:${messageUrn}`
 
-        threadSeenMap.get(threadID).set(participant.id, [messageID, new Date(seenReceipt.seenAt)])
+          threadSeenMap.get(threadID).set(participant.id, [messageID, new Date(seenReceipt.seenAt)])
+        }
       }
     })
 
@@ -301,7 +300,7 @@ export default class LinkedInAPI {
       headers: GraphQLHeaders,
     })
 
-    return response?.messengerSeenReceiptsByConversation?.elements || []
+    return response?.messengerSeenReceiptsByConversation?.elements
   }
 
   markThreadRead = async (threadID: string, read = true) => {
@@ -595,8 +594,7 @@ export default class LinkedInAPI {
     })
   }
 
-  getUserPresence = async (threadID: string): Promise<{ userID: string, status: 'OFFLINE' | 'ONLINE', lastActiveAt: number }[]> => {
-    const participants = this.conversationsParticipants[threadID] || []
+  getUserPresence = async (participants: string[]): Promise<{ userID: string, status: 'OFFLINE' | 'ONLINE', lastActiveAt: number }[]> => {
     const ids = participants.map(id => encodeURIComponent(`urn:li:fs_miniProfile:${id}`))
     const url = `${LinkedInURLs.API_MESSAGING}/presenceStatuses`
     const body = `ids=List(${ids.join(',')})`
