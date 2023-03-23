@@ -434,34 +434,32 @@ const getThumbnailUrl = (thumbnail: Thumbnail): string => {
 export const mapConversationParticipant = (participant: ConversationParticipant): Participant => {
   if (!participant) return null
 
-  const hasMember = participant.participantType.member
+  const { member, organization, custom } = participant.participantType
 
   const id = urnID(participant.hostIdentityUrn)
 
-  if (!hasMember && participant.participantType.organization) {
-    const { organization } = participant.participantType
-
+  if (member) {
     return {
       id,
-      fullName: `${organization.name.text} ${organization.tagline?.text}`,
+      fullName: [member.firstName?.text, member.lastName?.text].filter(Boolean).join(' '),
+      imgURL: getThumbnailUrl(member.profilePicture),
+    }
+  }
+
+  if (organization) {
+    return {
+      id,
+      fullName: organization.name.text,
       imgURL: getThumbnailUrl(organization.logo),
     }
   }
 
-  if (!hasMember && participant.participantType.custom) {
-    const { custom } = participant.participantType
-
+  if (custom) {
     return {
       id,
       fullName: custom.name.text,
       imgURL: getThumbnailUrl(custom.image),
     }
-  }
-
-  return {
-    id,
-    fullName: `${participant.participantType?.member?.firstName?.text} ${participant.participantType?.member?.lastName?.text}`,
-    imgURL: getThumbnailUrl(participant.participantType?.member?.profilePicture),
   }
 }
 
