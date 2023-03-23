@@ -436,12 +436,13 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
 
   const hasMember = participant.participantType.member
 
+  const id = urnID(participant.hostIdentityUrn)
+
   if (!hasMember && participant.participantType.organization) {
     const { organization } = participant.participantType
 
     return {
-      id: urnID(participant.hostIdentityUrn),
-      username: organization.name.text,
+      id,
       fullName: `${organization.name.text} ${organization.tagline?.text}`,
       imgURL: getThumbnailUrl(organization.logo),
     }
@@ -451,16 +452,14 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
     const { custom } = participant.participantType
 
     return {
-      id: urnID(participant.hostIdentityUrn),
-      username: custom.name.text,
+      id,
       fullName: custom.name.text,
       imgURL: getThumbnailUrl(custom.image),
     }
   }
 
   return {
-    id: urnID(participant.hostIdentityUrn),
-    username: participant.participantType?.member?.firstName?.text,
+    id,
     fullName: `${participant.participantType?.member?.firstName?.text} ${participant.participantType?.member?.lastName?.text}`,
     imgURL: getThumbnailUrl(participant.participantType?.member?.profilePicture),
   }
