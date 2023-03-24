@@ -443,9 +443,6 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
       id,
       fullName: [member.firstName?.text, member.lastName?.text].filter(Boolean).join(' '),
       imgURL: getThumbnailUrl(member.profilePicture),
-      social: {
-        website: member.profileUrl,
-      }
     }
   }
 
