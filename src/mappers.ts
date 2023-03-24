@@ -437,13 +437,11 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
   const { member, organization, custom } = participant.participantType
 
   const id = urnID(participant.hostIdentityUrn)
-  const isUnknown = participant.entityUrn.includes('UNKNOWN')
 
   if (member) {
     return {
       id,
       fullName: [member.firstName?.text, member.lastName?.text].filter(Boolean).join(' '),
-      username: !isUnknown ? urnID(participant.entityUrn) : undefined,
       imgURL: getThumbnailUrl(member.profilePicture),
       social: {
         website: member.profileUrl,
@@ -455,7 +453,6 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
     return {
       id,
       fullName: organization.name.text,
-      username: !isUnknown ? urnID(participant.entityUrn) : undefined,
       imgURL: getThumbnailUrl(organization.logo),
     }
   }
