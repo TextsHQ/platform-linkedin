@@ -58,7 +58,7 @@ const info: PlatformInfo = {
     Attribute.SINGLE_THREAD_CREATION_REQUIRES_MESSAGE,
     Attribute.GROUP_THREAD_CREATION_REQUIRES_MESSAGE,
   ]),
-  getUserProfileLink: ({ username }) => username && `https://www.linkedin.com/in/${username}`,
+  getUserProfileLink: ({ id }) => `https://www.linkedin.com/in/${id}/`,
 }
 
 export default info
