@@ -101,8 +101,8 @@ export default class LinkedInAPI {
     }
 
     const res = await this.fetchRaw(url, opts)
-    if (texts.IS_DEV && res.statusCode >= 400) {
-      console.log(`[LinkedIn] ${url} returned ${res.statusCode} status code`)
+    if (res.statusCode >= 400) {
+      throw Error(`${url} returned status code ${res.statusCode}`)
     }
     if (!res.body?.length) return
     if (res.body[0] === '<') {
