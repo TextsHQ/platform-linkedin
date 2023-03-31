@@ -435,7 +435,6 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
   if (!participant) return null
 
   const { member, organization, custom } = participant.participantType
-
   const id = urnID(participant.hostIdentityUrn)
 
   if (member) {
@@ -445,7 +444,6 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
       imgURL: getThumbnailUrl(member.profilePicture),
     }
   }
-
   if (organization) {
     return {
       id,
@@ -453,7 +451,6 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
       imgURL: getThumbnailUrl(organization.logo),
     }
   }
-
   if (custom) {
     return {
       id,
@@ -461,6 +458,8 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
       imgURL: getThumbnailUrl(custom.image),
     }
   }
+
+  return { id }
 }
 
 export const mapGraphQLConversation = (conversation: GraphQLConversation, currentUserId: string, threadSeenMap = new Map()): Thread => {
@@ -469,24 +468,18 @@ export const mapGraphQLConversation = (conversation: GraphQLConversation, curren
   const isReadOnly = (conversation.disabledFeatures || []).some(feature => feature.disabledFeature === 'REPLY')
   const isGroupChat = !!conversation.groupChat
 
-  const participantsNotCurrentUser = conversation.conversationParticipants.filter(participant => {
-    if (participant.participantType?.member) {
-      return participant.participantType.member.distance !== 'SELF'
-    }
+  const participantsExcludingSelf = conversation.conversationParticipants.filter(participant =>
+    (participant.participantType?.member ? participant.participantType.member.distance !== 'SELF' : true))
 
-    return true
-  })
-
-  const participants = participantsNotCurrentUser.map(mapConversationParticipant)
+  const participants = participantsExcludingSelf.map(mapConversationParticipant)
 
   const title = (() => {
     if (isGroupChat) {
-      const namesTitle = participantsNotCurrentUser.map(mapConversationParticipant).map(({ fullName }) => fullName).join(', ')
+      const namesTitle = participants.map(({ fullName }) => fullName).join(', ')
       return conversation.title || namesTitle
     }
 
     if (!participants.length) return 'LinkedIn User'
-
     return undefined
   })()
 
