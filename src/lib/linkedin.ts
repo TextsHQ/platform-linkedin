@@ -4,6 +4,7 @@ import crypto from 'crypto'
 import type { CookieJar } from 'tough-cookie'
 
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts, Thread, ThreadFolderName } from '@textshq/platform-sdk'
+import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
 
@@ -107,8 +108,7 @@ export default class LinkedInAPI {
     if (!res.body?.length) return
     if (res.body[0] === '<') {
       texts.log(res.statusCode, url, res.body)
-      const [, title] = /<title[^>]*>(.*?)<\/title>/.exec(res.body) || []
-      throw Error(`expected json, got html, status code=${res.statusCode}, title=${title}`)
+      throw new ExpectedJSONGotHTMLError(res.statusCode, res.body)
     }
     return JSON.parse(res.body)
   }
