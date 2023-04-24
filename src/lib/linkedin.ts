@@ -269,8 +269,8 @@ export default class LinkedInAPI {
 
     await this.updateSeenReceipts(allElements, currentUserID, threadSeenMap).catch(texts.error)
 
-    const inboxThreads = (inboxElements || []).filter(x => !!x.entityUrn).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
-    const archiveThreads = (archiveElements || []).filter(x => !!x.entityUrn).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
+    const inboxThreads = (inboxElements || []).filter(x => x?.entityUrn).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
+    const archiveThreads = (archiveElements || []).filter(x => x?.entityUrn).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
 
     return {
       inbox: {
