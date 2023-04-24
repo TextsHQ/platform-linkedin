@@ -11,3 +11,8 @@ export type PaginatedMetadata = {
   nextCursor: null | string
   prevCursor: null | string
 }
+
+export type GraphQLNodeWithMultipleRecipeTypes<T = unknown> = {
+  $recipeTypes: string[]
+  $type: string
+} & T

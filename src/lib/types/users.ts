@@ -1,5 +1,5 @@
-import type { Thumbnail } from './attachments'
-import type { GraphQLNode } from './graphql'
+import type { Thumbnail, VectorImage } from './attachments'
+import type { GraphQLNode, GraphQLNodeWithMultipleRecipeTypes, GraphQLResponse } from './graphql'
 
 export type ConversationParticipant = GraphQLNode<{
   hostIdentityUrn: string
@@ -54,3 +54,29 @@ type Headline = GraphQLNode<{
   attributes: any[]
   text: string
 }>
+
+export type SearchUserResult = GraphQLResponse<{
+  'messagingDashMessagingTypeaheadByTypeaheadKeyword': GraphQLNodeWithMultipleRecipeTypes<{
+    elements: GraphQLNodeWithMultipleRecipeTypes<{
+      contextText: unknown
+      targetEntityViewModel: GraphQLNodeWithMultipleRecipeTypes<Member>
+      contextEntityUrn: any
+      type: string
+    }>[]
+  }>
+}> & {
+  included: GraphQLNodeWithMultipleRecipeTypes<{
+    firstName: string
+    lastName: string
+    objectUrn: string
+    entityUrn: string
+    headline: string
+    $type: string
+    profilePicture: {
+      displayImageReferenceResolutionResult: {
+        url: null | unknown
+        vectorImage: VectorImage
+      }
+    }
+  }>[]
+}

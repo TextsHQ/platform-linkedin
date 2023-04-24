@@ -69,9 +69,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   searchUsers = async (typed: string) => {
-    const res = await this.api.searchUsers(typed)
-    const users = res.map((miniProfile: any) => mapMiniProfile(miniProfile)).filter(Boolean)
-
+    const users = await this.api.searchUsers(typed)
     return users
   }
 

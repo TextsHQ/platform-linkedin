@@ -5,7 +5,7 @@ import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity, extract
 
 import type { GraphQLMessage, HostUrnData, Reaction, RichReaction } from './lib/types'
 import type { GraphQLConversation } from './lib/types/conversations'
-import type { ConversationParticipant } from './lib/types/users'
+import type { ConversationParticipant, SearchUserResult } from './lib/types/users'
 import type { Thumbnail } from './lib/types/attachments'
 
 type LIMessage = any
@@ -461,6 +461,13 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
 
   return { id }
 }
+
+export const mapGraphQLSearchUser = (user: SearchUserResult['included'][number]): User => ({
+  id: urnID(user.entityUrn),
+  username: user.firstName,
+  fullName: [user.firstName, user.lastName].filter(Boolean).join(' '),
+  imgURL: getThumbnailUrl(user.profilePicture?.displayImageReferenceResolutionResult?.vectorImage),
+})
 
 export const mapGraphQLConversation = (conversation: GraphQLConversation, currentUserId: string, threadSeenMap = new Map()): Thread => {
   const conversationId = extractSecondEntity(conversation.entityUrn)

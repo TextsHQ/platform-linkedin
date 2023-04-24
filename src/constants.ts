@@ -18,6 +18,7 @@ export const LinkedInURLs = {
   REALTIME: 'https://realtime.www.linkedin.com/realtime/connect',
   FEED_ACTIVITY: 'https://www.linkedin.com/feed/update',
   API_BASE: 'https://www.linkedin.com/voyager/api',
+  API_BASE_GRAPHQL: 'https://www.linkedin.com/voyager/api/graphql',
   API_MESSAGING: 'https://www.linkedin.com/voyager/api/messaging',
   API_CONVERSATIONS: 'https://www.linkedin.com/voyager/api/messaging/conversations',
   API_MESSAGING_GRAPHQL: 'https://www.linkedin.com/voyager/api/voyagerMessagingGraphQL/graphql',
