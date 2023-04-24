@@ -6,7 +6,7 @@ export type Artifact = GraphQLNode<{
   height: number
 }>
 
-export type Thumbnail = GraphQLNode<{
+export type VectorImage = GraphQLNode<{
   digitalmediaAsset: any
   attribution: any
   focalPoint: any
@@ -14,4 +14,4 @@ export type Thumbnail = GraphQLNode<{
   rootUrl: string
 }>
 
-export type VectorImage = Thumbnail
+export type Thumbnail = VectorImage
