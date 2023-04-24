@@ -465,7 +465,7 @@ export const mapConversationParticipant = (participant: ConversationParticipant)
 export const mapGraphQLSearchUser = (user: SearchUserResult['included'][number]): User => ({
   id: urnID(user.entityUrn),
   username: user.firstName,
-  fullName: [user.firstName, user.lastName, user.headline ? ` - ${user.headline}` : ''].filter(Boolean).join(' '),
+  fullName: [user.firstName, user.lastName].filter(Boolean).join(' '),
   imgURL: getThumbnailUrl(user.profilePicture?.displayImageReferenceResolutionResult?.vectorImage),
 })
 
