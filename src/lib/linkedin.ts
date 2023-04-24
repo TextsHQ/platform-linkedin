@@ -212,6 +212,24 @@ export default class LinkedInAPI {
     }
   }
 
+  private async updateSeenReceipts(allElements: GraphQLConversation[], currentUserID: string, threadSeenMap: ThreadSeenMap) {
+    const seenReceiptPromises = allElements.map(async thread => {
+      const threadID = extractSecondEntity(thread.entityUrn)
+      const seenReceipts = await this.getSeenReceipts({ threadID, currentUserID })
+      if (!seenReceipts) return
+      for (const seenReceipt of seenReceipts) {
+        if (!threadSeenMap.has(threadID)) threadSeenMap.set(threadID, new Map())
+
+        const participant = mapConversationParticipant(seenReceipt.seenByParticipant)
+        const messageUrn = extractSecondEntity(seenReceipt.message.entityUrn)
+        const messageID = `urn:li:messagingMessage:${messageUrn}`
+
+        threadSeenMap.get(threadID).set(participant.id, [messageID, new Date(seenReceipt.seenAt)])
+      }
+    })
+    await Promise.all(seenReceiptPromises)
+  }
+
   getThreads = async ({
     cursors,
     inboxType = InboxName.NORMAL,
@@ -249,25 +267,7 @@ export default class LinkedInAPI {
 
     const allElements = [...(inboxElements || []), ...(archiveElements || [])]
 
-    const seenReceiptPromises = allElements.map(async thread => {
-      const threadID = extractSecondEntity(thread.entityUrn)
-
-      const seenReceipts = await this.getSeenReceipts({ threadID, currentUserID })
-
-      if (seenReceipts) {
-        for (const seenReceipt of seenReceipts) {
-          if (!threadSeenMap.has(threadID)) threadSeenMap.set(threadID, new Map())
-
-          const participant = mapConversationParticipant(seenReceipt.seenByParticipant)
-          const messageUrn = extractSecondEntity(seenReceipt.message.entityUrn)
-          const messageID = `urn:li:messagingMessage:${messageUrn}`
-
-          threadSeenMap.get(threadID).set(participant.id, [messageID, new Date(seenReceipt.seenAt)])
-        }
-      }
-    })
-
-    await Promise.all(seenReceiptPromises)
+    await this.updateSeenReceipts(allElements, currentUserID, threadSeenMap).catch(texts.error)
 
     const inboxThreads = (inboxElements || []).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
     const archiveThreads = (archiveElements || []).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
