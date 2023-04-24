@@ -3,20 +3,20 @@ import crypto from 'crypto'
 
 import type { CookieJar } from 'tough-cookie'
 
-import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts, Thread, ThreadFolderName } from '@textshq/platform-sdk'
+import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
 import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
 
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
-import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage } from '../mappers'
+import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
 import { urnID, encodeLinkedinUriComponent, extractSecondEntity } from '../util'
 
 import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
 import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
 import type { SendMessageResolveFunction } from '../api'
 import type { ThreadSeenMap } from '../mappers'
-import type { ConversationParticipant } from './types/users'
+import type { ConversationParticipant, SearchUserResult } from './types/users'
 
 const timezoneOffset = 0
 const timezone = 'Europe/London'
@@ -319,22 +319,23 @@ export default class LinkedInAPI {
     await this.fetch({ method: 'POST', url, json: payload })
   }
 
-  searchUsers = async (keyword: string) => {
-    const url = `${LinkedInURLs.API_BASE}/voyagerMessagingTypeaheadHits`
-    const queryParams = Object.entries({
-      keyword,
-      q: 'typeaheadKeyword',
-      types: 'List(CONNECTIONS,COWORKERS)',
-    }).map(([key, value]) => `${key}=${value}`)
+  searchUsers = async (keyword: string): Promise<User[]> => {
+    if (!keyword) return []
 
-    const res = await this.fetch({
+    const queryParams = {
+      queryId: 'voyagerMessagingDashMessagingTypeahead.7910815d686c938c4a34fd12381f168c',
+      variables: `(keyword:${keyword},types:List(CONNECTIONS,COWORKERS))`,
+    }
+
+    const url = `${LinkedInURLs.API_BASE_GRAPHQL}?variables=${queryParams.variables}&&queryId=${queryParams.queryId}`
+
+    const response = await this.fetch<SearchUserResult>({
+      url,
       method: 'GET',
-      // Using query params this way because if we use fetch searchParams it'll serialize them
-      // and List(...) won't work
-      url: `${url}?${queryParams.join('&')}`,
     })
 
-    return res?.included ?? []
+    const foundUsers = (response?.included || [])
+    return foundUsers.map(mapGraphQLSearchUser)
   }
 
   uploadBuffer = async (buffer: Buffer, filename: string) => {
