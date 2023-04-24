@@ -13,3 +13,5 @@ export type Thumbnail = GraphQLNode<{
   artifacts: Artifact[]
   rootUrl: string
 }>
+
+export type VectorImage = Thumbnail
