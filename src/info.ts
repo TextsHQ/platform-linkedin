@@ -27,6 +27,7 @@ const info: PlatformInfo = {
   browserLogin: {
     url: LOGIN,
     authCookieName: LinkedInAuthCookieName,
+    cookieDomains: ['linkedin.com'],
   },
   attachments: {
     // https://www.linkedin.com/help/linkedin/answer/53703/attaching-files-and-images-to-linkedin-messages
