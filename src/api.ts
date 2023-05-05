@@ -1,10 +1,10 @@
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds, GetAssetOptions } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import LinkedInRealTime from './lib/real-time'
 import LinkedInAPI from './lib/linkedin'
 
-import { mapCurrentUser, mapMiniProfile, ParticipantSeenMap, ThreadSeenMap } from './mappers'
+import { mapCurrentUser, ParticipantSeenMap, ThreadSeenMap } from './mappers'
 import { LinkedInAuthCookieName } from './constants'
 
 export type SendMessageResolveFunction = (value: Message[]) => void
@@ -23,17 +23,16 @@ export default class LinkedIn implements PlatformAPI {
 
   readonly api = new LinkedInAPI()
 
-  private afterAuth = async (cookies: any) => {
-    this.api.setLoginState(CookieJar.fromJSON(cookies))
+  private afterAuth = async (cookies: CookieJar.Serialized) => {
+    this.api.setLoginState(CookieJar.fromJSON(cookies as any))
     const currentUser = await this.api.getCurrentUser()
     if (!currentUser) throw new ReAuthError()
     this.user = mapCurrentUser(currentUser)
   }
 
-  init = async (serialized: { cookies: any }) => {
+  init = async (serialized: { cookies: CookieJar.Serialized }) => {
     const { cookies } = serialized || {}
     if (!cookies) return
-
     await this.afterAuth(cookies)
   }
 
@@ -163,7 +162,7 @@ export default class LinkedIn implements PlatformAPI {
     await this.api.toggleArchiveThread(threadID, archived)
   }
 
-  getAsset = async (_, type: string, uri: string) => {
+  getAsset = async (_: GetAssetOptions, type: string, uri: string) => {
     if (type !== 'proxy') return
     const url = Buffer.from(uri, 'hex').toString()
     return this.api.fetchStream({ url })
