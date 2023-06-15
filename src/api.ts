@@ -113,7 +113,7 @@ export default class LinkedIn implements PlatformAPI {
 
     return {
       items,
-      hasMore: !!items.length || !!prevCursor,
+      hasMore: items.length > 0 || !!prevCursor,
     }
   }
 

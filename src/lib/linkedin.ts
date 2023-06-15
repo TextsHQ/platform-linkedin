@@ -3,7 +3,7 @@ import crypto from 'crypto'
 
 import type { CookieJar } from 'tough-cookie'
 
-import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
+import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
 import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
@@ -102,6 +102,10 @@ export default class LinkedInAPI {
     }
 
     const res = await this.fetchRaw(url, opts)
+    if (res.statusCode === 429) {
+      texts.log(res.statusCode, url)
+      throw new RateLimitError()
+    }
     if (res.statusCode >= 400) {
       throw Error(`${url} returned status code ${res.statusCode}`)
     }
