@@ -323,8 +323,6 @@ export default class LinkedInAPI {
       category: 'ARCHIVE',
     }
 
-    console.log('HEYY', JSON.stringify(payload, null, 2), threadIDs)
-
     await this.fetch({
       method: 'POST',
       url,
