@@ -10,7 +10,7 @@ import { promises as fs } from 'fs'
 
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
 import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
-import { urnID, encodeLinkedinUriComponent, extractSecondEntity } from '../util'
+import { urnID, encodeLinkedinUriComponent, extractSecondEntity, debounce } from '../util'
 
 import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
 import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
@@ -315,13 +315,31 @@ export default class LinkedInAPI {
     await this.fetch({ method: 'POST', url, json: payload })
   }
 
-  toggleArchiveThread = async (threadID: string, archived = true) => {
-    const encodedEndpoint = encodeURIComponent(`${threadID}`)
-    const url = `${LinkedInURLs.API_CONVERSATIONS}/${encodedEndpoint}`
-    const payload = { patch: { $set: { archived } } }
+  toggleArchiveThread = async (threadIDs: string[], archived = true) => {
+    const url = LinkedInURLs.API_CONVERSATIONS_API
+    const user = await this.getCurrentUser()
+    const payload = {
+      conversationUrns: threadIDs.map(threadID => `urn:li:msg_conversation:(${user.dashEntityUrn},${threadID})`),
+      category: 'ARCHIVE',
+    }
 
-    await this.fetch({ method: 'POST', url, json: payload })
+    console.log('HEYY', JSON.stringify(payload, null, 2), threadIDs)
+
+    await this.fetch({
+      method: 'POST',
+      url,
+      json: payload,
+      searchParams: { action: archived ? 'addCategory' : 'removeCategory' },
+    })
   }
+
+  archiveThread = debounce(async (threadIDs: string[]) => {
+    await this.toggleArchiveThread(threadIDs, true)
+  }, 300)
+
+  unArchiveThread = debounce(async (threadIDs: string[]) => {
+    await this.toggleArchiveThread(threadIDs, false)
+  }, 300)
 
   searchUsers = async (keyword: string): Promise<User[]> => {
     if (!keyword) return []
