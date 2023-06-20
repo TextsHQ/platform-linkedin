@@ -21,6 +21,7 @@ export const LinkedInURLs = {
   API_BASE_GRAPHQL: 'https://www.linkedin.com/voyager/api/graphql',
   API_MESSAGING: 'https://www.linkedin.com/voyager/api/messaging',
   API_CONVERSATIONS: 'https://www.linkedin.com/voyager/api/messaging/conversations',
+  API_CONVERSATIONS_API: 'https://www.linkedin.com/voyager/api/voyagerMessagingDashMessengerConversations',
   API_MESSAGING_GRAPHQL: 'https://www.linkedin.com/voyager/api/voyagerMessagingGraphQL/graphql',
   API_ME: 'https://www.linkedin.com/voyager/api/me',
 }
