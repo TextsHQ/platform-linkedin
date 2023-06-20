@@ -334,7 +334,7 @@ export default class LinkedInAPI {
   archiveThread = debounce((threadIDs: string[]) =>
     this.toggleArchiveThread(threadIDs, true), 300)
 
-  unArchiveThread = debounce((threadIDs: string[]) => {
+  unArchiveThread = debounce((threadIDs: string[]) =>
     this.toggleArchiveThread(threadIDs, false), 300)
 
   searchUsers = async (keyword: string): Promise<User[]> => {
