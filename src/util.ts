@@ -37,19 +37,18 @@ export const encodeLinkedinUriComponent = (component: string): string => compone
   c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
 ).replaceAll('%5F', '_').replaceAll('%2D', '-')
 
-export function debounce(func: Function, wait: number) {
+export const debounce = (func: Function, wait: number) => {
   let timeout: NodeJS.Timeout | null
   let values: any[] = []
-  // eslint-disable-next-line func-names
-  return function (...args: any[]) {
-    const context = this
+
+  return (...args: any[]) => {
     values.push(...args)
 
     if (timeout) clearTimeout(timeout)
 
     return new Promise<void>(resolve => {
       timeout = setTimeout(() => {
-        func.apply(context, [values])
+        func(values)
         values = []
         resolve()
       }, wait)
