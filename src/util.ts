@@ -36,3 +36,22 @@ export const encodeLinkedinUriComponent = (component: string): string => compone
   /[^A-Za-z0-9]/g,
   c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
 ).replaceAll('%5F', '_').replaceAll('%2D', '-')
+
+export const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout | null
+  let values: any[] = []
+
+  return (...args: any[]) => {
+    values.push(...args)
+
+    if (timeout) clearTimeout(timeout)
+
+    return new Promise<void>(resolve => {
+      timeout = setTimeout(() => {
+        func(values)
+        values = []
+        resolve()
+      }, wait)
+    })
+  }
+}

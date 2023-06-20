@@ -160,7 +160,8 @@ export default class LinkedIn implements PlatformAPI {
   deleteThread = async (threadID: string) => this.api.deleteThread(threadID)
 
   archiveThread = async (threadID: string, archived: boolean) => {
-    await this.api.toggleArchiveThread(threadID, archived)
+    if (archived) await this.api.archiveThread(threadID)
+    else await this.api.unArchiveThread(threadID)
   }
 
   getAsset = async (_: GetAssetOptions, type: string, uri: string) => {
