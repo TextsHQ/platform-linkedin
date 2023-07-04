@@ -27,8 +27,8 @@ const dateTimeMapper = (possibleDate: null | string | number): Date => {
   const [value, unit] = possibleDate.split(' ')
   const mappedUnit = unit.endsWith('s') ? unit.slice(0, -1) : unit
 
-  const durationInMillis = Number(value) * durationMap[mappedUnit]
-  const date = new Date(now.getTime() - durationInMillis)
+  const durationInMilliseconds = Number(value) * durationMap[mappedUnit]
+  const date = new Date(now.getTime() - durationInMilliseconds)
 
   return date
 }
