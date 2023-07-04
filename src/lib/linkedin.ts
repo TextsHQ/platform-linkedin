@@ -54,17 +54,17 @@ export default class LinkedInAPI {
 
   public myNetwork: MyNetwork
 
-  accountInfo: ClientContext
+  accountID: ClientContext['accountID']
 
   onEvent: OnServerEventCallback
 
   // key is threadID, values are participantIDs
   readonly conversationParticipantsMap: Record<string, string[]> = {}
 
-  setLoginState = (cookieJar: CookieJar, accountInfo: ClientContext) => {
+  setLoginState = (cookieJar: CookieJar, accountID: ClientContext['accountID']) => {
     if (!cookieJar) throw TypeError('invalid cookieJar')
 
-    this.accountInfo = accountInfo
+    this.accountID = accountID
     this.cookieJar = cookieJar
     this.myNetwork = new MyNetwork({ api: this })
   }

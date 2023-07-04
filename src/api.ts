@@ -1,4 +1,4 @@
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds, GetAssetOptions, ClientContext } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds, GetAssetOptions } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import LinkedInRealTime from './lib/real-time'
@@ -22,20 +22,19 @@ export default class LinkedIn implements PlatformAPI {
 
   onEvent: OnServerEventCallback
 
-  readonly api = new LinkedInAPI()
+  api = new LinkedInAPI()
 
-  accountInfo: ClientContext
+  constructor(readonly accountID: string) {}
 
   private afterAuth = async (cookies: CookieJar.Serialized) => {
-    this.api.setLoginState(CookieJar.fromJSON(cookies as any), this.accountInfo)
+    this.api.setLoginState(CookieJar.fromJSON(cookies as any), this.accountID)
 
     const currentUser = await this.api.getCurrentUser()
     if (!currentUser) throw new ReAuthError()
     this.user = mapCurrentUser(currentUser)
   }
 
-  init = async (serialized: { cookies: CookieJar.Serialized }, accountInfo: ClientContext) => {
-    this.accountInfo = accountInfo
+  init = async (serialized: { cookies: CookieJar.Serialized }) => {
     const { cookies } = serialized || {}
     if (!cookies) return
 

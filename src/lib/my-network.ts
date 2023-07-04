@@ -1,11 +1,11 @@
-import { ServerEventType, type Message, type Thread, AttachmentType, ServerEvent, Participant } from '@textshq/platform-sdk'
+import { ServerEventType, type Message, type Thread, Participant } from '@textshq/platform-sdk'
 
 import { encodeLinkedinUriComponent } from '../util'
 import { LinkedInURLs } from '../constants'
 
 import type LinkedInAPI from './linkedin'
 import type { PendingInvitationsRequests } from './types/my-network'
-import { getThumbnailUrl, mapConversationParticipant, mapPicture } from '../mappers'
+import { getThumbnailUrl } from '../mappers'
 
 export const MY_NETWORK_THREAD_ID = 'my-network-notifications'
 
@@ -92,11 +92,11 @@ export default class MyNetwork {
         buttons: [
           {
             label: 'Accept',
-            linkURL: `texts://platform-callback/${this.linkedInApi.accountInfo.accountID}/callback/${MY_NETWORK_THREAD_ID}/accept/${actionPayload}`,
+            linkURL: `texts://platform-callback/${this.linkedInApi.accountID}/callback/${MY_NETWORK_THREAD_ID}/accept/${actionPayload}`,
           },
           {
             label: 'Ignore',
-            linkURL: `texts://platform-callback/${this.linkedInApi.accountInfo.accountID}/callback/${MY_NETWORK_THREAD_ID}/ignore/${actionPayload}`,
+            linkURL: `texts://platform-callback/${this.linkedInApi.accountID}/callback/${MY_NETWORK_THREAD_ID}/ignore/${actionPayload}`,
           },
         ],
       }
