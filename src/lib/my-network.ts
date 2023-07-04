@@ -68,6 +68,7 @@ export default class MyNetwork {
       })).toString('base64')
 
       const common: Partial<Message> = {
+        _original: JSON.stringify(invitationFound),
         id: invitationOldEntityUrn,
         senderID: '$thread',
         seen: !invitationFound.unseen,
