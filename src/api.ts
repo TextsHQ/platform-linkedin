@@ -33,6 +33,7 @@ export default class LinkedIn implements PlatformAPI {
   init = async (serialized: { cookies: CookieJar.Serialized }) => {
     const { cookies } = serialized || {}
     if (!cookies) return
+
     await this.afterAuth(cookies)
   }
 
@@ -60,6 +61,15 @@ export default class LinkedIn implements PlatformAPI {
     this.onEvent = onEvent
     this.realTimeApi = new LinkedInRealTime(this)
     this.realTimeApi.setup()
+
+    const notificationsThread = await this.api.myNetwork.getThread()
+    this.onEvent([{
+      type: ServerEventType.STATE_SYNC,
+      objectIDs: {},
+      objectName: 'thread',
+      mutationType: 'upsert',
+      entries: [notificationsThread],
+    }])
   }
 
   dispose = async () => this.realTimeApi?.dispose()
