@@ -3,7 +3,7 @@ import crypto from 'crypto'
 
 import type { CookieJar } from 'tough-cookie'
 
-import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
+import { ActivityType, ClientContext, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, OnServerEventCallback, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
 import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
@@ -54,14 +54,23 @@ export default class LinkedInAPI {
 
   public myNetwork: MyNetwork
 
+  accountInfo: ClientContext
+
+  onEvent: OnServerEventCallback
+
   // key is threadID, values are participantIDs
   readonly conversationParticipantsMap: Record<string, string[]> = {}
 
-  setLoginState = (cookieJar: CookieJar) => {
+  setLoginState = (cookieJar: CookieJar, accountInfo: ClientContext) => {
     if (!cookieJar) throw TypeError('invalid cookieJar')
 
+    this.accountInfo = accountInfo
     this.cookieJar = cookieJar
     this.myNetwork = new MyNetwork({ api: this })
+  }
+
+  setOnEvent = (onEvent: OnServerEventCallback): void => {
+    this.onEvent = onEvent
   }
 
   getCSRFToken = async () => {

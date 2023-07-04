@@ -1,5 +1,6 @@
-import type { Message, Thread } from '@textshq/platform-sdk'
+import { ServerEventType, type Message, type Thread } from '@textshq/platform-sdk'
 
+import { encodeLinkedinUriComponent } from '../util'
 import { LinkedInURLs } from '../constants'
 
 import type LinkedInAPI from './linkedin'
@@ -57,11 +58,30 @@ export default class MyNetwork {
       const invitationFound = response.included.find(included => entityFound['*genericInvitationView'] === included.entityUrn || entityFound['*invitation'] === included.entityUrn)
       if (!invitationFound) return [...previous]
 
+      const invitationID = invitationFound.entityUrn.split(':').pop()
+      const invitationOldEntityUrn = `urn:li:fsd_invitation:${invitationID}`
+
+      const actionPayload = Buffer.from(JSON.stringify({
+        entityUrn: invitationOldEntityUrn,
+        type: invitationFound.invitationType,
+        secret: invitationFound.sharedSecret,
+      })).toString('base64')
+
       const common: Partial<Message> = {
-        id: invitationFound.entityUrn,
+        id: invitationOldEntityUrn,
         senderID: '$thread',
         seen: !invitationFound.unseen,
         timestamp: dateTimeMapper(invitationFound.sentTime),
+        buttons: [
+          {
+            label: 'Accept',
+            linkURL: `texts://platform-callback/${this.linkedInApi.accountInfo.accountID}/callback/${MY_NETWORK_THREAD_ID}/accept/${actionPayload}`,
+          },
+          {
+            label: 'Ignore',
+            linkURL: `texts://platform-callback/${this.linkedInApi.accountInfo.accountID}/callback/${MY_NETWORK_THREAD_ID}/ignore/${actionPayload}`,
+          },
+        ],
       }
 
       if (invitationFound['*fromMember']) {
@@ -73,16 +93,6 @@ export default class MyNetwork {
             ...common,
             textHeading: member.firstName && member.lastName ? `${member.firstName} ${member.lastName}` : 'Linkedin member',
             textFooter: member.occupation,
-            buttons: [
-              {
-                label: 'Accept',
-                linkURL: `https://www.linkedin.com/voyager/api/voyagerRelationshipsDashInvitations/urn%3Ali%3Afsd_invitation%3A${invitationFound.entityUrn}?action=accept`,
-              },
-              {
-                label: 'Ignore',
-                linkURL: `https://www.linkedin.com/voyager/api/voyagerRelationshipsDashInvitations/urn%3Ali%3Afsd_invitation%3A${invitationFound.entityUrn}?action=ignore`,
-              },
-            ],
           } as Message,
         ]
       }
@@ -112,5 +122,29 @@ export default class MyNetwork {
       messages: { items: requests, hasMore: false },
       participants: { items: [], hasMore: false },
     }
+  }
+
+  handleInvitationClick = async (action: 'accept' | 'ignore', encryptedData: string): Promise<void> => {
+    const data: { entityUrn: string, type: string, secret: string } = JSON.parse(Buffer.from(encryptedData, 'base64').toString())
+    const url = `${LinkedInURLs.API_BASE}/voyagerRelationshipsDashInvitations/${encodeLinkedinUriComponent(data.entityUrn)}`
+    const params = { action }
+
+    await this.linkedInApi.fetch<PendingInvitationsRequests>({
+      method: 'POST',
+      url,
+      searchParams: params,
+      json: {
+        sharedSecret: data.secret,
+        invitationType: data.type,
+      },
+    })
+
+    this.linkedInApi.onEvent([{
+      type: ServerEventType.STATE_SYNC,
+      mutationType: 'delete',
+      objectName: 'message',
+      objectIDs: { threadID: MY_NETWORK_THREAD_ID },
+      entries: [data.entityUrn],
+    }])
   }
 }
