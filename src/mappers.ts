@@ -14,7 +14,7 @@ export type ParticipantSeenMap = Map<string, [string, Date]>
 // threadID: participantID: [messageID, Date]
 export type ThreadSeenMap = Map<string, ParticipantSeenMap>
 
-const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.picture?.rootUrl
+export const mapPicture = (liMiniProfile: any): string | undefined => (liMiniProfile?.picture?.rootUrl
   // eslint-disable-next-line no-unsafe-optional-chaining
   ? liMiniProfile?.picture?.rootUrl + liMiniProfile?.picture?.artifacts[0]?.fileIdentifyingUrlPathSegment
   : undefined)
@@ -422,7 +422,7 @@ export const mapGraphQLMessage = (
   }
 }
 
-const getThumbnailUrl = (thumbnail: Thumbnail): string => {
+export const getThumbnailUrl = (thumbnail: Thumbnail): string => {
   if (!thumbnail) return undefined
 
   const baseUrl = thumbnail.rootUrl || ''
