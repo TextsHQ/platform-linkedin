@@ -1,4 +1,4 @@
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds, GetAssetOptions } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds, GetAssetOptions, ClientContext } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import LinkedInRealTime from './lib/real-time'
@@ -24,6 +24,8 @@ export default class LinkedIn implements PlatformAPI {
 
   readonly api = new LinkedInAPI()
 
+  private showMyNetwork = false
+
   constructor(readonly accountID: string) {}
 
   private afterAuth = async (cookies: CookieJar.Serialized) => {
@@ -34,9 +36,11 @@ export default class LinkedIn implements PlatformAPI {
     this.user = mapCurrentUser(currentUser)
   }
 
-  init = async (serialized: { cookies: CookieJar.Serialized }) => {
+  init = async (serialized: { cookies: CookieJar.Serialized }, _: ClientContext, preferences: Record<string, unknown> = {}) => {
     const { cookies } = serialized || {}
     if (!cookies) return
+
+    this.showMyNetwork = !!preferences.showMyNetwork
 
     await this.afterAuth(cookies)
   }
@@ -68,14 +72,16 @@ export default class LinkedIn implements PlatformAPI {
     this.realTimeApi = new LinkedInRealTime(this)
     this.realTimeApi.setup()
 
-    const notificationsThread = await this.api.myNetwork.getThread()
-    this.onEvent([{
-      type: ServerEventType.STATE_SYNC,
-      objectIDs: {},
-      objectName: 'thread',
-      mutationType: 'upsert',
-      entries: [notificationsThread],
-    }])
+    if (this.showMyNetwork) {
+      const notificationsThread = await this.api.myNetwork.getThread()
+      this.onEvent([{
+        type: ServerEventType.STATE_SYNC,
+        objectIDs: {},
+        objectName: 'thread',
+        mutationType: 'upsert',
+        entries: [notificationsThread],
+      }])
+    }
   }
 
   dispose = async () => this.realTimeApi?.dispose()
