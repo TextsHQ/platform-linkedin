@@ -107,7 +107,7 @@ export default class MyNetwork {
             ...common,
             text: invitationFound.message || 'Connection request',
             textHeading: member.occupation,
-            textFooter: sharedInsight ? `${sharedInsight?.totalCount} shared connections` : undefined,
+            textFooter: sharedInsight?.totalCount ? `${sharedInsight?.totalCount} shared connections` : undefined,
             senderID: member.entityUrn,
           } as Message,
         ]
