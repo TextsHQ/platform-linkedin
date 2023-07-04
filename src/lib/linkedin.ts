@@ -8,6 +8,8 @@ import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
 
+import MyNetwork from './my-network'
+
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
 import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
 import { urnID, encodeLinkedinUriComponent, extractSecondEntity, debounce } from '../util'
@@ -50,12 +52,16 @@ export default class LinkedInAPI {
 
   private httpClient = texts.createHttpClient()
 
+  public myNetwork: MyNetwork
+
   // key is threadID, values are participantIDs
   readonly conversationParticipantsMap: Record<string, string[]> = {}
 
   setLoginState = (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError('invalid cookieJar')
+
     this.cookieJar = cookieJar
+    this.myNetwork = new MyNetwork({ api: this })
   }
 
   getCSRFToken = async () => {
