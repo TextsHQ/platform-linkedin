@@ -29,8 +29,6 @@ const dateTimeMapper = (possibleDate: null | string | number): Date => {
   const durationInMillis = Number(value) * durationMap[mappedUnit]
   const date = new Date(now.getTime() - durationInMillis)
 
-  if (Number.isNaN(date.getTime())) return new Date()
-
   return date
 }
 
