@@ -47,14 +47,15 @@ const getSharedInsightText = (sharedInsight: SharedInsight, included: Included[]
 }
 
 export default class MyNetwork {
+  private latestCursor = 0
+
   constructor(private readonly linkedInApi: InstanceType<typeof LinkedInAPI>) {}
 
   getRequests = async (): Promise<{ messages: Message[], participants: Participant[] }> => {
     const url = `${LinkedInURLs.API_BASE}/relationships/invitationViews`
     const params = {
-      // TODO: work on pagination
-      // count: 110,
-      start: 0,
+      count: 10,
+      start: this.latestCursor,
       includeInsights: 'false',
       q: 'pendingInvitationsBasedOnRelevance',
     }
@@ -140,6 +141,8 @@ export default class MyNetwork {
       ]
     }, [] as Message[])
 
+    this.latestCursor += response.data['*elements'].length
+
     return {
       messages: mappedInvitations.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()),
       participants: participantEntries,
@@ -155,7 +158,7 @@ export default class MyNetwork {
       isUnread: false,
       isReadOnly: true,
       type: 'channel',
-      messages: { items: requests.messages, hasMore: false },
+      messages: { items: requests.messages, hasMore: true },
       participants: { items: requests.participants, hasMore: false },
     }
   }
