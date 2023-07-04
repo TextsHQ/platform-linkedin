@@ -138,7 +138,7 @@ export default class MyNetwork {
 
     return {
       id: MY_NETWORK_THREAD_ID,
-      title: 'My network',
+      title: 'My Network',
       isUnread: false,
       isReadOnly: true,
       type: 'channel',
