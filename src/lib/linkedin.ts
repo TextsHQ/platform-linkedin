@@ -66,7 +66,7 @@ export default class LinkedInAPI {
 
     this.accountID = accountID
     this.cookieJar = cookieJar
-    this.myNetwork = new MyNetwork({ api: this })
+    this.myNetwork = new MyNetwork(this)
   }
 
   setOnEvent = (onEvent: OnServerEventCallback): void => {

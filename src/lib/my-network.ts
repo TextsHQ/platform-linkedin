@@ -34,11 +34,7 @@ const dateTimeMapper = (possibleDate: null | string | number): Date => {
 }
 
 export default class MyNetwork {
-  private readonly linkedInApi: InstanceType<typeof LinkedInAPI>
-
-  constructor({ api }: { api: InstanceType<typeof LinkedInAPI> }) {
-    this.linkedInApi = api
-  }
+  constructor(private readonly linkedInApi: InstanceType<typeof LinkedInAPI>) {}
 
   getRequests = async (): Promise<{ messages: Message[], participants: Participant[] }> => {
     const url = `${LinkedInURLs.API_BASE}/relationships/invitationViews`
