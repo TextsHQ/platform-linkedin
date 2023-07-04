@@ -99,13 +99,13 @@ export default class MyNetwork {
 
       if (invitationFound['*fromMember']) {
         const member = response.included.find(included => included.entityUrn === invitationFound['*fromMember'])
-        const sharedInsight = entityFound.insights.find(insight => insight.$type === 'com.linkedin.voyager.relationships.shared.Insight')
+        const sharedInsight = entityFound.insights.find(insight => insight.$type === 'com.linkedin.voyager.relationships.shared.Insight')?.sharedInsight
 
         return [
           ...previous,
           {
             ...common,
-            text: invitationFound.message || sharedInsight?.sharedInsight ? `${sharedInsight?.sharedInsight?.totalCount} shared connections` : 'Connection request',
+            text: invitationFound.message || sharedInsight ? `${sharedInsight?.totalCount} shared connections` : 'Connection request',
             textFooter: member.occupation,
             senderID: member.entityUrn,
           } as Message,
