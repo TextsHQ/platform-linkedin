@@ -112,12 +112,16 @@ export default class MyNetwork {
         ]
       }
 
+      const profilePicutre = invitationFound.primaryImage.attributes.find(image => image.sourceType === 'PROFILE_PICTURE')
+      const member = response.included.find(included => included.entityUrn === profilePicutre['*miniProfile'])
+
       return [
         ...previous,
         {
           ...common,
           text: invitationFound?.title.text || undefined,
           textFooter: invitationFound?.subtitle?.text || undefined,
+          senderID: member.entityUrn || '$thread',
         } as Message,
       ]
     }, [] as Message[])
