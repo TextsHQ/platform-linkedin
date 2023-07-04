@@ -1,11 +1,11 @@
 import { ServerEventType, type Message, type Thread, Participant } from '@textshq/platform-sdk'
 
 import { encodeLinkedinUriComponent } from '../util'
+import { getThumbnailUrl } from '../mappers'
 import { LinkedInURLs } from '../constants'
 
 import type LinkedInAPI from './linkedin'
-import type { PendingInvitationsRequests } from './types/my-network'
-import { getThumbnailUrl } from '../mappers'
+import type { Included, PendingInvitationsRequests, SharedInsight } from './types/my-network'
 
 export const MY_NETWORK_THREAD_ID = 'my-network-notifications'
 
@@ -31,6 +31,19 @@ const dateTimeMapper = (possibleDate: null | string | number): Date => {
   const date = new Date(now.getTime() - durationInMillis)
 
   return date
+}
+
+const getSharedInsightText = (sharedInsight: SharedInsight, included: Included[]): string | undefined => {
+  if (!sharedInsight?.totalCount) return undefined
+
+  if (sharedInsight['*connections'].length) {
+    const [firstConnectionID] = sharedInsight['*connections']
+    const [firstSharedConnection] = included.filter(x => firstConnectionID === x.entityUrn)
+
+    return `${firstSharedConnection.firstName} ${firstSharedConnection.lastName}${sharedInsight.totalCount > 1 ? ` and ${sharedInsight.totalCount - 1} other mutual connections` : ' is a mutual connection'}`
+  }
+
+  return `${sharedInsight.totalCount} mutual connections`
 }
 
 export default class MyNetwork {
@@ -107,7 +120,7 @@ export default class MyNetwork {
             ...common,
             text: invitationFound.message || 'Connection request',
             textHeading: member.occupation,
-            textFooter: sharedInsight?.totalCount ? `${sharedInsight?.totalCount} shared connections` : undefined,
+            textFooter: getSharedInsightText(sharedInsight, response.included),
             senderID: member.entityUrn,
           } as Message,
         ]
