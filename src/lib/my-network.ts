@@ -121,7 +121,7 @@ export default class MyNetwork {
         {
           ...common,
           text: invitationFound?.title.text || undefined,
-          textFooter: invitationFound?.subtitle?.text || undefined,
+          textHeading: invitationFound?.subtitle?.text || undefined,
           senderID: member.entityUrn || '$thread',
         } as Message,
       ]
