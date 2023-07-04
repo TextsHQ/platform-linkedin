@@ -22,7 +22,7 @@ export default class LinkedIn implements PlatformAPI {
 
   onEvent: OnServerEventCallback
 
-  api = new LinkedInAPI()
+  readonly api = new LinkedInAPI()
 
   constructor(readonly accountID: string) {}
 
