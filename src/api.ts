@@ -1,4 +1,4 @@
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds, GetAssetOptions } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds, GetAssetOptions, ClientContext } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import LinkedInRealTime from './lib/real-time'
@@ -6,6 +6,7 @@ import LinkedInAPI from './lib/linkedin'
 
 import { mapCurrentUser, ParticipantSeenMap, ThreadSeenMap } from './mappers'
 import { LinkedInAuthCookieName } from './constants'
+import { MY_NETWORK_THREAD_ID } from './lib/my-network'
 
 export type SendMessageResolveFunction = (value: Message[]) => void
 
@@ -23,14 +24,18 @@ export default class LinkedIn implements PlatformAPI {
 
   readonly api = new LinkedInAPI()
 
+  accountInfo: ClientContext
+
   private afterAuth = async (cookies: CookieJar.Serialized) => {
-    this.api.setLoginState(CookieJar.fromJSON(cookies as any))
+    this.api.setLoginState(CookieJar.fromJSON(cookies as any), this.accountInfo)
+
     const currentUser = await this.api.getCurrentUser()
     if (!currentUser) throw new ReAuthError()
     this.user = mapCurrentUser(currentUser)
   }
 
-  init = async (serialized: { cookies: CookieJar.Serialized }) => {
+  init = async (serialized: { cookies: CookieJar.Serialized }, accountInfo: ClientContext) => {
+    this.accountInfo = accountInfo
     const { cookies } = serialized || {}
     if (!cookies) return
 
@@ -59,6 +64,8 @@ export default class LinkedIn implements PlatformAPI {
 
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
     this.onEvent = onEvent
+    this.api.setOnEvent(onEvent)
+
     this.realTimeApi = new LinkedInRealTime(this)
     this.realTimeApi.setup()
 
@@ -220,5 +227,15 @@ export default class LinkedIn implements PlatformAPI {
   unregisterForPushNotifications = async (type: keyof NotificationsInfo, token: string) => {
     if (type !== 'android') throw Error('invalid type')
     await this.api.registerPush(token, false)
+  }
+
+  handleDeepLink = (link: string): void => {
+    const [, , , , type, threadID, messageID, data] = link.split('/')
+
+    if (type === 'callback') {
+      if (threadID === MY_NETWORK_THREAD_ID) {
+        this.api.myNetwork.handleInvitationClick(messageID as never, data)
+      }
+    }
   }
 }
