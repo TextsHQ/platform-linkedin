@@ -9,13 +9,13 @@ import type { PendingInvitationsRequests } from './types/my-network'
 export const MY_NETWORK_THREAD_ID = 'my-network-notifications'
 
 const durationMap = {
-  seconds: 1000,
-  minutes: 60 * 1000,
-  hours: 60 * 60 * 1000,
-  days: 24 * 60 * 60 * 1000,
-  weeks: 7 * 24 * 60 * 60 * 1000,
-  months: 30 * 24 * 60 * 60 * 1000,
-  years: 365 * 24 * 60 * 60 * 1000,
+  second: 1000,
+  minute: 60 * 1000,
+  hour: 60 * 60 * 1000,
+  day: 24 * 60 * 60 * 1000,
+  week: 7 * 24 * 60 * 60 * 1000,
+  month: 30 * 24 * 60 * 60 * 1000,
+  year: 365 * 24 * 60 * 60 * 1000,
 }
 
 const dateTimeMapper = (possibleDate: null | string | number): Date => {
@@ -24,7 +24,9 @@ const dateTimeMapper = (possibleDate: null | string | number): Date => {
 
   const now = new Date()
   const [value, unit] = possibleDate.split(' ')
-  const durationInMillis = Number(value) * durationMap[unit]
+  const mappedUnit = unit.endsWith('s') ? unit.slice(0, -1) : unit
+
+  const durationInMillis = Number(value) * durationMap[mappedUnit]
   const date = new Date(now.getTime() - durationInMillis)
 
   return date
