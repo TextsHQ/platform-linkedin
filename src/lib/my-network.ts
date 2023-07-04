@@ -1,10 +1,11 @@
-import { ServerEventType, type Message, type Thread } from '@textshq/platform-sdk'
+import { ServerEventType, type Message, type Thread, AttachmentType, ServerEvent, Participant } from '@textshq/platform-sdk'
 
 import { encodeLinkedinUriComponent } from '../util'
 import { LinkedInURLs } from '../constants'
 
 import type LinkedInAPI from './linkedin'
 import type { PendingInvitationsRequests } from './types/my-network'
+import { getThumbnailUrl, mapConversationParticipant, mapPicture } from '../mappers'
 
 export const MY_NETWORK_THREAD_ID = 'my-network-notifications'
 
@@ -39,18 +40,31 @@ export default class MyNetwork {
     this.linkedInApi = api
   }
 
-  getRequests = async (): Promise<Message[]> => {
+  getRequests = async (): Promise<{ messages: Message[], participants: Participant[] }> => {
     const url = `${LinkedInURLs.API_BASE}/relationships/invitationViews`
     const params = {
       // TODO: work on pagination
-      count: 100,
+      // count: 110,
       start: 0,
       includeInsights: 'false',
       q: 'pendingInvitationsBasedOnRelevance',
     }
     const response = await this.linkedInApi.fetch<PendingInvitationsRequests>({ method: 'GET', url, searchParams: params })
 
-    if (!(response.data['*elements'] || []).length) return []
+    if (!(response.data['*elements'] || []).length) return { messages: [], participants: [] }
+
+    const participantEntries = response.included.reduce((previous, included) => {
+      if (included.$type !== 'com.linkedin.voyager.identity.shared.MiniProfile') return [...previous]
+
+      return [
+        ...previous,
+        {
+          id: included.entityUrn,
+          fullName: [included.firstName, included.lastName].filter(Boolean).join(' '),
+          imgURL: getThumbnailUrl(included.picture),
+        },
+      ]
+    }, [] as Participant[])
 
     const invitations = response.data['*elements']
     const mappedInvitations = invitations.reduce((previous, invitation) => {
@@ -89,13 +103,15 @@ export default class MyNetwork {
 
       if (invitationFound['*fromMember']) {
         const member = response.included.find(included => included.entityUrn === invitationFound['*fromMember'])
+        const sharedInsight = entityFound.insights.find(insight => insight.$type === 'com.linkedin.voyager.relationships.shared.Insight')
 
         return [
           ...previous,
           {
             ...common,
-            textHeading: member.firstName && member.lastName ? `${member.firstName} ${member.lastName}` : 'Linkedin member',
+            text: sharedInsight ? `${sharedInsight.sharedInsight.totalCount} shared connections` : 'Connection request',
             textFooter: member.occupation,
+            senderID: member.entityUrn,
           } as Message,
         ]
       }
@@ -104,13 +120,16 @@ export default class MyNetwork {
         ...previous,
         {
           ...common,
-          textHeading: invitationFound?.title.text || undefined,
+          text: invitationFound?.title.text || undefined,
           textFooter: invitationFound?.subtitle?.text || undefined,
         } as Message,
       ]
     }, [] as Message[])
 
-    return mappedInvitations.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+    return {
+      messages: mappedInvitations.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()),
+      participants: participantEntries,
+    }
   }
 
   getThread = async (): Promise<Thread> => {
@@ -121,9 +140,9 @@ export default class MyNetwork {
       title: 'My network',
       isUnread: false,
       isReadOnly: true,
-      type: 'broadcast',
-      messages: { items: requests, hasMore: false },
-      participants: { items: [], hasMore: false },
+      type: 'channel',
+      messages: { items: requests.messages, hasMore: false },
+      participants: { items: requests.participants, hasMore: false },
     }
   }
 
