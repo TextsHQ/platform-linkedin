@@ -123,6 +123,13 @@ export default class MyNetwork {
             textHeading: member.occupation,
             textFooter: getSharedInsightText(sharedInsight, response.included),
             senderID: member.entityUrn,
+            buttons: [
+              ...common.buttons,
+              {
+                label: 'Open user profile',
+                linkURL: `https://linkedin.com/in/${member.entityUrn.split(':').pop()}`,
+              },
+            ],
           } as Message,
         ]
       }
@@ -137,6 +144,21 @@ export default class MyNetwork {
           text: invitationFound?.title.text || undefined,
           textHeading: invitationFound?.subtitle?.text || undefined,
           senderID: member.entityUrn || '$thread',
+          textAttributes: invitationFound?.title?.attributes ? {
+            entities: invitationFound?.title?.attributes.map(attribute => {
+              switch (attribute.type) {
+                case 'HYPERLINK':
+                  return {
+                    from: attribute.start,
+                    to: attribute.start + attribute.length,
+                    link: `https://linkedin.com/${attribute.link}`,
+                  }
+
+                default:
+                  return null
+              }
+            }).filter(Boolean),
+          } : undefined,
         } as Message,
       ]
     }, [] as Message[])
