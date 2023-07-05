@@ -161,6 +161,13 @@ export default class MyNetwork {
               }
             }).filter(Boolean),
           } : undefined,
+          buttons: member ? [
+            ...common.buttons,
+            {
+              label: 'Open user profile',
+              linkURL: `https://linkedin.com/in/${member.entityUrn.split(':').pop()}`,
+            },
+          ] : common.buttons,
         } as Message,
       ]
     }, [] as Message[])
