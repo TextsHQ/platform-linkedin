@@ -161,8 +161,11 @@ export default class LinkedIn implements PlatformAPI {
     return this.api.sendMessage(threadID, content, options, this.sendMessageResolvers)
   }
 
-  deleteMessage = (threadID: string, messageID: string) =>
-    this.api.deleteMessage(threadID, messageID)
+  deleteMessage = async (threadID: string, messageID: string) => {
+    if (threadID === MY_NETWORK_THREAD_ID) throw new Error('Delete message not supported')
+
+    await this.api.deleteMessage(threadID, messageID)
+  }
 
   editMessage = this.api.editMessage
 
@@ -181,10 +184,14 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
+    if (threadID === MY_NETWORK_THREAD_ID) throw new Error('Reactions not supported on My Network thread')
+
     await this.api.toggleReaction(reactionKey, messageID, threadID, true)
   }
 
   removeReaction = async (threadID: string, messageID: string, reactionKey: string) => {
+    if (threadID === MY_NETWORK_THREAD_ID) throw new Error('Reactions not supported on My Network thread')
+
     await this.api.toggleReaction(reactionKey, messageID, threadID, false)
   }
 
@@ -196,7 +203,11 @@ export default class LinkedIn implements PlatformAPI {
     await this.api.markThreadRead(threadID, false)
   }
 
-  deleteThread = async (threadID: string) => this.api.deleteThread(threadID)
+  deleteThread = async (threadID: string) => {
+    if (threadID === MY_NETWORK_THREAD_ID) throw new Error('To remove the notifications thread: click Prefs → your LinkedIn account → Show My Network')
+
+    await this.api.deleteThread(threadID)
+  }
 
   archiveThread = async (threadID: string, archived: boolean) => {
     if (archived) await this.api.archiveThread(threadID)
