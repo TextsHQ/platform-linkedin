@@ -51,7 +51,9 @@ export default class MyNetwork {
 
   constructor(private readonly linkedInApi: InstanceType<typeof LinkedInAPI>) {}
 
-  getRequests = async (): Promise<{ messages: Message[], participants: Participant[] }> => {
+  getRequests = async (shouldRefreshCursor = false): Promise<{ messages: Message[], participants: Participant[] }> => {
+    if (shouldRefreshCursor) this.latestCursor = 0
+
     const url = `${LinkedInURLs.API_BASE}/relationships/invitationViews`
     const params = {
       count: 10,

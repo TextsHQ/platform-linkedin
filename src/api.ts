@@ -124,7 +124,8 @@ export default class LinkedIn implements PlatformAPI {
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
     if (threadID === MY_NETWORK_THREAD_ID) {
-      const response = await this.api.myNetwork.getRequests()
+      const shouldRefresh = !pagination?.cursor
+      const response = await this.api.myNetwork.getRequests(shouldRefresh)
 
       this.onEvent([{
         type: ServerEventType.STATE_SYNC,
