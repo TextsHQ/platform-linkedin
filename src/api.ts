@@ -226,7 +226,10 @@ export default class LinkedIn implements PlatformAPI {
   removeParticipant = (threadID: string, participantID: string) => this.api.changeParticipants(threadID, participantID, 'remove')
 
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
-    if (updates.title) await this.api.renameThread(threadID, updates.title)
+    if (updates.title) {
+      if (threadID === MY_NETWORK_THREAD_ID) throw new Error('Cannot update My Network thread title')
+      await this.api.renameThread(threadID, updates.title)
+    }
     if ('mutedUntil' in updates) await this.api.sendMutePatch(threadID, updates.mutedUntil)
   }
 

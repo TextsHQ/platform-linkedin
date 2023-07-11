@@ -99,7 +99,7 @@ export default class MyNetwork {
         _original: JSON.stringify(invitationFound),
         id: invitationOldEntityUrn,
         senderID: '$thread',
-        seen: !invitationFound.unseen,
+        // seen: !invitationFound.unseen,
         timestamp: dateTimeMapper(invitationFound.sentTime),
         buttons: [
           {
@@ -128,7 +128,7 @@ export default class MyNetwork {
             buttons: [
               ...common.buttons,
               {
-                label: 'Open user profile',
+                label: 'Open User Profile',
                 linkURL: `https://linkedin.com/in/${member.entityUrn.split(':').pop()}`,
               },
             ],
@@ -164,7 +164,7 @@ export default class MyNetwork {
           buttons: member ? [
             ...common.buttons,
             {
-              label: 'Open user profile',
+              label: 'Open User Profile',
               linkURL: `https://linkedin.com/in/${member.entityUrn.split(':').pop()}`,
             },
           ] : common.buttons,
