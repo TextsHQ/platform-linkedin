@@ -24,9 +24,7 @@ export default class LinkedIn implements PlatformAPI {
 
   readonly api = new LinkedInAPI()
 
-  readonly myNetwork = new MyNetwork(this)
-
-  private showMyNetwork = false
+  private myNetwork: MyNetwork
 
   constructor(readonly accountID: string) {}
 
@@ -41,7 +39,9 @@ export default class LinkedIn implements PlatformAPI {
   init = async (serialized: { cookies: CookieJar.Serialized }, _: ClientContext, preferences: Record<string, unknown> = {}) => {
     const { cookies } = serialized || {}
     if (!cookies) return
-    this.showMyNetwork = !!preferences.showMyNetwork
+    if (preferences.showMyNetwork) {
+      this.myNetwork = new MyNetwork(this)
+    }
     await this.afterAuth(cookies)
   }
 
@@ -66,7 +66,7 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   upsertMyNetworkThread = async () => {
-    if (!this.showMyNetwork) return
+    if (!this.myNetwork) return
     const notificationsThread = await this.myNetwork.getThread()
     this.onEvent([{
       type: ServerEventType.STATE_SYNC,
