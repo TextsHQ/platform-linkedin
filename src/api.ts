@@ -1,4 +1,4 @@
-import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds, GetAssetOptions } from '@textshq/platform-sdk'
+import { PlatformAPI, OnServerEventCallback, LoginResult, Paginated, Thread, Message, MessageContent, PaginationArg, ActivityType, ReAuthError, CurrentUser, MessageSendOptions, ServerEventType, ServerEvent, NotificationsInfo, ThreadFolderName, LoginCreds, GetAssetOptions, ClientContext } from '@textshq/platform-sdk'
 import { CookieJar } from 'tough-cookie'
 
 import LinkedInRealTime from './lib/real-time'
@@ -6,6 +6,7 @@ import LinkedInAPI from './lib/linkedin'
 
 import { mapCurrentUser, ParticipantSeenMap, ThreadSeenMap } from './mappers'
 import { LinkedInAuthCookieName } from './constants'
+import MyNetwork, { MY_NETWORK_THREAD_ID } from './lib/my-network'
 
 export type SendMessageResolveFunction = (value: Message[]) => void
 
@@ -23,16 +24,24 @@ export default class LinkedIn implements PlatformAPI {
 
   readonly api = new LinkedInAPI()
 
+  private myNetwork: MyNetwork
+
+  constructor(readonly accountID: string) {}
+
   private afterAuth = async (cookies: CookieJar.Serialized) => {
     this.api.setLoginState(CookieJar.fromJSON(cookies as any))
+
     const currentUser = await this.api.getCurrentUser()
     if (!currentUser) throw new ReAuthError()
     this.user = mapCurrentUser(currentUser)
   }
 
-  init = async (serialized: { cookies: CookieJar.Serialized }) => {
+  init = async (serialized: { cookies: CookieJar.Serialized }, _: ClientContext, preferences: Record<string, unknown> = {}) => {
     const { cookies } = serialized || {}
     if (!cookies) return
+    if (preferences.showMyNetwork) {
+      this.myNetwork = new MyNetwork(this)
+    }
     await this.afterAuth(cookies)
   }
 
@@ -56,10 +65,23 @@ export default class LinkedIn implements PlatformAPI {
     pmap.set(participantID, [messageID, new Date(Number(seenAt))])
   }
 
+  private upsertMyNetworkThread = async () => {
+    if (!this.myNetwork) return
+    const notificationsThread = await this.myNetwork.getThread()
+    this.onEvent([{
+      type: ServerEventType.STATE_SYNC,
+      objectIDs: {},
+      objectName: 'thread',
+      mutationType: 'upsert',
+      entries: [notificationsThread],
+    }])
+  }
+
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
     this.onEvent = onEvent
     this.realTimeApi = new LinkedInRealTime(this)
     this.realTimeApi.setup()
+    this.upsertMyNetworkThread()
   }
 
   dispose = async () => this.realTimeApi?.dispose()
@@ -101,6 +123,24 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
+    if (threadID === MY_NETWORK_THREAD_ID) {
+      const shouldRefresh = !pagination?.cursor
+      const response = await this.myNetwork.getRequests(shouldRefresh)
+
+      this.onEvent([{
+        type: ServerEventType.STATE_SYNC,
+        objectIDs: { threadID: MY_NETWORK_THREAD_ID },
+        objectName: 'participant',
+        mutationType: 'upsert',
+        entries: [...response.participants],
+      }])
+
+      return {
+        items: response.messages,
+        hasMore: response.messages.length > 0,
+      }
+    }
+
     const { cursor } = pagination ?? {}
     const createdBefore = +cursor || Date.now()
 
@@ -122,8 +162,11 @@ export default class LinkedIn implements PlatformAPI {
     return this.api.sendMessage(threadID, content, options, this.sendMessageResolvers)
   }
 
-  deleteMessage = (threadID: string, messageID: string) =>
-    this.api.deleteMessage(threadID, messageID)
+  deleteMessage = async (threadID: string, messageID: string) => {
+    if (threadID === MY_NETWORK_THREAD_ID) throw new Error('Delete message not supported')
+
+    await this.api.deleteMessage(threadID, messageID)
+  }
 
   editMessage = this.api.editMessage
 
@@ -142,10 +185,14 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   addReaction = async (threadID: string, messageID: string, reactionKey: string) => {
+    if (threadID === MY_NETWORK_THREAD_ID) throw new Error('Reactions not supported on My Network thread')
+
     await this.api.toggleReaction(reactionKey, messageID, threadID, true)
   }
 
   removeReaction = async (threadID: string, messageID: string, reactionKey: string) => {
+    if (threadID === MY_NETWORK_THREAD_ID) throw new Error('Reactions not supported on My Network thread')
+
     await this.api.toggleReaction(reactionKey, messageID, threadID, false)
   }
 
@@ -157,7 +204,11 @@ export default class LinkedIn implements PlatformAPI {
     await this.api.markThreadRead(threadID, false)
   }
 
-  deleteThread = async (threadID: string) => this.api.deleteThread(threadID)
+  deleteThread = async (threadID: string) => {
+    if (threadID === MY_NETWORK_THREAD_ID) throw new Error('To remove the notifications thread: click Prefs → your LinkedIn account → Show My Network')
+
+    await this.api.deleteThread(threadID)
+  }
 
   archiveThread = async (threadID: string, archived: boolean) => {
     if (archived) await this.api.archiveThread(threadID)
@@ -175,7 +226,10 @@ export default class LinkedIn implements PlatformAPI {
   removeParticipant = (threadID: string, participantID: string) => this.api.changeParticipants(threadID, participantID, 'remove')
 
   updateThread = async (threadID: string, updates: Partial<Thread>) => {
-    if (updates.title) await this.api.renameThread(threadID, updates.title)
+    if (updates.title) {
+      if (threadID === MY_NETWORK_THREAD_ID) throw new Error('Cannot update My Network thread title')
+      await this.api.renameThread(threadID, updates.title)
+    }
     if ('mutedUntil' in updates) await this.api.sendMutePatch(threadID, updates.mutedUntil)
   }
 
@@ -210,5 +264,15 @@ export default class LinkedIn implements PlatformAPI {
   unregisterForPushNotifications = async (type: keyof NotificationsInfo, token: string) => {
     if (type !== 'android') throw Error('invalid type')
     await this.api.registerPush(token, false)
+  }
+
+  handleDeepLink = (link: string): void => {
+    const [, , , , type, threadID, messageID, data] = link.split('/')
+
+    if (type === 'callback') {
+      if (threadID === MY_NETWORK_THREAD_ID) {
+        this.myNetwork.handleInvitationClick(messageID as 'accept' | 'ignore', data)
+      }
+    }
   }
 }

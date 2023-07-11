@@ -1,12 +1,10 @@
 import FormData from 'form-data'
 import crypto from 'crypto'
-
-import type { CookieJar } from 'tough-cookie'
-
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
 import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
+import type { CookieJar } from 'tough-cookie'
 
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
 import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'

@@ -59,6 +59,13 @@ const info: PlatformInfo = {
     Attribute.GROUP_THREAD_CREATION_REQUIRES_MESSAGE,
   ]),
   getUserProfileLink: ({ id }) => `https://www.linkedin.com/in/${id}/`,
+  prefs: {
+    showMyNetwork: {
+      label: 'Show LinkedIn My Network as a thread',
+      type: 'checkbox',
+      default: false,
+    },
+  },
 }
 
 export default info
