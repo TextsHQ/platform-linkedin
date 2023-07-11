@@ -1,14 +1,10 @@
 import FormData from 'form-data'
 import crypto from 'crypto'
-
-import type { CookieJar } from 'tough-cookie'
-
-import { ActivityType, ClientContext, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, OnServerEventCallback, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
+import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
 import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
 import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
-
-import MyNetwork from './my-network'
+import type { CookieJar } from 'tough-cookie'
 
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
 import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
@@ -52,25 +48,12 @@ export default class LinkedInAPI {
 
   private httpClient = texts.createHttpClient()
 
-  public myNetwork: MyNetwork
-
-  accountID: ClientContext['accountID']
-
-  onEvent: OnServerEventCallback
-
   // key is threadID, values are participantIDs
   readonly conversationParticipantsMap: Record<string, string[]> = {}
 
-  setLoginState = (cookieJar: CookieJar, accountID: ClientContext['accountID']) => {
+  setLoginState = (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError('invalid cookieJar')
-
-    this.accountID = accountID
     this.cookieJar = cookieJar
-    this.myNetwork = new MyNetwork(this)
-  }
-
-  setOnEvent = (onEvent: OnServerEventCallback): void => {
-    this.onEvent = onEvent
   }
 
   getCSRFToken = async () => {

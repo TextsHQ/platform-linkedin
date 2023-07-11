@@ -6,7 +6,7 @@ import LinkedInAPI from './lib/linkedin'
 
 import { mapCurrentUser, ParticipantSeenMap, ThreadSeenMap } from './mappers'
 import { LinkedInAuthCookieName } from './constants'
-import { MY_NETWORK_THREAD_ID } from './lib/my-network'
+import MyNetwork, { MY_NETWORK_THREAD_ID } from './lib/my-network'
 
 export type SendMessageResolveFunction = (value: Message[]) => void
 
@@ -24,12 +24,14 @@ export default class LinkedIn implements PlatformAPI {
 
   readonly api = new LinkedInAPI()
 
+  readonly myNetwork = new MyNetwork(this)
+
   private showMyNetwork = false
 
   constructor(readonly accountID: string) {}
 
   private afterAuth = async (cookies: CookieJar.Serialized) => {
-    this.api.setLoginState(CookieJar.fromJSON(cookies as any), this.accountID)
+    this.api.setLoginState(CookieJar.fromJSON(cookies as any))
 
     const currentUser = await this.api.getCurrentUser()
     if (!currentUser) throw new ReAuthError()
@@ -39,9 +41,7 @@ export default class LinkedIn implements PlatformAPI {
   init = async (serialized: { cookies: CookieJar.Serialized }, _: ClientContext, preferences: Record<string, unknown> = {}) => {
     const { cookies } = serialized || {}
     if (!cookies) return
-
     this.showMyNetwork = !!preferences.showMyNetwork
-
     await this.afterAuth(cookies)
   }
 
@@ -65,23 +65,25 @@ export default class LinkedIn implements PlatformAPI {
     pmap.set(participantID, [messageID, new Date(Number(seenAt))])
   }
 
+  upsertMyNetworkThread = async () => {
+    if (!this.showMyNetwork) return
+    const notificationsThread = await this.myNetwork.getThread()
+    this.onEvent([{
+      type: ServerEventType.STATE_SYNC,
+      objectIDs: {},
+      objectName: 'thread',
+      mutationType: 'upsert',
+      entries: [notificationsThread],
+    }])
+  }
+
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
     this.onEvent = onEvent
-    this.api.setOnEvent(onEvent)
 
     this.realTimeApi = new LinkedInRealTime(this)
     this.realTimeApi.setup()
 
-    if (this.showMyNetwork) {
-      const notificationsThread = await this.api.myNetwork.getThread()
-      this.onEvent([{
-        type: ServerEventType.STATE_SYNC,
-        objectIDs: {},
-        objectName: 'thread',
-        mutationType: 'upsert',
-        entries: [notificationsThread],
-      }])
-    }
+    this.upsertMyNetworkThread()
   }
 
   dispose = async () => this.realTimeApi?.dispose()
@@ -125,7 +127,7 @@ export default class LinkedIn implements PlatformAPI {
   getMessages = async (threadID: string, pagination?: PaginationArg): Promise<Paginated<Message>> => {
     if (threadID === MY_NETWORK_THREAD_ID) {
       const shouldRefresh = !pagination?.cursor
-      const response = await this.api.myNetwork.getRequests(shouldRefresh)
+      const response = await this.myNetwork.getRequests(shouldRefresh)
 
       this.onEvent([{
         type: ServerEventType.STATE_SYNC,
@@ -271,7 +273,7 @@ export default class LinkedIn implements PlatformAPI {
 
     if (type === 'callback') {
       if (threadID === MY_NETWORK_THREAD_ID) {
-        this.api.myNetwork.handleInvitationClick(messageID as never, data)
+        this.myNetwork.handleInvitationClick(messageID as 'accept' | 'ignore', data)
       }
     }
   }

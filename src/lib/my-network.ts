@@ -4,7 +4,7 @@ import { encodeLinkedinUriComponent } from '../util'
 import { getThumbnailUrl } from '../mappers'
 import { LinkedInURLs } from '../constants'
 
-import type LinkedInAPI from './linkedin'
+import type LinkedInAPI from '../api'
 import type { Included, PendingInvitationsRequests, SharedInsight } from './types/my-network'
 
 export const MY_NETWORK_THREAD_ID = 'my-network-notifications'
@@ -49,7 +49,7 @@ const getSharedInsightText = (sharedInsight: SharedInsight, included: Included[]
 export default class MyNetwork {
   private latestCursor = 0
 
-  constructor(private readonly linkedInApi: InstanceType<typeof LinkedInAPI>) {}
+  constructor(private readonly api: InstanceType<typeof LinkedInAPI>) {}
 
   getRequests = async (shouldRefreshCursor = false): Promise<{ messages: Message[], participants: Participant[] }> => {
     if (shouldRefreshCursor) this.latestCursor = 0
@@ -61,7 +61,7 @@ export default class MyNetwork {
       includeInsights: 'false',
       q: 'pendingInvitationsBasedOnRelevance',
     }
-    const response = await this.linkedInApi.fetch<PendingInvitationsRequests>({ method: 'GET', url, searchParams: params })
+    const response = await this.api.api.fetch<PendingInvitationsRequests>({ method: 'GET', url, searchParams: params })
 
     if (!(response.data['*elements'] || []).length) return { messages: [], participants: [] }
 
@@ -104,11 +104,11 @@ export default class MyNetwork {
         buttons: [
           {
             label: 'Accept',
-            linkURL: `texts://platform-callback/${this.linkedInApi.accountID}/callback/${MY_NETWORK_THREAD_ID}/accept/${actionPayload}`,
+            linkURL: `texts://platform-callback/${this.api.accountID}/callback/${MY_NETWORK_THREAD_ID}/accept/${actionPayload}`,
           },
           {
             label: 'Ignore',
-            linkURL: `texts://platform-callback/${this.linkedInApi.accountID}/callback/${MY_NETWORK_THREAD_ID}/ignore/${actionPayload}`,
+            linkURL: `texts://platform-callback/${this.api.accountID}/callback/${MY_NETWORK_THREAD_ID}/ignore/${actionPayload}`,
           },
         ],
       }
@@ -199,7 +199,7 @@ export default class MyNetwork {
     const url = `${LinkedInURLs.API_BASE}/voyagerRelationshipsDashInvitations/${encodeLinkedinUriComponent(data.entityUrn)}`
     const params = { action }
 
-    await this.linkedInApi.fetch<PendingInvitationsRequests>({
+    await this.api.api.fetch<PendingInvitationsRequests>({
       method: 'POST',
       url,
       searchParams: params,
@@ -209,7 +209,7 @@ export default class MyNetwork {
       },
     })
 
-    this.linkedInApi.onEvent([{
+    this.api.onEvent([{
       type: ServerEventType.STATE_SYNC,
       mutationType: 'delete',
       objectName: 'message',
