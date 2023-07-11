@@ -61,7 +61,7 @@ const info: PlatformInfo = {
   getUserProfileLink: ({ id }) => `https://www.linkedin.com/in/${id}/`,
   prefs: {
     showMyNetwork: {
-      label: 'My Network',
+      label: 'Show LinkedIn My Network as a thread',
       type: 'checkbox',
       default: false,
     },

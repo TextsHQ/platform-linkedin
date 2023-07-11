@@ -65,7 +65,7 @@ export default class LinkedIn implements PlatformAPI {
     pmap.set(participantID, [messageID, new Date(Number(seenAt))])
   }
 
-  upsertMyNetworkThread = async () => {
+  private upsertMyNetworkThread = async () => {
     if (!this.myNetwork) return
     const notificationsThread = await this.myNetwork.getThread()
     this.onEvent([{
@@ -79,10 +79,8 @@ export default class LinkedIn implements PlatformAPI {
 
   subscribeToEvents = async (onEvent: OnServerEventCallback) => {
     this.onEvent = onEvent
-
     this.realTimeApi = new LinkedInRealTime(this)
     this.realTimeApi.setup()
-
     this.upsertMyNetworkThread()
   }
 
