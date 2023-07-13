@@ -1,11 +1,11 @@
-import { ServerEventType, type Message, type Thread, Participant } from '@textshq/platform-sdk'
+import { ServerEventType, type Message, type Thread, Participant, texts } from '@textshq/platform-sdk'
 
 import { encodeLinkedinUriComponent } from '../util'
 import { getThumbnailUrl } from '../mappers'
-import { LinkedInURLs } from '../constants'
+import { GraphQLHeaders, LinkedInURLs } from '../constants'
 
 import type LinkedInAPI from '../api'
-import type { Included, PendingInvitationsRequests, SharedInsight } from './types/my-network'
+import type { Included, MyNetworkNotificationsSummary, PendingInvitationsRequests, SharedInsight } from './types/my-network'
 
 export const MY_NETWORK_THREAD_ID = 'my-network-notifications'
 
@@ -99,7 +99,7 @@ export default class MyNetwork {
         _original: JSON.stringify(invitationFound),
         id: invitationOldEntityUrn,
         senderID: '$thread',
-        // seen: !invitationFound.unseen,
+        seen: !invitationFound.unseen,
         timestamp: dateTimeMapper(invitationFound.sentTime),
         buttons: [
           {
@@ -180,13 +180,31 @@ export default class MyNetwork {
     }
   }
 
+  getInvitationsUnreadNotifications = async (): Promise<number> => {
+    // Query/Search params are added inline because otherwise searchParams will encode them and LinkedIn is throwing 400
+    // if query params are encoded for this request
+    const url = `${LinkedInURLs.API_BASE_GRAPHQL}?variables=(types:List(PENDING_INVITATION_COUNT,UNSEEN_INVITATION_COUNT))&queryId=voyagerRelationshipsDashInvitationsSummary.26002c38d857d2d5cd4503df1a43a0ab`
+    const response = await this.api.api.fetch<MyNetworkNotificationsSummary>({
+      method: 'GET',
+      url,
+      headers: GraphQLHeaders,
+    }).catch(texts.error)
+
+    if (!response) return 0
+
+    const summaryElements = response.data?.relationshipsDashInvitationsSummaryByInvitationSummaryTypes?.elements || []
+
+    return summaryElements.reduce((prev, current) => prev + (current.numNewInvitations || 0), 0)
+  }
+
   getThread = async (): Promise<Thread> => {
     const requests = await this.getRequests()
+    const unreadNotifications = await this.getInvitationsUnreadNotifications()
 
     return {
       id: MY_NETWORK_THREAD_ID,
       title: 'My Network',
-      isUnread: false,
+      isUnread: unreadNotifications > 0,
       isReadOnly: true,
       type: 'channel',
       messages: { items: requests.messages, hasMore: true },
