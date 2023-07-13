@@ -1,11 +1,12 @@
 import type { VectorImage } from './attachments'
+import type { GraphQLNodeWithMultipleRecipeTypes, GraphQLResponse } from './graphql'
 
-export interface PendingInvitationsRequests {
+export type PendingInvitationsRequests = {
   data: Data
   included: Included[]
 }
 
-export interface Data {
+export type Data = {
   metadata: Metadata
   entityUrn: string
   paging: Paging
@@ -13,19 +14,19 @@ export interface Data {
   $type: string
 }
 
-export interface Metadata {
+export type Metadata = {
   paginationToken: string
   $type: string
 }
 
-export interface Paging {
+export type Paging = {
   count: number
   start: number
   total: number
   links: any[]
 }
 
-export interface Included {
+export type Included = {
   objectUrn?: string
   entityUrn: string
   name?: string
@@ -86,13 +87,13 @@ export interface Included {
   genericInvitationView: any
 }
 
-export interface PrimaryImage {
+export type PrimaryImage = {
   attributes: Attribute[]
   actionTarget: string
   $type: string
 }
 
-export interface Attribute {
+export type Attribute = {
   sourceType: string
   '*miniProfile'?: string
   $type: string
@@ -100,13 +101,13 @@ export interface Attribute {
   '*miniCompany'?: string
 }
 
-export interface Title {
+export type Title = {
   attributes: TitleAtribute[]
   text: string
   $type: string
 }
 
-export interface TitleAtribute {
+export type TitleAtribute = {
   start: number
   length: number
   link: string
@@ -114,24 +115,35 @@ export interface TitleAtribute {
   $type: string
 }
 
-export interface Subtitle {
+export type Subtitle = {
   textDirection: string
   text: string
   $type: string
 }
 
-export interface Invitee {
+export type Invitee = {
   '*miniProfile': string
   $type: string
 }
 
-export interface Insight {
+export type Insight = {
   sharedInsight: SharedInsight
   $type: string
 }
 
-export interface SharedInsight {
+export type SharedInsight = {
   '*connections': string[]
   totalCount: number
   $type: string
 }
+
+export type MyNetworkNotificationsSummary = GraphQLResponse<{
+  relationshipsDashInvitationsSummaryByInvitationSummaryTypes: InvitationSummary
+}>
+
+export type InvitationSummary = GraphQLNodeWithMultipleRecipeTypes<{
+  elements: GraphQLNodeWithMultipleRecipeTypes<{
+    numPendingInvitations: number
+    numNewInvitations: number
+  }>[]
+}>
