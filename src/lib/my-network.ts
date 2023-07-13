@@ -202,7 +202,7 @@ export default class MyNetwork {
       this.getInvitationsUnreadNotifications(),
     ])
 
-    const lastReadMessage = requests.messages.at(-unreadNotifications)
+    const lastReadMessage = requests.messages.at(-(unreadNotifications + 1))
 
     return {
       id: MY_NETWORK_THREAD_ID,
