@@ -99,7 +99,6 @@ export default class MyNetwork {
         _original: JSON.stringify(invitationFound),
         id: invitationOldEntityUrn,
         senderID: '$thread',
-        seen: !invitationFound.unseen,
         timestamp: dateTimeMapper(invitationFound.sentTime),
         buttons: [
           {
