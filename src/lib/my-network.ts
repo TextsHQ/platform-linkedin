@@ -197,13 +197,18 @@ export default class MyNetwork {
   }
 
   getThread = async (): Promise<Thread> => {
-    const requests = await this.getRequests()
-    const unreadNotifications = await this.getInvitationsUnreadNotifications()
+    const [requests, unreadNotifications] = await Promise.all([
+      this.getRequests(),
+      this.getInvitationsUnreadNotifications(),
+    ])
+
+    const lastReadMessage = requests.messages.at(-unreadNotifications)
 
     return {
       id: MY_NETWORK_THREAD_ID,
       title: 'My Network',
       isUnread: unreadNotifications > 0,
+      lastReadMessageID: lastReadMessage?.id,
       isReadOnly: true,
       type: 'channel',
       messages: { items: requests.messages, hasMore: true },
