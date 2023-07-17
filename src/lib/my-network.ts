@@ -223,7 +223,7 @@ export default class MyNetwork {
       searchParams: {
         action: 'clearUnseenCount',
       },
-    }).catch(texts.error)
+    })
   }
 
   handleInvitationClick = async (action: 'accept' | 'ignore', encryptedData: string): Promise<void> => {
