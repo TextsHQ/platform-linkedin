@@ -216,6 +216,16 @@ export default class MyNetwork {
     }
   }
 
+  markThreadRead = async (): Promise<void> => {
+    await this.api.api.fetch({
+      method: 'POST',
+      url: `${LinkedInURLs.API_BASE}/relationships/invitationsSummary`,
+      searchParams: {
+        action: 'clearUnseenCount',
+      },
+    }).catch(texts.error)
+  }
+
   handleInvitationClick = async (action: 'accept' | 'ignore', encryptedData: string): Promise<void> => {
     const data: { entityUrn: string, type: string, secret: string } = JSON.parse(Buffer.from(encryptedData, 'base64').toString())
     const url = `${LinkedInURLs.API_BASE}/voyagerRelationshipsDashInvitations/${encodeLinkedinUriComponent(data.entityUrn)}`

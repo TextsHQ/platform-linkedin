@@ -197,6 +197,8 @@ export default class LinkedIn implements PlatformAPI {
   }
 
   sendReadReceipt = async (threadID: string) => {
+    if (threadID === MY_NETWORK_THREAD_ID) return this.myNetwork.markThreadRead()
+
     await this.api.markThreadRead(threadID)
   }
 
