@@ -1,4 +1,4 @@
-import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Attachment, AttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen, UNKNOWN_DATE } from '@textshq/platform-sdk'
+import { Thread, Message, CurrentUser, Participant, User, MessageReaction, Attachment, AttachmentType, MessageLink, MessagePreview, TextAttributes, TextEntity, texts, MessageSeen, UNKNOWN_DATE, Button } from '@textshq/platform-sdk'
 
 import { LinkedInAPITypes, LinkedInURLs } from './constants'
 import { urnID, getFeedUpdateURL, getParticipantID, extractSecondEntity, extractFirstEntity } from './util'
@@ -203,6 +203,27 @@ const mapMediaCustomAttachment = (liCustomContent: any): Attachment[] => {
   }]
 }
 
+const isVideoMeeting = (render: GraphQLMessage['renderContent'][number]) => render.videoMeeting?._type === 'com.linkedin.messenger.VideoMeeting'
+
+const mapConferenceButtons = (message: GraphQLMessage): Button[] => {
+  const hasConference = (message?.renderContent || []).some(isVideoMeeting)
+
+  if (!hasConference) return []
+
+  const conference = (message?.renderContent || []).find(isVideoMeeting)
+  const threadID = urnID(message.backendConversationUrn || '')
+  const conferenceID = urnID(conference.videoMeeting?.videoMeeting?.entityUrn || '')
+
+  if (!threadID || !conferenceID) return []
+
+  return [
+    {
+      label: 'Join conference',
+      linkURL: `https://linkedin.com/thread/${threadID}/conference/${conferenceID}`,
+    },
+  ]
+}
+
 const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: string, participantSeenMap: ParticipantSeenMap): Message => {
   const { reactionSummaries, subtype } = liMessage
   // liMessage.eventContent['com.linkedin.voyager.messaging.event.MessageEvent'] is present in real time events
@@ -403,12 +424,22 @@ export const mapGraphQLMessage = (
   const hostUrnData = firstHostUrnData ? mapHostUrnData(firstHostUrnData) : { text: undefined, attributes: undefined }
   const textAttributes = { ...bodyTextAttributes, ...(hostUrnData.attributes || {}) }
 
+  const conferenceText = (() => {
+    const hasConference = (message?.renderContent || []).some(isVideoMeeting)
+    if (hasConference) return 'Meeting'
+  })()
+
+  const buttons = [
+    ...(mapConferenceButtons(message) || []),
+  ]
+
   return {
     _original: JSON.stringify(message),
     id: message.backendUrn,
     cursor: String(message.deliveredAt),
     timestamp: new Date(message.deliveredAt),
     text: message?.body.text || hostUrnData?.text,
+    textHeading: conferenceText,
     isSender: senderID === currentUserID,
     textAttributes,
     senderID,
@@ -416,6 +447,7 @@ export const mapGraphQLMessage = (
     reactions,
     attachments,
     seen,
+    buttons,
     /** We don't have editedAt with the newest graphql type */
     editedTimestamp: message.messageBodyRenderFormat === 'EDITED' ? UNKNOWN_DATE : undefined,
     isDeleted: message.messageBodyRenderFormat === 'RECALLED',
