@@ -231,13 +231,23 @@ export default class MyNetwork {
     const url = `${LinkedInURLs.API_BASE}/voyagerRelationshipsDashInvitations/${encodeLinkedinUriComponent(data.entityUrn)}`
     const params = { action }
 
+    const invitationType = (() => {
+      switch (data.type) {
+        case 'PENDING':
+          return 'CONNECTION'
+
+        default:
+          return data.type
+      }
+    })()
+
     await this.api.api.fetch<PendingInvitationsRequests>({
       method: 'POST',
       url,
       searchParams: params,
       json: {
         sharedSecret: data.secret,
-        invitationType: data.type,
+        invitationType,
       },
     })
 
