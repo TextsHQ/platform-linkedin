@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto'
+
 // urn:li:fs_conversation:2-YmU3NDYwNzctNTU0ZS00NjdhLTg3ZDktMjkwOTE5NDAxNGQ4XzAxMw==
 // urn:li:fs_miniProfile:ACoAAB2EEb4BjsqIcMYQQ57SqWL6ihsOZCvTzWM
 // urn:li:fsd_message:2-MTYxNzY2ODAyODc1N2IyNjY1MC0wMDQmZTI4OTlmNDEtOGI1MC00ZGEyLWI3ODUtNjM5NGVjYTlhNWIwXzAxMg==
@@ -57,8 +59,7 @@ export const debounce = (func: Function, wait: number) => {
 }
 
 export const getTrackingId = (): string => {
-  const randomIntArray = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256))
-  const randByteArray = new Uint8Array(randomIntArray)
+  const randByteArray = new Uint8Array(randomBytes(16))
   const charArray = Array.from(randByteArray, byte => String.fromCharCode(byte))
 
   return charArray.join('')
