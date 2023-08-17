@@ -8,14 +8,10 @@ import { mapCurrentUser, ParticipantSeenMap, ThreadSeenMap } from './mappers'
 import { LinkedInAuthCookieName } from './constants'
 import MyNetwork, { MY_NETWORK_THREAD_ID } from './lib/my-network'
 
-export type SendMessageResolveFunction = (value: Message[]) => void
-
 export default class LinkedIn implements PlatformAPI {
   user: CurrentUser
 
   private realTimeApi: null | LinkedInRealTime = null
-
-  sendMessageResolvers = new Map<string, SendMessageResolveFunction>()
 
   // threadID: participantID: [messageID, Date]
   threadSeenMap: ThreadSeenMap = new Map<string, ParticipantSeenMap>()

@@ -33,19 +33,6 @@ export default class LinkedInRealTime {
     this.heartbeatCheckerInterval = setInterval(this.checkLastHeartbeat, HEARTBEAT_CHECK_INTERVAL_MS)
   }
 
-  private resolveSendMessage(originToken: string, messages: Message[]) {
-    const resolve = this.papi.sendMessageResolvers.get(originToken)
-    if (!resolve) {
-      texts.log('[li] ignoring sent message with token:', originToken)
-      return
-    }
-
-    this.papi.sendMessageResolvers.delete(originToken)
-    resolve(messages)
-
-    return true
-  }
-
   private lastHeartbeat: Date
 
   private parseJSON(json: any): ServerEvent[] {
@@ -67,22 +54,18 @@ export default class LinkedInRealTime {
 
     switch (topic) {
       case Topic.messagesTopic: {
-        const { entityUrn = '', originToken } = payload.event
+        const { entityUrn = '' } = payload.event
         const threadID = eventUrnToThreadID(entityUrn)
 
         const messages = [mapNewMessage(payload.event, this.papi.user.id, this.papi.threadSeenMap.get(threadID))]
 
-        if (!this.resolveSendMessage(originToken, messages)) {
-          return [{
-            type: ServerEventType.STATE_SYNC,
-            mutationType: 'upsert',
-            objectName: 'message',
-            objectIDs: { threadID },
-            entries: messages,
-          }]
-        }
-
-        break
+        return [{
+          type: ServerEventType.STATE_SYNC,
+          mutationType: 'upsert',
+          objectName: 'message',
+          objectIDs: { threadID },
+          entries: messages,
+        }]
       }
 
       case Topic.messageReactionSummariesTopic: {
