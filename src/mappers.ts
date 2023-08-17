@@ -291,13 +291,13 @@ const mapAudio = (audio: GraphQLMessage['renderContent'][number]['audio']): Atta
   isVoiceNote: true, // @TODO: not sure if there is any other way to send audio
 })
 
-const mapFile = (file: GraphQLMessage['renderContent'][number]['file']): Attachment => ({
+export const mapFile = (file: GraphQLMessage['renderContent'][number]['file']): Attachment => ({
   id: file.assetUrn,
   fileName: file.name,
   type: mapMediaType(file.mediaType),
   mimeType: file.mediaType,
   fileSize: file.byteSize,
-  srcURL: 'asset://$accountID/proxy/' + Buffer.from(file.url).toString('hex'),
+  srcURL: file.url.startsWith('blob:') ? file.url : 'asset://$accountID/proxy/' + Buffer.from(file.url).toString('hex'),
 })
 
 const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage']): Attachment => ({

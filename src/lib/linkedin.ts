@@ -2,17 +2,15 @@ import FormData from 'form-data'
 import crypto from 'crypto'
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
 import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
-import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
 import type { CookieJar } from 'tough-cookie'
 
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
-import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
+import { mapConversationParticipant, mapFile, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
 import { urnID, encodeLinkedinUriComponent, extractSecondEntity, debounce, getTrackingId } from '../util'
 
 import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
 import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
-import type { SendMessageResolveFunction } from '../api'
 import type { ThreadSeenMap } from '../mappers'
 import type { ConversationParticipant, SearchUserResult } from './types/users'
 
@@ -370,12 +368,10 @@ export default class LinkedInAPI {
       headers: {
         Connection: 'keep-alive',
         'Content-Type': 'image/png',
-        accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        accept: '*/*',
         'sec-fetch-site': 'cross-site',
         'sec-fetch-mode': 'no-cors',
-        'sec-fetch-dest': 'image',
-        'accept-encoding': 'gzip, deflate, br',
-        'accept-language': 'en-US',
+        dnt: '1',
       },
     })
     return data
@@ -387,14 +383,16 @@ export default class LinkedInAPI {
 
     if (message.mimeType) {
       const buffer = message.fileBuffer ?? await fs.readFile(message.filePath)
-      const data = await this.uploadBuffer(buffer, message.fileName)
+      const { data } = await this.uploadBuffer(buffer, message.fileName)
 
       attachments.push({
-        id: data.data.value.urn,
-        reference: { string: buffer.toString() },
-        mediaType: message.mimeType,
-        byteSize: buffer.byteLength,
-        name: message.fileName,
+        file: {
+          assetUrn: data.value.urn,
+          byteSize: buffer.byteLength,
+          mediaType: message.mimeType,
+          name: message.fileName,
+          url: 'blob:https://www.linkedin.com/f29e8ad6-f3dc-41ec-a246-f03a0f70861c',
+        },
       })
     }
 
@@ -437,9 +435,9 @@ export default class LinkedInAPI {
       message: {
         body: {
           attributes: mentionedAttributes,
-          text: message.text,
+          text: message.text || '',
         },
-        renderContentUnions: [],
+        renderContentUnions: attachments,
         conversationUrn: `urn:li:msg_conversation:(urn:li:fsd_profile:${currentUserId},${threadID})`,
         originToken,
       },
@@ -450,7 +448,7 @@ export default class LinkedInAPI {
 
     const res = await this.fetch<{
       value: {
-        'renderContentUnions': unknown[]
+        'renderContentUnions': { file: never }[]
         'entityUrn': string
         'backendConversationUrn': string
         'senderUrn': string
@@ -482,6 +480,7 @@ export default class LinkedInAPI {
       text: res.value?.body.text,
       isSender: true,
       senderID: urnID(res.value.senderUrn),
+      attachments: (res.value.renderContentUnions || [])?.map(attachment => mapFile(attachment.file as never)),
     }]
   }
 
