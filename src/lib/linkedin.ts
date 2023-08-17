@@ -378,7 +378,6 @@ export default class LinkedInAPI {
   }
 
   sendMessage = async (threadID: string, message: MessageContent, options: MessageSendOptions, currentUserId: string) => {
-    const url = LinkedInURLs.API_MESSAGES
     const attachments = []
 
     if (message.mimeType) {
@@ -462,7 +461,7 @@ export default class LinkedInAPI {
         'deliveredAt': number
       }
     }>({
-      url,
+      url: LinkedInURLs.API_MESSAGES,
       method: 'POST',
       json: payload,
       searchParams: { action: 'createMessage' },
