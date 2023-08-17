@@ -371,7 +371,6 @@ export default class LinkedInAPI {
         accept: '*/*',
         'sec-fetch-site': 'cross-site',
         'sec-fetch-mode': 'no-cors',
-        dnt: '1',
       },
     })
     return data
