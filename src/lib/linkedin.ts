@@ -8,7 +8,7 @@ import type { CookieJar } from 'tough-cookie'
 
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
 import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
-import { urnID, encodeLinkedinUriComponent, extractSecondEntity, debounce } from '../util'
+import { urnID, encodeLinkedinUriComponent, extractSecondEntity, debounce, getTrackingId } from '../util'
 
 import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
 import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
@@ -32,15 +32,12 @@ export const REQUEST_HEADERS: Record<string, string> = {
     timezone,
     deviceFormFactor: 'DESKTOP',
     mpName: 'voyager-web',
-    // displayDensity: 2,
-    // displayWidth: 3456,
-    // displayHeight: 2234,
   }),
   'sec-fetch-site': 'same-origin',
   'sec-fetch-mode': 'cors',
   referer: 'https://www.linkedin.com/',
   'accept-encoding': 'gzip, deflate, br',
-  'accept-language': 'en',
+  'accept-language': 'en-US,en;q=0.9',
 }
 
 export default class LinkedInAPI {
@@ -384,8 +381,8 @@ export default class LinkedInAPI {
     return data
   }
 
-  sendMessage = async (threadID: string, message: MessageContent, options: MessageSendOptions, sendMessageResolvers: Map<string, SendMessageResolveFunction> = null) => {
-    const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
+  sendMessage = async (threadID: string, message: MessageContent, options: MessageSendOptions, currentUserId: string) => {
+    const url = LinkedInURLs.API_MESSAGES
     const attachments = []
 
     if (message.mimeType) {
@@ -405,6 +402,28 @@ export default class LinkedInAPI {
 
     const mentionedAttributes = (() => {
       if (!message.mentionedUserIDs?.length) return []
+
+      //   [
+      //     {
+      //         "attributeKindUnion": {
+      //             "entity": {
+      //                 "urn": "urn:li:fsd_profile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
+      //             }
+      //         },
+      //         "length": 9,
+      //         "start": 0,
+      //         "type": {
+      //             "com.linkedin.pemberly.text.Entity": {
+      //                 "urn": "urn:li:fsd_profile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
+      //             }
+      //         },
+      //         "attributeKind": {
+      //             "entity": {
+      //                 "urn": "urn:li:fsd_profile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
+      //             }
+      //         }
+      //     }
+      // ]
 
       const re = new RegExp('@', 'gi')
       const results = [...message.text?.matchAll(re)]
@@ -430,36 +449,55 @@ export default class LinkedInAPI {
     })()
 
     const payload = {
-      dedupeByClientGeneratedToken: false,
-      eventCreate: {
-        originToken,
-        // trackingId: '',
-        value: {
-          'com.linkedin.voyager.messaging.create.MessageCreate': {
-            attributedBody: {
-              text: message.text ?? '',
-              attributes: mentionedAttributes,
-            },
-            attachments,
-          },
+      message: {
+        body: {
+          attributes: mentionedAttributes,
+          text: message.text,
         },
+        renderContentUnions: [],
+        conversationUrn: `urn:li:msg_conversation:(urn:li:fsd_profile:${currentUserId},${threadID})`,
+        originToken,
       },
+      mailboxUrn: `urn:li:fsd_profile:${currentUserId}`,
+      dedupeByClientGeneratedToken: false,
+      trackingId: getTrackingId(),
     }
 
-    const promise = new Promise<Message[]>(resolve => {
-      sendMessageResolvers.set(originToken, resolve)
-    })
-    const res = await this.fetch({
+    const res = await this.fetch<{
+      value: {
+        'renderContentUnions': unknown[]
+        'entityUrn': string
+        'backendConversationUrn': string
+        'senderUrn': string
+        'originToken': string
+        'body': {
+          'attributes': unknown[]
+          'text': string
+        }
+        'backendUrn': string
+        'conversationUrn': string
+        'deliveredAt': number
+      }
+    }>({
       url,
       method: 'POST',
       json: payload,
-      searchParams: { action: 'create' },
+      searchParams: { action: 'createMessage' },
+      headers: {
+        'content-type': 'text/plain;charset=UTF-8',
+        accept: 'application/json',
+      },
     })
-    if (!res?.data?.value?.createdAt) throw Error(JSON.stringify(res))
-    return Promise.race([
-      promise,
-      setTimeoutAsync(5_000).then(() => true), // workaround to not have send failure if EventSource is disconnected
-    ])
+
+    return [{
+      _original: JSON.stringify(res.value),
+      id: res.value.backendUrn,
+      cursor: String(res.value.deliveredAt),
+      timestamp: new Date(res.value.deliveredAt),
+      text: res.value?.body.text,
+      isSender: true,
+      senderID: urnID(res.value.senderUrn),
+    }]
   }
 
   deleteMessage = async (threadID: string, messageID: string) => {
