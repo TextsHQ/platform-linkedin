@@ -1,5 +1,5 @@
 import FormData from 'form-data'
-import crypto from 'crypto'
+import crypto, { randomUUID } from 'crypto'
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
 import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
 import { promises as fs } from 'fs'
@@ -390,7 +390,7 @@ export default class LinkedInAPI {
           byteSize: buffer.byteLength,
           mediaType: message.mimeType,
           name: message.fileName,
-          url: 'blob:https://www.linkedin.com/f29e8ad6-f3dc-41ec-a246-f03a0f70861c',
+          url: `blob:https://www.linkedin.com/${randomUUID()}`,
         },
       })
     }
