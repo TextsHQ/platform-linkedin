@@ -25,8 +25,8 @@ export const REQUEST_HEADERS: Record<string, string> = {
   'user-agent': texts.constants.USER_AGENT,
   accept: 'application/vnd.linkedin.normalized+json+2.1',
   'x-li-track': JSON.stringify({
-    clientVersion: '1.10.9166',
-    mpVersion: '1.10.9166',
+    clientVersion: '1.13.1471',
+    mpVersion: '1.13.1471',
     osName: 'web',
     timezoneOffset,
     timezone,
