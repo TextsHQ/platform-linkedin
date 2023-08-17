@@ -389,7 +389,7 @@ export default class LinkedInAPI {
           byteSize: buffer.byteLength,
           mediaType: message.mimeType,
           name: message.fileName,
-          url: `https://www.linkedin.com/${randomUUID()}`,
+          url: `blob:https://www.linkedin.com/${randomUUID()}`,
         },
       })
     }
