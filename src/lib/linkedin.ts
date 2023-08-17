@@ -403,45 +403,30 @@ export default class LinkedInAPI {
     const mentionedAttributes = (() => {
       if (!message.mentionedUserIDs?.length) return []
 
-      //   [
-      //     {
-      //         "attributeKindUnion": {
-      //             "entity": {
-      //                 "urn": "urn:li:fsd_profile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
-      //             }
-      //         },
-      //         "length": 9,
-      //         "start": 0,
-      //         "type": {
-      //             "com.linkedin.pemberly.text.Entity": {
-      //                 "urn": "urn:li:fsd_profile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
-      //             }
-      //         },
-      //         "attributeKind": {
-      //             "entity": {
-      //                 "urn": "urn:li:fsd_profile:ACoAADRSJgABy3J9f7VTdTKCbW79SieJTT-sub0"
-      //             }
-      //         }
-      //     }
-      // ]
-
-      const re = new RegExp('@', 'gi')
-      const results = [...message.text?.matchAll(re)]
+      const re = /@/gi
+      const results = [...(message.text?.matchAll(re) || [])]
 
       return results.map(({ index: initialIndex }, index) => {
         const remainingText = message.text.slice(initialIndex)
         const endIndex = remainingText.indexOf(' ')
+        const urn = `urn:li:fsd_profile:${message.mentionedUserIDs[index]}`
 
         return {
           length: endIndex >= 0 ? endIndex : remainingText.length,
           start: initialIndex,
+          attributeKindUnion: {
+            entity: {
+              urn,
+            },
+          },
           type: {
             'com.linkedin.pemberly.text.Entity': {
-              emberEntityName: 'pemberly/text/entity',
-              isEntity: true,
-              tag: 'span',
-              type: 'Entity',
-              urn: `urn:li:fs_miniProfile:${message.mentionedUserIDs[index]}`,
+              urn,
+            },
+          },
+          attributeKind: {
+            entity: {
+              urn,
             },
           },
         }
