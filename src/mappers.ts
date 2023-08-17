@@ -297,7 +297,7 @@ export const mapFile = (file: GraphQLMessage['renderContent'][number]['file']): 
   type: mapMediaType(file.mediaType),
   mimeType: file.mediaType,
   fileSize: file.byteSize,
-  srcURL: file.url.startsWith('blob:') ? file.url : 'asset://$accountID/proxy/' + Buffer.from(file.url).toString('hex'),
+  srcURL: file.url.startsWith('blob:') ? file.url.split('blob:').pop() : 'asset://$accountID/proxy/' + Buffer.from(file.url).toString('hex'),
 })
 
 const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage']): Attachment => ({
