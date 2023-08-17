@@ -159,7 +159,7 @@ export default class LinkedIn implements PlatformAPI {
 
   sendMessage = (threadID: string, content: MessageContent, options: MessageSendOptions) => {
     this.realTimeApi.checkLastHeartbeat()
-    return this.api.sendMessage(threadID, content, options, this.sendMessageResolvers)
+    return this.api.sendMessage(threadID, content, options, this.user.id)
   }
 
   deleteMessage = async (threadID: string, messageID: string) => {
