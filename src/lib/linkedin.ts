@@ -1,18 +1,16 @@
 import FormData from 'form-data'
-import crypto from 'crypto'
+import crypto, { randomUUID } from 'crypto'
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
 import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
-import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
 import type { CookieJar } from 'tough-cookie'
 
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
-import { mapConversationParticipant, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
-import { urnID, encodeLinkedinUriComponent, extractSecondEntity, debounce } from '../util'
+import { mapConversationParticipant, mapFile, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
+import { urnID, encodeLinkedinUriComponent, extractSecondEntity, debounce, getTrackingId } from '../util'
 
 import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
 import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
-import type { SendMessageResolveFunction } from '../api'
 import type { ThreadSeenMap } from '../mappers'
 import type { ConversationParticipant, SearchUserResult } from './types/users'
 
@@ -32,15 +30,12 @@ export const REQUEST_HEADERS: Record<string, string> = {
     timezone,
     deviceFormFactor: 'DESKTOP',
     mpName: 'voyager-web',
-    // displayDensity: 2,
-    // displayWidth: 3456,
-    // displayHeight: 2234,
   }),
   'sec-fetch-site': 'same-origin',
   'sec-fetch-mode': 'cors',
   referer: 'https://www.linkedin.com/',
   'accept-encoding': 'gzip, deflate, br',
-  'accept-language': 'en',
+  'accept-language': 'en-US,en;q=0.9',
 }
 
 export default class LinkedInAPI {
@@ -373,31 +368,29 @@ export default class LinkedInAPI {
       headers: {
         Connection: 'keep-alive',
         'Content-Type': 'image/png',
-        accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        accept: '*/*',
         'sec-fetch-site': 'cross-site',
         'sec-fetch-mode': 'no-cors',
-        'sec-fetch-dest': 'image',
-        'accept-encoding': 'gzip, deflate, br',
-        'accept-language': 'en-US',
       },
     })
     return data
   }
 
-  sendMessage = async (threadID: string, message: MessageContent, options: MessageSendOptions, sendMessageResolvers: Map<string, SendMessageResolveFunction> = null) => {
-    const url = `${LinkedInURLs.API_CONVERSATIONS}/${threadID}/events`
+  sendMessage = async (threadID: string, message: MessageContent, options: MessageSendOptions, currentUserId: string) => {
     const attachments = []
 
     if (message.mimeType) {
       const buffer = message.fileBuffer ?? await fs.readFile(message.filePath)
-      const data = await this.uploadBuffer(buffer, message.fileName)
+      const { data } = await this.uploadBuffer(buffer, message.fileName)
 
       attachments.push({
-        id: data.data.value.urn,
-        reference: { string: buffer.toString() },
-        mediaType: message.mimeType,
-        byteSize: buffer.byteLength,
-        name: message.fileName,
+        file: {
+          assetUrn: data.value.urn,
+          byteSize: buffer.byteLength,
+          mediaType: message.mimeType,
+          name: message.fileName,
+          url: `blob:https://www.linkedin.com/${randomUUID()}`,
+        },
       })
     }
 
@@ -406,23 +399,30 @@ export default class LinkedInAPI {
     const mentionedAttributes = (() => {
       if (!message.mentionedUserIDs?.length) return []
 
-      const re = new RegExp('@', 'gi')
-      const results = [...message.text?.matchAll(re)]
+      const re = /@/gi
+      const results = [...(message.text?.matchAll(re) || [])]
 
       return results.map(({ index: initialIndex }, index) => {
         const remainingText = message.text.slice(initialIndex)
         const endIndex = remainingText.indexOf(' ')
+        const urn = `urn:li:fsd_profile:${message.mentionedUserIDs[index]}`
 
         return {
           length: endIndex >= 0 ? endIndex : remainingText.length,
           start: initialIndex,
+          attributeKindUnion: {
+            entity: {
+              urn,
+            },
+          },
           type: {
             'com.linkedin.pemberly.text.Entity': {
-              emberEntityName: 'pemberly/text/entity',
-              isEntity: true,
-              tag: 'span',
-              type: 'Entity',
-              urn: `urn:li:fs_miniProfile:${message.mentionedUserIDs[index]}`,
+              urn,
+            },
+          },
+          attributeKind: {
+            entity: {
+              urn,
             },
           },
         }
@@ -430,36 +430,56 @@ export default class LinkedInAPI {
     })()
 
     const payload = {
-      dedupeByClientGeneratedToken: false,
-      eventCreate: {
-        originToken,
-        // trackingId: '',
-        value: {
-          'com.linkedin.voyager.messaging.create.MessageCreate': {
-            attributedBody: {
-              text: message.text ?? '',
-              attributes: mentionedAttributes,
-            },
-            attachments,
-          },
+      message: {
+        body: {
+          attributes: mentionedAttributes,
+          text: message.text || '',
         },
+        renderContentUnions: attachments,
+        conversationUrn: `urn:li:msg_conversation:(urn:li:fsd_profile:${currentUserId},${threadID})`,
+        originToken,
       },
+      mailboxUrn: `urn:li:fsd_profile:${currentUserId}`,
+      dedupeByClientGeneratedToken: false,
+      trackingId: getTrackingId(),
     }
 
-    const promise = new Promise<Message[]>(resolve => {
-      sendMessageResolvers.set(originToken, resolve)
-    })
-    const res = await this.fetch({
-      url,
+    const res = await this.fetch<{
+      value: {
+        'renderContentUnions': { file: never }[]
+        'entityUrn': string
+        'backendConversationUrn': string
+        'senderUrn': string
+        'originToken': string
+        'body': {
+          'attributes': unknown[]
+          'text': string
+        }
+        'backendUrn': string
+        'conversationUrn': string
+        'deliveredAt': number
+      }
+    }>({
+      url: LinkedInURLs.API_MESSAGES,
       method: 'POST',
       json: payload,
-      searchParams: { action: 'create' },
+      searchParams: { action: 'createMessage' },
+      headers: {
+        'content-type': 'text/plain;charset=UTF-8',
+        accept: 'application/json',
+      },
     })
-    if (!res?.data?.value?.createdAt) throw Error(JSON.stringify(res))
-    return Promise.race([
-      promise,
-      setTimeoutAsync(5_000).then(() => true), // workaround to not have send failure if EventSource is disconnected
-    ])
+
+    return [{
+      _original: JSON.stringify(res.value),
+      id: res.value.backendUrn,
+      cursor: String(res.value.deliveredAt),
+      timestamp: new Date(res.value.deliveredAt),
+      text: res.value?.body.text,
+      isSender: true,
+      senderID: urnID(res.value.senderUrn),
+      attachments: (res.value.renderContentUnions || [])?.map(attachment => mapFile(attachment.file as never)),
+    }]
   }
 
   deleteMessage = async (threadID: string, messageID: string) => {
