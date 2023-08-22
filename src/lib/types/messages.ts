@@ -2,6 +2,23 @@ import type { Thumbnail } from './attachments'
 import type { GraphQLResponse, GraphQLNode, PaginatedMetadata } from './graphql'
 import type { ConversationParticipant } from './users'
 
+export type SendMessageResponse = {
+  value: {
+    'renderContentUnions': { file: never }[]
+    'entityUrn': string
+    'backendConversationUrn': string
+    'senderUrn': string
+    'originToken': string
+    'body': {
+      'attributes': unknown[]
+      'text': string
+    }
+    'backendUrn': string
+    'conversationUrn': string
+    'deliveredAt': number
+  }
+}
+
 export type MessagesGraphQLResponse = GraphQLResponse<MessagesByConversation | MessagesByAnchorTimestamp>
 
 export type MessagesByConversation = GraphQLNode<{

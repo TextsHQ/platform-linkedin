@@ -5,13 +5,17 @@ import LinkedInRealTime from './lib/real-time'
 import LinkedInAPI from './lib/linkedin'
 
 import { mapCurrentUser, ParticipantSeenMap, ThreadSeenMap } from './mappers'
-import { LinkedInAuthCookieName } from './constants'
 import MyNetwork, { MY_NETWORK_THREAD_ID } from './lib/my-network'
+import { LinkedInAuthCookieName } from './constants'
+
+export type SendMessageResolveFunction = (value: Message[]) => void
 
 export default class LinkedIn implements PlatformAPI {
   user: CurrentUser
 
   private realTimeApi: null | LinkedInRealTime = null
+
+  sendMessageResolvers = new Map<string, SendMessageResolveFunction>()
 
   // threadID: participantID: [messageID, Date]
   threadSeenMap: ThreadSeenMap = new Map<string, ParticipantSeenMap>()
@@ -155,7 +159,13 @@ export default class LinkedIn implements PlatformAPI {
 
   sendMessage = (threadID: string, content: MessageContent, options: MessageSendOptions) => {
     this.realTimeApi.checkLastHeartbeat()
-    return this.api.sendMessage(threadID, content, options, this.user.id)
+    return this.api.sendMessage({
+      threadID,
+      message: content,
+      options,
+      currentUserId: this.user.id,
+      sendMessageResolvers: this.sendMessageResolvers,
+    })
   }
 
   deleteMessage = async (threadID: string, messageID: string) => {

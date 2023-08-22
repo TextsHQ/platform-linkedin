@@ -10,9 +10,10 @@ import { mapConversationParticipant, mapFile, mapGraphQLConversation, mapGraphQL
 import { urnID, encodeLinkedinUriComponent, extractSecondEntity, debounce, getTrackingId } from '../util'
 
 import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
-import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction } from './types'
-import type { ThreadSeenMap } from '../mappers'
+import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction, SendMessageResponse } from './types'
 import type { ConversationParticipant, SearchUserResult } from './types/users'
+import type { SendMessageResolveFunction } from '../api'
+import type { ThreadSeenMap } from '../mappers'
 
 const timezoneOffset = 0
 const timezone = 'Europe/London'
@@ -376,7 +377,13 @@ export default class LinkedInAPI {
     return data
   }
 
-  sendMessage = async (threadID: string, message: MessageContent, options: MessageSendOptions, currentUserId: string) => {
+  sendMessage = async ({ threadID, message, options, currentUserId, sendMessageResolvers = new Map() }: {
+    threadID: string
+    message: MessageContent
+    options: MessageSendOptions
+    currentUserId: string
+    sendMessageResolvers?: Map<string, SendMessageResolveFunction>
+  }) => {
     const attachments = []
 
     if (message.mimeType) {
@@ -444,22 +451,7 @@ export default class LinkedInAPI {
       trackingId: getTrackingId(),
     }
 
-    const res = await this.fetch<{
-      value: {
-        'renderContentUnions': { file: never }[]
-        'entityUrn': string
-        'backendConversationUrn': string
-        'senderUrn': string
-        'originToken': string
-        'body': {
-          'attributes': unknown[]
-          'text': string
-        }
-        'backendUrn': string
-        'conversationUrn': string
-        'deliveredAt': number
-      }
-    }>({
+    const res = await this.fetch<SendMessageResponse>({
       url: LinkedInURLs.API_MESSAGES,
       method: 'POST',
       json: payload,
@@ -470,16 +462,29 @@ export default class LinkedInAPI {
       },
     })
 
-    return [{
-      _original: JSON.stringify(res.value),
-      id: res.value.backendUrn,
-      cursor: String(res.value.deliveredAt),
-      timestamp: new Date(res.value.deliveredAt),
-      text: res.value?.body.text,
-      isSender: true,
-      senderID: urnID(res.value.senderUrn),
-      attachments: (res.value.renderContentUnions || [])?.map(attachment => mapFile(attachment.file as never)),
-    }]
+    // @notes
+    //  Resolve from real-time response (using `sendMessageResolvers` map) OR if it isn't resolved
+    //  yet (not response from real-time connection) it will resolve from the response from the
+    //  send message request.
+    return Promise.race([
+      new Promise<Message[]>(resolve => {
+        sendMessageResolvers.set(originToken, resolve)
+      }),
+      new Promise<Message[]>(resolve => {
+        // TODO:
+        // move partial mapper to mappers or adapt the response to use existing mapper function
+        setTimeout(() => resolve([{
+          _original: JSON.stringify(res.value),
+          id: res.value.backendUrn,
+          cursor: String(res.value.deliveredAt),
+          timestamp: new Date(res.value.deliveredAt),
+          text: res.value?.body.text,
+          isSender: true,
+          senderID: urnID(res.value.senderUrn),
+          attachments: (res.value.renderContentUnions || [])?.map(attachment => mapFile(attachment.file as never)),
+        }]), 5000)
+      }),
+    ])
   }
 
   deleteMessage = async (threadID: string, messageID: string) => {

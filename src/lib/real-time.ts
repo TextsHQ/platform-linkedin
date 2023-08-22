@@ -35,6 +35,19 @@ export default class LinkedInRealTime {
 
   private lastHeartbeat: Date
 
+  private resolveSendMessage(originToken: string, messages: Message[]) {
+    const resolve = this.papi.sendMessageResolvers.get(originToken)
+    if (!resolve) {
+      texts.log('[li] ignoring sent message with token:', originToken)
+      return
+    }
+
+    this.papi.sendMessageResolvers.delete(originToken)
+    resolve(messages)
+
+    return true
+  }
+
   private parseJSON(json: any): ServerEvent[] {
     if (!json) return
     // texts.log('[li]', new Date(), json?.['com.linkedin.realtimefrontend.DecoratedEvent']?.topic, JSON.stringify(json))
@@ -54,18 +67,22 @@ export default class LinkedInRealTime {
 
     switch (topic) {
       case Topic.messagesTopic: {
-        const { entityUrn = '' } = payload.event
+        const { entityUrn = '', originToken } = payload.event
         const threadID = eventUrnToThreadID(entityUrn)
 
         const messages = [mapNewMessage(payload.event, this.papi.user.id, this.papi.threadSeenMap.get(threadID))]
 
-        return [{
-          type: ServerEventType.STATE_SYNC,
-          mutationType: 'upsert',
-          objectName: 'message',
-          objectIDs: { threadID },
-          entries: messages,
-        }]
+        if (!this.resolveSendMessage(originToken, messages)) {
+          return [{
+            type: ServerEventType.STATE_SYNC,
+            mutationType: 'upsert',
+            objectName: 'message',
+            objectIDs: { threadID },
+            entries: messages,
+          }]
+        }
+
+        break
       }
 
       case Topic.messageReactionSummariesTopic: {
