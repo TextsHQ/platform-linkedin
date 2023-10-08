@@ -66,16 +66,29 @@ export default class MyNetwork {
     if (!(response.data['*elements'] || []).length) return { messages: [], participants: [] }
 
     const participantEntries = response.included.reduce((previous, included) => {
-      if (included.$type !== 'com.linkedin.voyager.identity.shared.MiniProfile') return [...previous]
+      if (included.$type === 'com.linkedin.voyager.entities.shared.MiniCompany') {
+        return [
+          ...previous,
+          {
+            id: included.entityUrn,
+            fullName: included.name,
+            imgURL: getThumbnailUrl(included.logo),
+          },
+        ]
+      }
 
-      return [
-        ...previous,
-        {
-          id: included.entityUrn,
-          fullName: [included.firstName, included.lastName].filter(Boolean).join(' '),
-          imgURL: getThumbnailUrl(included.picture),
-        },
-      ]
+      if (included.$type === 'com.linkedin.voyager.identity.shared.MiniProfile') {
+        return [
+          ...previous,
+          {
+            id: included.entityUrn,
+            fullName: [included.firstName, included.lastName].filter(Boolean).join(' '),
+            imgURL: getThumbnailUrl(included.picture),
+          },
+        ]
+      }
+
+      return [...previous]
     }, [] as Participant[])
 
     const invitations = response.data['*elements']
@@ -136,7 +149,7 @@ export default class MyNetwork {
       }
 
       const profilePicutre = invitationFound.primaryImage.attributes.find(image => image.sourceType === 'PROFILE_PICTURE')
-      const member = response.included.find(included => included.entityUrn === profilePicutre['*miniProfile'])
+      const member = response.included.find(included => included.entityUrn === profilePicutre?.['*miniProfile']) || response.included?.[0]
 
       return [
         ...previous,
