@@ -2,12 +2,14 @@ import FormData from 'form-data'
 import crypto, { randomUUID } from 'crypto'
 import { ActivityType, FetchOptions, InboxName, Message, MessageContent, MessageSendOptions, RateLimitError, texts, Thread, ThreadFolderName, User } from '@textshq/platform-sdk'
 import { ExpectedJSONGotHTMLError } from '@textshq/platform-sdk/dist/json'
+import { setTimeout as setTimeoutAsync } from 'timers/promises'
 import { promises as fs } from 'fs'
 import type { CookieJar } from 'tough-cookie'
 
 import { LinkedInURLs, LinkedInAPITypes, GraphQLRecipes, GraphQLHeaders } from '../constants'
 import { mapConversationParticipant, mapFile, mapGraphQLConversation, mapGraphQLMessage, mapGraphQLSearchUser } from '../mappers'
 import { urnID, encodeLinkedinUriComponent, extractSecondEntity, debounce, getTrackingId } from '../util'
+import { MY_NETWORK_THREAD_ID } from './my-network'
 
 import type { ConversationByIdGraphQLResponse, ConversationsByCategoryGraphQLResponse, GraphQLConversation, NewConversationResponse, SeenReceipt, SeenReceiptGraphQLResponse } from './types/conversations'
 import type { GraphQLMessage, MessagesByAnchorTimestamp, MessagesGraphQLResponse, ReactionsByMessageAndEmoji, RichReaction, SendMessageResponse } from './types'
@@ -268,7 +270,7 @@ export default class LinkedInAPI {
     await this.updateSeenReceipts(allElements, currentUserID, threadSeenMap).catch(texts.error)
 
     const inboxThreads = (inboxElements || []).filter(x => x?.entityUrn).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
-    const archiveThreads = (archiveElements || []).filter(x => x?.entityUrn).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
+    const archivedThreads = (archiveElements || []).filter(x => x?.entityUrn).map(thread => mapGraphQLConversation(thread, currentUserID, threadSeenMap))
 
     return {
       inbox: {
@@ -276,8 +278,8 @@ export default class LinkedInAPI {
         cursor: inboxThreads?.[inboxThreads.length - 1]?.timestamp.getTime(),
       },
       archive: {
-        threads: archiveThreads,
-        cursor: archiveThreads?.[archiveThreads.length - 1]?.timestamp.getTime(),
+        threads: archivedThreads,
+        cursor: archivedThreads?.[archivedThreads.length - 1]?.timestamp.getTime(),
       },
     }
   }
@@ -312,24 +314,38 @@ export default class LinkedInAPI {
   toggleArchiveThread = async (threadIDs: string[], archived = true) => {
     const url = LinkedInURLs.API_CONVERSATIONS_API
     const user = await this.getCurrentUser()
-    const payload = {
-      conversationUrns: threadIDs.map(threadID => `urn:li:msg_conversation:(${user.dashEntityUrn},${threadID})`),
-      category: 'ARCHIVE',
+    const filteredThreads = threadIDs.filter(id => id !== MY_NETWORK_THREAD_ID)
+    const chunkSize = 20
+
+    const sendArchiveThread = async (ids: string[]): Promise<void> => {
+      const payload = {
+        conversationUrns: ids.map(threadID => `urn:li:msg_conversation:(${user.dashEntityUrn},${threadID})`),
+        category: 'ARCHIVE',
+      }
+
+      await this.fetch({
+        method: 'POST',
+        url,
+        json: payload,
+        searchParams: { action: archived ? 'addCategory' : 'removeCategory' },
+      })
     }
 
-    await this.fetch({
-      method: 'POST',
-      url,
-      json: payload,
-      searchParams: { action: archived ? 'addCategory' : 'removeCategory' },
-    })
+    for (let i = 0; i < filteredThreads.length; i += chunkSize) {
+      const chunk = filteredThreads.slice(i, i + chunkSize)
+      try {
+        await sendArchiveThread(chunk)
+        await setTimeoutAsync(500)
+      } catch (error) {
+        texts.error(error)
+        await setTimeoutAsync(5_000)
+      }
+    }
   }
 
-  archiveThread = debounce((threadIDs: string[]) =>
-    this.toggleArchiveThread(threadIDs, true), 300)
+  archiveThread = debounce((threadIDs: string[]) => this.toggleArchiveThread(threadIDs, true), 300)
 
-  unArchiveThread = debounce((threadIDs: string[]) =>
-    this.toggleArchiveThread(threadIDs, false), 300)
+  unArchiveThread = debounce((threadIDs: string[]) => this.toggleArchiveThread(threadIDs, false), 300)
 
   searchUsers = async (keyword: string): Promise<User[]> => {
     if (!keyword) return []
