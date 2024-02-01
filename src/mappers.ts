@@ -278,10 +278,9 @@ const mapVideo = (video: GraphQLMessage['renderContent'][number]['video']): Atta
   type: AttachmentType.VIDEO,
   // @FIXME: don't use only first element - check for multiple progressive streams sources
   srcURL: `asset://$accountID/proxy/${Buffer.from(video.progressiveStreams?.[0]?.streamingLocations?.[0]?.url).toString('hex')}`,
-  size: {
-    width: video.progressiveStreams?.[0]?.width,
-    height: video.progressiveStreams?.[0]?.height,
-  },
+  size: video.progressiveStreams?.[0]?.width && video.progressiveStreams?.[0]?.height
+    ? { width: video.progressiveStreams?.[0]?.width, height: video.progressiveStreams?.[0]?.height }
+    : undefined,
 })
 
 const mapAudio = (audio: GraphQLMessage['renderContent'][number]['audio']): Attachment => ({
@@ -304,6 +303,10 @@ const mapImage = (image: GraphQLMessage['renderContent'][number]['vectorImage'])
   id: image.digitalmediaAsset,
   type: AttachmentType.IMG,
   srcURL: `asset://$accountID/proxy/${Buffer.from(image.rootUrl).toString('hex')}`,
+  size: {
+    width: image?.artifacts?.[0]?.width || 100,
+    height: image?.artifacts?.[0]?.height || 100,
+  },
 })
 
 const mapExternalMediaProxyImage = (media: GraphQLMessage['renderContent'][number]['externalMedia']): Attachment => ({

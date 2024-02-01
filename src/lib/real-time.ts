@@ -146,14 +146,19 @@ export default class LinkedInRealTime {
         const serverEvents: ServerEvent[] = [updateEvent]
 
         if (payload.action === 'UPDATE') {
-          const participants = (conversation.participants as any[])
-            .map(participant => {
-              const { miniProfile: eventMiniProfile } = participant[LinkedInAPITypes.member] || {}
-              return mapMiniProfile({
+          const participants = (conversation.participants as any[]).reduce((previous, participant) => {
+            const { miniProfile: eventMiniProfile } = participant[LinkedInAPITypes.member] || {}
+            if (!eventMiniProfile) return previous
+
+            return [
+              ...previous,
+              mapMiniProfile({
                 ...eventMiniProfile,
                 picture: { ...(eventMiniProfile?.picture?.['com.linkedin.common.VectorImage'] || {}) },
-              })
-            })
+              }),
+            ]
+          }, [])
+
           Object.assign(partialThread, {
             isArchived: conversation.archived,
             mutedUntil: conversation.muted ? 'forever' : undefined,
@@ -268,6 +273,8 @@ export default class LinkedInRealTime {
       this.retryAttempt = 0
     }
     this.es.onmessage = event => {
+      if (!event?.data) return
+
       const jsons = (event.data as string).split('\n').map(line => {
         if (!line.startsWith('{')) {
           texts.log('unknown linkedin realtime response', event.data)
