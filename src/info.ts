@@ -17,6 +17,12 @@ const info: PlatformInfo = {
   version: '0.0.1',
   displayName: 'LinkedIn',
   icon,
+  brand: {
+    background: '#006699',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="none" viewBox="0 0 48 48">
+    <path fill="black" fill-rule="evenodd" d="M16.126 39V18.758H9.398V39h6.728Zm-3.364-23.006c2.346 0 3.806-1.554 3.806-3.496C16.524 10.51 15.108 9 12.806 9 10.505 9 9 10.511 9 12.498c0 1.942 1.46 3.496 3.718 3.496h.044ZM19.849 39h6.728V27.696c0-.605.043-1.21.221-1.642.486-1.208 1.593-2.46 3.452-2.46 2.435 0 3.408 1.856 3.408 4.577v10.83h6.728V27.393c0-6.218-3.32-9.11-7.746-9.11-3.63 0-5.223 2.028-6.108 3.41h.045v-2.936h-6.728c.088 1.9 0 20.242 0 20.242Z" clip-rule="evenodd"/>
+    </svg>`,
+  },
   typingDurationMs: 6_000,
   reactions: {
     supported: supportedReactions,
