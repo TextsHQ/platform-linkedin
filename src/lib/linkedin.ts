@@ -46,6 +46,8 @@ export default class LinkedInAPI {
 
   private httpClient = texts.createHttpClient()
 
+  private messagesCache = new Map<string, Message>()
+
   // key is threadID, values are participantIDs
   readonly conversationParticipantsMap: Record<string, string[]> = {}
 
@@ -201,13 +203,16 @@ export default class LinkedInAPI {
         }))
       }
 
-      return message
+      const mappedMessage = mapGraphQLMessage(message, currentUserID, threadParticipantsSeen, reactionsMap)
+      this.messagesCache.set(mappedMessage.id, mappedMessage)
+
+      return mappedMessage
     })
 
     const messages = await Promise.all(messagesPromises)
 
     return {
-      messages: messages.map(message => mapGraphQLMessage(message, currentUserID, threadParticipantsSeen, reactionsMap)),
+      messages,
       prevCursor: responseBody?.metadata.prevCursor || undefined,
     }
   }
@@ -458,7 +463,30 @@ export default class LinkedInAPI {
           attributes: mentionedAttributes,
           text: message.text || '',
         },
-        renderContentUnions: attachments,
+        renderContentUnions: [
+          ...attachments,
+          ...(options.quotedMessageID
+            ? (() => {
+              const cachedMessage = this.messagesCache.get(options.quotedMessageID)
+              if (!cachedMessage) return []
+
+              return [{
+                repliedMessageContent: {
+                  originalSenderUrn: `urn:li:msg_messagingParticipant:urn:li:fsd_profile:${cachedMessage.senderID}`,
+                  originalSendAt: cachedMessage.timestamp.getTime(),
+                  originalMessageUrn: `urn:li:msg_message:(urn:li:fsd_profile:${cachedMessage.senderID},${cachedMessage.id})`,
+                  messageBody: {
+                    _type: 'com.linkedin.pemberly.text.AttributedText',
+                    attributes: [],
+                    text: cachedMessage.text,
+                    _recipeType: 'com.linkedin.1ea7e24db829a1347b841f2dd496da36',
+                  },
+                },
+              }]
+            })()
+            : []
+          ),
+        ],
         conversationUrn: `urn:li:msg_conversation:(urn:li:fsd_profile:${currentUserId},${threadID})`,
         originToken,
       },
