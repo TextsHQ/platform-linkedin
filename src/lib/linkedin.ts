@@ -46,10 +46,14 @@ export default class LinkedInAPI {
 
   private httpClient = texts.createHttpClient()
 
-  private messagesCache = new Map<string, Message>()
-
   // key is threadID, values are participantIDs
   readonly conversationParticipantsMap: Record<string, string[]> = {}
+
+  private accountID: string
+
+  setAccountID = (accountID: string) => {
+    this.accountID = accountID
+  }
 
   setLoginState = (cookieJar: CookieJar) => {
     if (!cookieJar) throw TypeError('invalid cookieJar')
@@ -204,7 +208,6 @@ export default class LinkedInAPI {
       }
 
       const mappedMessage = mapGraphQLMessage(message, currentUserID, threadParticipantsSeen, reactionsMap)
-      this.messagesCache.set(mappedMessage.id, mappedMessage)
 
       return mappedMessage
     })
@@ -467,18 +470,20 @@ export default class LinkedInAPI {
           ...attachments,
           ...(options.quotedMessageID
             ? (() => {
-              const cachedMessage = this.messagesCache.get(options.quotedMessageID)
-              if (!cachedMessage) return []
+              const originalMessageJSON = texts.getOriginalObject('linkedin', this.accountID, ['messageID', options.quotedMessageID])
+              if (!originalMessageJSON) return []
+
+              const originalMessage = mapGraphQLMessage(JSON.parse(originalMessageJSON), currentUserId, new Map())
 
               return [{
                 repliedMessageContent: {
-                  originalSenderUrn: `urn:li:msg_messagingParticipant:urn:li:fsd_profile:${cachedMessage.senderID}`,
-                  originalSendAt: cachedMessage.timestamp.getTime(),
-                  originalMessageUrn: `urn:li:msg_message:(urn:li:fsd_profile:${cachedMessage.senderID},${cachedMessage.id})`,
+                  originalSenderUrn: `urn:li:msg_messagingParticipant:urn:li:fsd_profile:${originalMessage.senderID}`,
+                  originalSendAt: originalMessage.timestamp.getTime(),
+                  originalMessageUrn: `urn:li:msg_message:(urn:li:fsd_profile:${originalMessage.senderID},${originalMessage.id})`,
                   messageBody: {
                     _type: 'com.linkedin.pemberly.text.AttributedText',
                     attributes: [],
-                    text: cachedMessage.text,
+                    text: originalMessage.text,
                     _recipeType: 'com.linkedin.1ea7e24db829a1347b841f2dd496da36',
                   },
                 },
