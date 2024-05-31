@@ -115,6 +115,22 @@ type RenderContent = GraphQLNode<{
   forwardedMessageContent: any
   hostUrnData: HostUrnData
   vectorImage?: VectorImage
+  repliedMessageContent?: RepliedMessageContent
+}>
+
+export type RepliedMessageContent = GraphQLNode<{
+  messageBody: {
+    attributes: Attribute[]
+    text: string
+  }
+  originalMessage: {
+    entityUrn: string
+  }
+  originalSender: {
+    entityUrn: string
+    // @TODO update type
+  }
+  originalSendAt: number
 }>
 
 export type HostUrnData = GraphQLNode<{

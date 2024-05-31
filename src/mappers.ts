@@ -64,9 +64,10 @@ export const mapReactions = (liReactionSummaries: any, { currentUserID, particip
 }
 
 const mapForwardedMessage = (liForwardedMessage: any): MessagePreview => {
-  const { originalCreatedAt, forwardedBody } = liForwardedMessage
+  const { originalCreatedAt, forwardedBody, originalFrom } = liForwardedMessage['com.linkedin.voyager.messaging.event.message.ForwardedContent'] || liForwardedMessage
   const { text } = forwardedBody
-  const messagingMember = liForwardedMessage['*originalFrom']
+
+  const messagingMember = originalFrom?.['com.linkedin.voyager.messaging.MessagingMember']?.entityUrn || liForwardedMessage['*originalFrom']
   const senderID = getParticipantID(messagingMember)
 
   return {
@@ -231,7 +232,9 @@ const mapMessageInner = (liMessage: LIMessage, currentUserID: string, senderID: 
     textAttributes = mapTextAttributes(attributedBody?.attributes)
   }
 
-  const linkedMessage = customContent?.forwardedContentType ? mapForwardedMessage(customContent) : undefined
+  const linkedMessage = customContent?.forwardedContentType || customContent?.['com.linkedin.voyager.messaging.event.message.ForwardedContent']
+    ? mapForwardedMessage(customContent)
+    : undefined
 
   // linkedin seems to have broken reactions?
   const reactions = (reactionSummaries as any[] || []).map(reaction => mapReactions(reaction, { currentUserID, participantId: senderID }))
@@ -428,6 +431,27 @@ export const mapGraphQLMessage = (
     if (hasConference) return 'Meeting'
   })()
 
+  const linkedMessage: Partial<Message> = (() => {
+    const repliedContent = (message.renderContent || []).find(x => x.repliedMessageContent)
+    if (!repliedContent) return {}
+    // @notes
+    //  Sometimes (depending the client where it was sent) the entityUrn is not in the format
+    //  'urn:li:messagingMessage:<messageId>' so we need to add it if it's missing.
+    const linkedMessageEntity = extractSecondEntity(repliedContent.repliedMessageContent.originalMessage.entityUrn)
+    const linkedMessageID = linkedMessageEntity.startsWith('urn:li:messagingMessage:')
+      ? linkedMessageEntity
+      : `urn:li:messagingMessage:${linkedMessageEntity}`
+
+    return {
+      linkedMessageID,
+      linkedMessage: {
+        id: linkedMessageID,
+        senderID: urnID(repliedContent.repliedMessageContent.originalSender.entityUrn),
+        text: repliedContent.repliedMessageContent.messageBody.text,
+      },
+    }
+  })()
+
   return {
     _original: JSON.stringify(message),
     id: message.backendUrn,
@@ -442,6 +466,7 @@ export const mapGraphQLMessage = (
     reactions,
     attachments,
     seen,
+    ...linkedMessage,
     buttons: mapMessageButtons(message),
     /** We don't have editedAt with the newest graphql type */
     editedTimestamp: message.messageBodyRenderFormat === 'EDITED' ? UNKNOWN_DATE : undefined,

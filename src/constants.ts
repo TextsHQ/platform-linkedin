@@ -29,8 +29,7 @@ export const LinkedInURLs = {
 
 export const GraphQLRecipes = {
   messages: {
-    getMessagesByAnchorTimestamp: 'messengerMessages.41f713c7de5635f9e81d2b0dfc65df1b',
-    getWithCursor: 'messengerMessages.377636847892a71d7e915107d5b4abc1',
+    getMessagesByAnchorTimestamp: 'messengerMessages.8078e691076ceb6cef7a35504dae2390',
     getReactionParticipantsByMessageAndEmoji: 'messengerMessagingParticipants.d8df65a2f55f270ced7e37ff2fafc8c8',
   },
   conversations: {

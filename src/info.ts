@@ -63,6 +63,7 @@ const info: PlatformInfo = {
     Attribute.SUPPORTS_PUSH_NOTIFICATIONS,
     Attribute.SINGLE_THREAD_CREATION_REQUIRES_MESSAGE,
     Attribute.GROUP_THREAD_CREATION_REQUIRES_MESSAGE,
+    Attribute.SUPPORTS_QUOTED_MESSAGES,
   ]),
   getUserProfileLink: ({ id }) => `https://www.linkedin.com/in/${id}/`,
   prefs: {

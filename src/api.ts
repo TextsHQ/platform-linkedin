@@ -22,7 +22,7 @@ export default class LinkedIn implements PlatformAPI {
 
   onEvent: OnServerEventCallback
 
-  readonly api = new LinkedInAPI()
+  api: LinkedInAPI = new LinkedInAPI()
 
   private myNetwork: MyNetwork
 
@@ -39,9 +39,13 @@ export default class LinkedIn implements PlatformAPI {
   init = async (serialized: { cookies: CookieJar.Serialized }, _: ClientContext, preferences: Record<string, unknown> = {}) => {
     const { cookies } = serialized || {}
     if (!cookies) return
+
     if (preferences.showMyNetwork) {
       this.myNetwork = new MyNetwork(this)
     }
+
+    this.api.setAccountID(this.accountID)
+
     await this.afterAuth(cookies)
   }
 
